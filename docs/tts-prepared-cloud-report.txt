@@ -4,170 +4,166 @@ Branch: tts/prepared-cloud (from origin/main ae1c40f8), in worktree
 Commits this run (hash + subject, oldest first):
   1f06dae0 docs(tts): the brief for prepared chapters in Parrot Cloud
   bec5e38e docs(tts): step 0, the design answers and the baseline
-  (one further commit records this hash in the report, which could not name
-  its own parent before that parent existed)
-Steps complete this run, and steps complete in total (0-7): Steps 0, 1 and 2 this
-run; 3 of 8 in total (Step 0, Step 1, Step 2). Steps 3-7 not built. Steps 0 and 2
-are verified by running tests. Step 1 is complete as written but NOT verified at
-all: none of its SQL has been run, see below.
+  449b7400 docs(tts): name the step 0 commit in the report
+  edd3ae70 feat(server): prepared chapter audio as one more book file (TTS-C1)
+  367bc53d feat(tts): pack a prepared chapter into one verified archive (TTS-C2)
+  b7554034 feat(tts): upload a prepared chapter through the book file engine (TTS-C3)
+  (one further commit carries this final report, which cannot name its own hash)
+Steps complete this run, and steps complete in total (0-7): Steps 0, 1 and 2 complete
+this run; Step 3 partly. 3 of 8 complete in total, plus a partial Step 3. Steps 4-7
+not built. Steps 0 and 2 are verified by running tests. Step 1 is written and NOT
+verified at all: none of its SQL has been run. Step 3's upload path, states and
+analytics are built and green, but nothing calls them yet, so no user can reach the
+feature.
 Step 0: can prepared audio be one more cloud_book_files row (yes/no, what had to
-change); what an older Android app and the iPhone app do with an unknown media
-type (file and line), and how that risk is handled:
+change); what an older Android app and the iPhone app do with an unknown media type
+(file and line), and how that risk is handled:
   YES. cloud_book_files is already unique on (cloud_book_id, media_type,
-  relative_path) (20260922000000_parrot_cloud.sql:45) and cloud_book_uploads has
-  a matching per-slot reservation index (:72-74). There is NO media-type
-  allow-list anywhere today: reserve only checks media_type is non-blank
+  relative_path) (20260922000000_parrot_cloud.sql:45) and cloud_book_uploads has a
+  matching per-slot reservation index (:72-74). There is NO media-type allow-list
+  anywhere today: reserve only checks media_type is non-blank
   (20260922000001_parrot_cloud_rpcs.sql:471) and <=64 chars
   (20261003000000_parrot_cloud_security_hardening.sql:306); finalize, download,
   delete, takedown and the orphan GC all address a file by id and never branch on
   media type. Storage paths are media-type-free
-  (20260922000001_parrot_cloud_rpcs.sql:626) and all storage policies match on
-  path plus owner.
-  What has to change: (a) a per-media-type 64 MiB cap, because reserve and the
-  bucket both allow 2 GiB (20261003000000...:313 and :70) - additive; (b) a
-  positive named allow-list for the new type, so it gets its own rules instead of
-  inheriting the ebook's - additive. What does NOT have to change: the bucket's
-  MIME types, because application/octet-stream is already allowed
-  (20261003000000...:80) and TusUploadMetadata.contentType() already falls through
-  to it for an unmapped media type and an unmapped extension
-  (lib/cloud/implementation/.../transfer/TusUploadPolicies.kt:18 and :30-41; zip
-  is not mapped); and the rights attestation, which still applies unchanged
-  (20260922000001_parrot_cloud_rpcs.sql:485-493).
+  (20260922000001_parrot_cloud_rpcs.sql:626) and all storage policies match on path
+  plus owner.
+  What had to change: (a) a per-media-type 64 MiB cap, because reserve and the bucket
+  both allow 2 GiB (20261003000000...:313 and :70); (b) a positive named allow-list
+  for the new type, so it gets its own rules instead of inheriting the ebook's. Both
+  additive. What did NOT have to change: the bucket's MIME types, because
+  application/octet-stream is already allowed (20261003000000...:80) and
+  TusUploadMetadata.contentType() already falls through to it for an unmapped media
+  type and an unmapped extension (lib/cloud/implementation/.../TusUploadPolicies.kt:18
+  and :30-41; zip is not mapped); and the rights attestation, which still applies
+  unchanged (20260922000001_parrot_cloud_rpcs.sql:485-493).
   Unknown media type, current apps: the same commonMain code runs on Android and
   iPhone. ParrotCloudBookFileChangeApplier.apply
   (lib/server-parrot-cloud/.../ParrotCloudBookFileChangeApplier.kt:25-61) is
-  media-type agnostic, parses with ignoreUnknownKeys (:23) and writes the row into
-  the local mirror keyed by (libraryBookId, mediaType, relativePath) (:46-60): no
-  crash, no overwrite of the ebook's row. The dangerous consumer is
+  media-type agnostic, parses with ignoreUnknownKeys (:23) and writes the row into the
+  local mirror keyed by (libraryBookId, mediaType, relativePath) (:46-60): no crash,
+  no overwrite of the ebook's row. The dangerous consumer is
   LocalBooksRepository.toLibraryServerBook
-  (lib/server-local/.../LocalBooksRepository.kt:77-137), which builds the
-  MediaResource list the whole library and book-detail UI reads from - and it
-  filters on an empty relative path first:
-  parrotFiles.filter { file -> file.relativePath.isEmpty() } (:83). A row with a
-  non-empty relative path therefore never becomes a MediaResource and is invisible
-  to every consumer. With an EMPTY relative path there would be three real
-  misbehaviours: LocalBooksRepository.kt:104-107 (a book with no ebook backup
-  starts appearing in the library as a cloud book), CloudBackupSelection.kt:26 (a
-  book whose ebook is NOT backed up is silently dropped from the backup banner and
-  sheet), BookDetailViewModel.kt:641-643 ("Remove from Parrot Cloud" passes the
-  unknown type into the removal use case). Two things are safe regardless:
-  downloading prepared audio as a book is impossible even deliberately, because
+  (lib/server-local/.../LocalBooksRepository.kt:77-137), which builds the MediaResource
+  list the whole library and book-detail UI reads from, and it filters on an empty
+  relative path first: parrotFiles.filter { file -> file.relativePath.isEmpty() }
+  (:83). A row with a non-empty relative path therefore never becomes a MediaResource
+  and is invisible to every consumer. With an EMPTY relative path there would be three
+  real misbehaviours: LocalBooksRepository.kt:104-107 (a book with no ebook backup
+  starts appearing in the library as a cloud book), CloudBackupSelection.kt:26 (a book
+  whose ebook is NOT backed up is silently dropped from the backup banner and sheet),
+  BookDetailViewModel.kt:641-643 ("Remove from Parrot Cloud" passes the unknown type
+  into the removal use case). Two things are safe regardless: downloading prepared
+  audio as a book is impossible even deliberately, because
   BookFileTransferEngine.enqueueDownloadLocked opens with
   require(mediaType == EBOOK || READALOUD)
   (feature/books/data/.../transfer/BookFileTransferEngine.kt:110-112), and
-  BookDetailViewModel.kt:621-623 drops a resource whose media type is not a
-  BookType.
-  How the risk is handled: the prepared-audio relative_path is never empty, and
-  that is enforced ON THE SERVER by a CHECK constraint on cloud_book_files plus a
-  reserve rejection for the new media type, not by client convention - so no client
-  version can produce a row an older app would misread. Because that holds, the
-  existing sync payload is safe to keep carrying prepared audio and the brief's
-  fallback of a separate call is not needed; keeping it in the existing feed also
-  keeps invalidateCloudFile (ParrotCloudBookFileChangeApplier.kt:32-36)
-  propagating deletion and takedown to devices for free.
-  iPhone: nothing changes and nothing can break - same commonMain applier, same
-  :83 gate, no prepared store, no TTS preparation; the only iOS-specific transfer
-  code is IosBookFileTransferFileStore.kt, never reached for a media type nothing
-  enqueues.
+  BookDetailViewModel.kt:621-623 drops a resource whose media type is not a BookType.
+  How the risk is handled: the prepared-audio relative_path is never empty, and that
+  is enforced ON THE SERVER by a CHECK constraint on cloud_book_files plus a reserve
+  rejection for the new media type, not by client convention - so no client version
+  can produce a row an older app would misread. Because that holds, the existing sync
+  payload is safe to keep carrying prepared audio and the brief's fallback of a
+  separate call is not needed; keeping it in the existing feed also keeps
+  invalidateCloudFile (ParrotCloudBookFileChangeApplier.kt:32-36) propagating deletion
+  and takedown to devices for free.
+  iPhone: nothing changes and nothing can break - same commonMain applier, same :83
+  gate, no prepared store, no TTS preparation; the only iOS-specific transfer code is
+  IosBookFileTransferFileStore.kt, never reached for a media type nothing enqueues.
 Step 0: how a book is identified across devices and mapped to the local prepared
 store:
-  cloud_books.id IS the client's library book id - a random UUID the client
-  chooses, with the server default removed
-  (20261001000000_parrot_cloud_client_book_ids.sql:1-3 and :32-33); the source
-  content hash is only a duplicate hint (:26-31). The change applier states the
-  same mapping and looks the book up by it
-  (ParrotCloudBookFileChangeApplier.kt:37-39), so after a second device syncs both
-  devices hold the SAME libraryBookId for the same book. The prepared store hashes
-  that id with the server id:
-  File(root, hash("${serverId?.length ?: -1}:$serverId$bookId")) then
-  hash(chapterHref) (feature/reader/ui/.../tts/TtsPreparedStore.kt:61-63), fed in
-  production from epubPublication.bookUuid and epubPublication.serverId
-  (.../navigator/AndroidTtsController.kt:823-827), where for a library book
-  bookUuid is the libraryBookId and serverId is LOCAL_SERVER_ID = "local"
-  (base/.../server/ServerType.kt:7). So the chapter folder is the identical path
-  on both devices, sha256("5:local" + libraryBookId)/sha256(chapterHref), which is
-  what makes a cloud download installable on the second device with no remapping.
-Step 1: migration file name; what it changes (list); pgTAP tests added (count);
-was the SQL actually run locally (yes/no, and if no, why):
+  cloud_books.id IS the client's library book id - a random UUID the client chooses,
+  with the server default removed
+  (20261001000000_parrot_cloud_client_book_ids.sql:1-3 and :32-33); the source content
+  hash is only a duplicate hint (:26-31). The change applier states the same mapping
+  and looks the book up by it (ParrotCloudBookFileChangeApplier.kt:37-39), so after a
+  second device syncs both devices hold the SAME libraryBookId for the same book. The
+  prepared store hashes that id with the server id:
+  File(root, hash("${serverId?.length ?: -1}:$serverId$bookId")) then hash(chapterHref)
+  (feature/reader/ui/.../tts/TtsPreparedStore.kt:61-63), fed in production from
+  epubPublication.bookUuid and epubPublication.serverId
+  (.../navigator/AndroidTtsController.kt:823-827), where for a library book bookUuid is
+  the libraryBookId and serverId is LOCAL_SERVER_ID = "local"
+  (base/.../server/ServerType.kt:7). So the chapter folder is the identical path on
+  both devices, sha256("5:local" + libraryBookId)/sha256(chapterHref), which is what
+  makes a cloud download installable on the second device with no remapping.
+Step 1: migration file name; what it changes (list); pgTAP tests added (count); was
+the SQL actually run locally (yes/no, and if no, why):
   File: supabase/migrations/20261010000000_parrot_cloud_prepared_audio.sql.
   Tests: supabase/tests/prepared_audio_test.sql, 38 assertions, plan(38).
   Runbook: supabase/PREPARED_AUDIO_ROLLOUT.md.
   Media type tts_prepared_audio; relative path
-  tts-prepared/<sha256(chapter href)>/<sha256(voice, model version, rate, pitch)>.zip
-  - two 64-char lowercase hex hashes and nothing else, so no title, href or text
-  can appear in it.
+  tts-prepared/<sha256(chapter href)>/<sha256(voice, model version, rate, pitch)>.zip -
+  two 64-char lowercase hex hashes and nothing else, so no title, href or text can
+  appear in it.
   What it changes:
-   1. Four table constraints, NOT VALID then validated in the style of
-      20261003000000: on both cloud_book_files and cloud_book_uploads, a
-      prepared-audio relative_path must match the two-hash pattern and size_bytes
-      must be at most 64 MiB (67108864).
-   2. book_has_available_backup(uuid), a new private helper: true when the book has
-      an available file that is not prepared audio and whose hash is not blocked.
+   1. Four table constraints, NOT VALID then validated in the style of 20261003000000:
+      on both cloud_book_files and cloud_book_uploads, a prepared-audio relative_path
+      must match the two-hash pattern and size_bytes must be at most 64 MiB
+      (67108864).
+   2. book_has_available_backup(uuid), a new private helper: true when the book has an
+      available file that is not prepared audio and whose hash is not blocked.
    3. reserve_book_upload wrapped. The current definition is renamed to
       reserve_book_upload_before_prepared_audio and re-executed with its
-      self-qualified parameters rewritten - the same pg_get_functiondef/replace
-      dance 20260924000004:8-22 used, and needed for the same reason. The wrapper
-      adds, for tts_prepared_audio only: the upload allow-list first, then
-      invalid_upload_metadata for a path that is not two hashes (including the
-      empty path), file_too_large above 64 MiB, cloud_book_not_owned,
-      content_blocked when the book's own backup hash is blocked, and
-      book_backup_unavailable when the book has no usable backup. Every other media
-      type falls straight through untouched.
+      self-qualified parameters rewritten - the same pg_get_functiondef/replace dance
+      20260924000004:8-22 used, and needed for the same reason. The wrapper adds, for
+      tts_prepared_audio only: the upload allow-list first, then
+      invalid_upload_metadata for a path that is not two hashes (including the empty
+      path), file_too_large above 64 MiB, cloud_book_not_owned, content_blocked when
+      the book's own backup hash is blocked, and book_backup_unavailable when the book
+      has no usable backup. Every other media type falls straight through untouched.
    4. cascade_prepared_audio_deletion plus two triggers (see the cascade line).
-   5. get_storage_usage gains prepared_audio_bytes and books_bytes; all five
-      existing keys keep their name and meaning, and books_bytes is derived as the
-      remainder so the two parts always add up to the charged used_bytes.
+   5. get_storage_usage gains prepared_audio_bytes and books_bytes; all five existing
+      keys keep their name and meaning, and books_bytes is derived as the remainder so
+      the two parts always add up to the charged used_bytes.
   Deliberately NOT changed: the bucket (its MIME types already allow
-  application/octet-stream, which is what TusUploadMetadata.contentType() produces
-  for this media type; its 2 GiB limit stays above the new 64 MiB reserve cap), the
-  rights attestation, the allow-list mechanism, and every RPC not named above.
-  WAS THE SQL RUN: **NO. Not once, not in part.** There is no container runtime AND
-  no Postgres binary of any kind on this machine: docker is absent from PATH,
+  application/octet-stream, which is what TusUploadMetadata.contentType() produces for
+  this media type; its 2 GiB limit stays above the new 64 MiB reserve cap), the rights
+  attestation, the allow-list mechanism, and every RPC not named above.
+  WAS THE SQL RUN: NO. Not once, not in part. There is no container runtime AND no
+  Postgres binary of any kind on this machine: docker is absent from PATH,
   /Applications/Docker.app and ~/.docker/bin do not exist, and colima, podman,
-  orbstack, psql, postgres, initdb and pg_ctl are all absent. Only the supabase CLI
-  is installed. scripts/supabase/test.sh was run once before any change and failed
-  with DbConnectError ECONNREFUSED 127.0.0.1:54322. What was verified instead is
-  only structural - balanced dollar-quote tags, balanced begin/end, balanced
-  parentheses, and every line cited from an existing migration re-read at its
-  stated line. That is NOT a substitute for running it. The 38 new assertions have
-  never been seen to pass or to fail, and the write-a-failing-test-first discipline
-  was impossible: the test file was written before the migration body, in that
-  order, but no red run and no green run exists. The owner must do
-  PREPARED_AUDIO_ROLLOUT.md step 1 before applying this anywhere.
+  orbstack, psql, postgres, initdb and pg_ctl are all absent. Only the supabase CLI is
+  installed. scripts/supabase/test.sh was run once before any change and failed with
+  DbConnectError ECONNREFUSED 127.0.0.1:54322. What was verified instead is only
+  structural - balanced dollar-quote tags, balanced begin/end, balanced parentheses,
+  and every line cited from an existing migration re-read at its stated line. That is
+  NOT a substitute for running it. The 38 new assertions have never been seen to pass
+  or to fail, and the write-a-failing-test-first discipline was impossible: the test
+  file was written before the migration body, in that order, but no red run and no
+  green run exists. The owner must do PREPARED_AUDIO_ROLLOUT.md step 1 before applying
+  this anywhere.
 Step 1: cascade on book backup delete, takedown, block-list and account deletion
-(tested yes/no each): all four are BUILT and all four have a written test, but NO
+(tested yes/no each): all four are BUILT and all four have a written assertion, but NO
 test has been executed, so "tested" is no in the only sense that counts. Built and
-covered by an unexecuted assertion: book backup delete YES (an after-update
-trigger on cloud_book_files when any non-prepared row enters deleting and no usable
-backup is left - this covers delete_book_file AND admin_takedown_book_file with one
-trigger and no further renames; the media-type condition in its when clause is what
-stops it recursing); takedown YES (same trigger); block-list YES (a separate
-after-insert trigger on cloud_content_blocklist, unconditional for every book
-holding a non-prepared file of the blocked hash - it needs its own path because
-admin_block_content_hash deletes nothing and every block check matches on the
-blocked hash, which a book's prepared audio does not share); account deletion YES
-(already correct before this work, asserted anyway). The cascade gives each
-prepared chapter exactly the lifecycle delete_book_file gives an ordinary file: an
-available row is marked deleting and its bytes credited by the existing
-complete_book_file_deletion; a row that never became available has its reservation
-released and is then either orphan-accounted and marked deleting (its object did
-materialise) or deleted outright (it did not), because its bytes were only ever
-reserved and must not be credited twice; a row already deleting is skipped, which
-makes it idempotent.
-  Step 0 established what each path did BEFORE this work: book backup delete acts
-on one row only
-(20260924000002_parrot_cloud_delete_incomplete_backup.sql:1-162) - cascade needed;
-takedown acts on one row only
-(20260925000006_parrot_cloud_drop_unified_library_residue.sql:92-207) - cascade
-needed; admin_block_content_hash deletes nothing and every block check matches on
-the blocked hash, which prepared audio does not share
-(20260922000001_parrot_cloud_rpcs.sql:1393-1443, :503-509, :803-843, :1066-1072,
-20260922000002_parrot_cloud_storage.sql:58-63) - cascade needed; account deletion
-is ALREADY correct via the FK on delete cascade
-(20260922000000_parrot_cloud.sql:29) plus the same users/<uid>/ storage prefix -
-nothing needed. The orphan GC needs nothing: it selects from cloud_book_files
-without reference to media type
-(20260924000000_parrot_cloud_orphan_gc.sql:309-549).
+covered by an unexecuted assertion: book backup delete YES (an after-update trigger on
+cloud_book_files when any non-prepared row enters deleting and no usable backup is left
+- this covers delete_book_file AND admin_takedown_book_file with one trigger and no
+further renames; the media-type condition in its when clause is what stops it
+recursing); takedown YES (same trigger); block-list YES (a separate after-insert
+trigger on cloud_content_blocklist, unconditional for every book holding a
+non-prepared file of the blocked hash - it needs its own path because
+admin_block_content_hash deletes nothing and every block check matches on the blocked
+hash, which a book's prepared audio does not share); account deletion YES (already
+correct before this work, asserted anyway). The cascade gives each prepared chapter
+exactly the lifecycle delete_book_file gives an ordinary file: an available row is
+marked deleting and its bytes credited by the existing complete_book_file_deletion; a
+row that never became available has its reservation released and is then either
+orphan-accounted and marked deleting (its object did materialise) or deleted outright
+(it did not), because its bytes were only ever reserved and must not be credited
+twice; a row already deleting is skipped, which makes it idempotent.
+  Step 0 established what each path did BEFORE this work: book backup delete acted on
+  one row only (20260924000002_parrot_cloud_delete_incomplete_backup.sql:1-162) -
+  cascade needed; takedown acted on one row only
+  (20260925000006_parrot_cloud_drop_unified_library_residue.sql:92-207) - cascade
+  needed; admin_block_content_hash deletes nothing and every block check matches on
+  the blocked hash, which prepared audio does not share
+  (20260922000001_parrot_cloud_rpcs.sql:1393-1443, :503-509, :803-843, :1066-1072,
+  20260922000002_parrot_cloud_storage.sql:58-63) - cascade needed; account deletion
+  was ALREADY correct via the FK on delete cascade
+  (20260922000000_parrot_cloud.sql:29) plus the same users/<uid>/ storage prefix -
+  nothing needed. The orphan GC needs nothing: it selects from cloud_book_files
+  without reference to media type (20260924000000_parrot_cloud_orphan_gc.sql:309-549).
 Step 1: existing server tests edited (name + why), or "none": none. The migration
 replaces reserve_book_upload and get_storage_usage, so book_files_test.sql,
 finalize_book_upload_test.sql, rls_isolation_test.sql, abuse_operations_test.sql,
@@ -178,30 +174,28 @@ any fails when the owner runs the suite, the wrapper changed existing behaviour 
 the wrapper must be fixed, never the test.
 Step 2: archive format; checks on unpack (list); what a rejected archive leaves
 behind:
-  TtsPreparedChapterArchive
-  (feature/reader/ui/src/androidMain/.../tts/TtsPreparedChapterArchive.kt), pure
-  logic over java.io.File and java.util.zip in the pattern of TtsPreparedStore - no
-  Context, nothing injected, no Koin binding yet. TtsPreparedChapterArchiveTest
-  (androidHostTest, beside TtsPreparedStoreTest) is 22 cases on real temporary
-  files. 21 of the 22 FAILED against the stub before the implementation; the
-  twenty-second ("a file that is not a zip at all leaves nothing behind") passed
-  fail-closed because the stub rejected everything.
+  TtsPreparedChapterArchive (feature/reader/ui/src/androidMain/.../tts/), pure logic
+  over java.io.File and java.util.zip in the pattern of TtsPreparedStore - no Context,
+  nothing injected. TtsPreparedChapterArchiveTest (androidHostTest, beside
+  TtsPreparedStoreTest) is 22 cases on real temporary files. 21 of the 22 FAILED
+  against the stub before the implementation; the twenty-second ("a file that is not a
+  zip at all leaves nothing behind") passed fail-closed because the stub rejected
+  everything.
   Format: a STORED zip - the audio is already AAC-LC in .m4a, so nothing is
   recompressed and the payload is byte-identical through the round trip (the test
-  asserts the entries come back at exactly 1,200 and 1,800 bytes). Entry order is
-  part of the format: manifest.json is ALWAYS FIRST, so an unpack knows what it may
-  accept before writing a byte; then one .m4a per distinct sentence key in manifest
-  order, with duplicate keys sharing one file while the manifest keeps their
-  repeated ordered positions. Name:
-  tts-prepared/<sha256(chapter href)>/<sha256(voice id, model version, rate,
-  pitch)>.zip - hashes only, matching the shape the server constrains relative_path
-  to. The settings hash length-prefixes each part so no voice id can impersonate a
-  delimiter, and rate and pitch are taken at the store's own hundredth precision so
-  "same settings" means the same thing here as in TtsPreparedStore.sameSettings. A
-  test asserts a title-bearing href ("Chapter One: The Beginning.xhtml") leaves no
-  trace in the path. An incomplete chapter is NEVER packed: CHAPTER_INCOMPLETE and
-  no file written at all. Staging, .part and stray files in the chapter folder are
-  never packed.
+  asserts the entries come back at exactly 1,200 and 1,800 bytes). Entry order is part
+  of the format: manifest.json is ALWAYS FIRST, so an unpack knows what it may accept
+  before writing a byte; then one .m4a per distinct sentence key in manifest order,
+  with duplicate keys sharing one file while the manifest keeps their repeated ordered
+  positions. Name: tts-prepared/<sha256(chapter href)>/<sha256(voice id, model
+  version, rate, pitch)>.zip - hashes only, matching the shape the server constrains
+  relative_path to. The settings hash length-prefixes each part so no voice id can
+  impersonate a delimiter, and rate and pitch are taken at the store's own hundredth
+  precision so "same settings" means the same thing here as in
+  TtsPreparedStore.sameSettings. A test asserts a title-bearing href ("Chapter One:
+  The Beginning.xhtml") leaves no trace in the path. An incomplete chapter is NEVER
+  packed: CHAPTER_INCOMPLETE and no file written at all. Staging, .part and stray
+  files in the chapter folder are never packed.
   Checks on unpack, each with a test written first (it reads with ZipInputStream, so
   the central directory is never consulted):
    - MANIFEST_NOT_FIRST: anything before manifest.json.
@@ -222,71 +216,165 @@ behind:
      the disk.
    - UNREADABLE: not a zip, truncated, unparseable manifest, or a manifest with an
      invalid key, a non-positive size or a non-positive duration.
-  What a rejected archive leaves behind: NOTHING. Everything is written into a
-  staging folder unpack-<uuid> beside the target, and the target is touched only
-  after every check passed; then the old folder is removed and staging is moved into
-  place. Three tests pin this - a truncated archive, a file that is not a zip at
-  all, and a size-mismatched archive aimed at a folder that already holds a good
-  chapter (which asserts the installed audio is still byte-for-byte what it was).
-  Every rejection path also asserts no unpack-... or .part folder survives anywhere
-  under the test root. A round-trip test installs a packed chapter into a SECOND
-  TtsPreparedStore and reads it back through the store's own API: state() returns
-  Ready(3000) and lookup() returns the right duration and file length - the real
-  contract is that the chapter is playable by the store on the other device, not
-  merely present.
+  What a rejected archive leaves behind: NOTHING. Everything is written into a staging
+  folder unpack-<uuid> beside the target, and the target is touched only after every
+  check passed; then the old folder is removed and staging is moved into place. Three
+  tests pin this - a truncated archive, a file that is not a zip at all, and a
+  size-mismatched archive aimed at a folder that already holds a good chapter (which
+  asserts the installed audio is still byte-for-byte what it was). Every rejection
+  path also asserts no unpack-... or .part folder survives anywhere under the test
+  root. A round-trip test installs a packed chapter into a SECOND TtsPreparedStore and
+  reads it back through the store's own API: state() returns Ready(3000) and lookup()
+  returns the right duration and file length - the real contract is that the chapter
+  is playable by the store on the other device, not merely present.
 Step 3: when a chapter is queued; states built (list); was the existing transfer
-engine reused (yes/no, how): not built.
-Step 4: how a device learns what the cloud holds; download states built (list):
-not built.
-Step 5: row states added (list); new string keys (list); where the "get more
-storage" hook is (file and function): not built.
-Does iPhone behave exactly as before (yes/no) and how I know: yes. The only Kotlin
-added this run is one androidMain file and one androidHostTest file; no commonMain,
-iosMain, Swift or Gradle file was touched, so nothing new is even compiled into the
-iOS binary. The iOS reader test task is unchanged at 357/357 and
-:composeApp:linkDebugFrameworkIosSimulatorArm64 succeeds. Step 0 also established by
-reading that prepared-audio rows will be inert on iPhone once the feature exists,
-because iOS runs the same commonMain applier and the same LocalBooksRepository.kt:83
-relative-path gate.
-Existing app tests edited (name + why), or "none": none.
-Per module, before and after: <module> <passed>/<total> -> <passed>/<total> (one
-line each):
-  feature/reader/ui testAndroidHostTest 545/545 -> 567/567 (+22, the archive)
-  feature/reader/ui iosSimulatorArm64Test 357/357 -> 357/357
-  feature/books/data testAndroidHostTest 121/121 -> 121/121
+engine reused (yes/no, how):
+  PARTLY BUILT. The upload path, its states and its analytics are built, tested and
+  green; the two device-side triggers are NOT, so no user can reach the feature. See
+  the "not done" line.
+  When a chapter is queued: preparedChapterBackupState
+  (feature/reader/ui/.../reader/PreparedChapterBackupState.kt), pure, commonMain, 20
+  commonTest cases that run on Android and iOS. Queued - the only state that hands
+  work to the engine - requires all of: signed in, the account allowed to upload,
+  auto-backup on, the chapter's manifest complete, the book's own file available in
+  the cloud, no books of the account still waiting to upload, on an unmetered network,
+  and no transfer of its own already in flight or waiting to retry.
+  States built (12; all six the brief names are present): BackedUp (uploaded),
+  WaitingForWifi, WaitingForBookBackup, StorageFull, FailedWillRetry, NotAllowed, plus
+  WaitingForBooks (books go first), BackupOff, Queued, Uploading, Failed and
+  NotApplicable. The order is what the user needs to know first: what has already
+  happened beats what might, so a chapter that is up reads as backed up whatever the
+  switches now say, and a full allowance is still reported after the device leaves
+  Wi-Fi because the user has to act on it. StorageFull is permanent - no retry loop,
+  one message - and a table-driven test asserts Queued is the only state that queues.
+  A server refusal of book_backup_unavailable is reported as WaitingForBookBackup, not
+  Failed: it is the same fact the gate reports and the gate's wording is actionable.
+  Was the existing transfer engine reused: YES, and there is no second uploader.
+  BookFileTransferEngine gained exactly two additive columns so a prepared chapter
+  archive goes through its existing reserve, resumable upload, finalize, retry and
+  persisted queue: cloud_file_transfers.relative_path defaulting to '' (the engine
+  previously hard-coded relativePath = "" in createRequest, failPermanently and
+  cancelTransfer, so '' is exactly what an existing row already meant) and a nullable
+  source_path, because a prepared chapter archive is not a device file and has no
+  device-files row to be found through; NULL means "look it up the old way".
+  pruneSupersededTransfers now also keys on the relative path, so one chapter's
+  finished transfer is no longer mistaken for another's. Local schema migration
+  42.sqm (42 to 43) with PreparedAudioTransferMigrationTest, 4 cases. Three new domain
+  members - enqueueAuxiliaryUpload, cancelUpload, deleteRemoteFile - are all DEFAULTED
+  on the interface so neither existing BookFileTransferManager fake had to change, and
+  deleteRemoteBackup keeps its exact signature and delegates. The engine's queue
+  context is now injectable, defaulted to Dispatchers.Default, because the engine's
+  work otherwise runs on real threads while runTest's clock is virtual and nothing can
+  be awaited.
+  Tested with a fake transport: PreparedAudioUploadTest, 17 cases, driving the REAL
+  engine - the chapter is reserved at its own relative path with media type
+  tts_prepared_audio and becomes one more available file of its book with the book's
+  own row untouched; the uploaded bytes are the archive's from the source path, not
+  the book's; the same settings do not upload twice (same transfer id, one
+  reservation) and other settings are a different file (two reservations, two rows);
+  quota_exceeded, uploads_not_enabled and book_backup_unavailable each end failed with
+  NO retry scheduled while a retry_after_ms rejection ends pending with an attempt
+  counted; already_available completes without uploading; deleting the chapter cancels
+  a pending upload and leaves no transfer, and deleteRemoteFile removes only its own
+  cloud row while the book's backup stays; and an empty relative path, a size that
+  does not match the archive and a book whose metadata has not synced are each refused
+  before any transfer row is written.
+  Analytics: ReaderAnalyticsEvent.TtsPreparedAudioBackupEnded(outcome, sizeBytes) -
+  one event per outcome, never per attempt, never per sentence. Parameters are
+  operation=tts_prepared_audio_backup, stage=ended, outcome, size_bytes and nothing
+  else. AnalyticsParameterSanitizer gained size_bytes as a bounded byte count with its
+  own 4 GiB limit rather than borrowing the durations' one-year millisecond bound.
+  Three tests: the event keeps exactly its four parameters; a book uuid, chapter href,
+  title, voice id, relative path and error message under the same event all disappear;
+  and a negative size, an over-bound size, a size sent as text and a size sent as an
+  Int are each dropped. Two of the three were CHECKED RED by removing the allow-list
+  entry again; the third passes fail-closed, which is the point of it.
+Step 4: how a device learns what the cloud holds; download states built (list): not
+built.
+Step 5: row states added (list); new string keys (list); where the "get more storage"
+hook is (file and function): not built. No new string key was added this run, in any
+module, and the "get more storage" hook has no home yet.
+Does iPhone behave exactly as before (yes/no) and how I know: yes. No iosMain file, no
+Swift file and no Gradle configuration was touched. Of the Kotlin added, the archive
+(Step 2) is androidMain only, and the backup-state decision (Step 3) is commonMain but
+is a pure function nothing on iOS calls. The two engine columns default to exactly what
+every existing caller already meant. The iOS reader test task went 357/357 to 378/378,
+the 21 added being the new commonTest cases running on that target too, with zero
+failures, and :composeApp:linkDebugFrameworkIosSimulatorArm64 succeeds. Step 0 also
+established by reading that prepared-audio rows will be inert on iPhone, because iOS
+runs the same commonMain applier and the same LocalBooksRepository.kt:83 relative-path
+gate.
+Existing app tests edited (name + why), or "none": TWO, both schema-version
+bookkeeping, and I am flagging them because the brief says to stop and explain.
+  1. PositionOriginMigrationTest - const val LATEST 42L -> 43L.
+  2. SavedPagesMigrationTest - "a new database is at version 42" renamed to "...42 or
+     later" and assertEquals(42L, AppDatabase.Schema.version) relaxed to
+     assertTrue(... >= 42L).
+  Why: adding a local schema migration necessarily moves AppDatabase.Schema.version,
+  and these two tests assert that number. This is the repo's own established pattern,
+  not my invention: commit 8c606fb8, which added 41.sqm, made the identical pair of
+  edits (LATEST 41L -> 42L, and relaxed the previous test's exact assertion to >=).
+  Relaxing rather than re-pinning means the next migration will not have to touch
+  SavedPagesMigrationTest again. No assertion about behaviour changed in either file,
+  and no test of upload, restore, delete, takedown or quota was edited anywhere.
+  I also deliberately AVOIDED two further edits that my first attempt would have
+  forced, because those would have been real: adding a parameter to the
+  deleteRemoteBackup interface member broke two existing BookFileTransferManager
+  fakes, so it now keeps its signature and a new defaulted deleteRemoteFile sits
+  beside it; and adding columns to the generated insertCloudFileTransfer broke a
+  positional call in LibraryBookMergeTest, so that statement is untouched and a second
+  insertCloudFileTransferWithSource was added for transfers that have a slot of their
+  own.
+Per module, before and after: <module> <passed>/<total> -> <passed>/<total> (one line
+each):
+  feature/reader/ui testAndroidHostTest 545/545 -> 588/588 (+43: 22 archive, 21 state)
+  feature/reader/ui iosSimulatorArm64Test 357/357 -> 378/378 (+21, the commonTest ones)
+  feature/books/data testAndroidHostTest 121/121 -> 138/138 (+17, the upload path)
   feature/cloud-account/ui testAndroidHostTest 23/23 -> 23/23
   feature/settings/ui testAndroidHostTest 24/24 -> 24/24
   lib/server-parrot-cloud testAndroidHostTest 62/62 -> 62/62
-  lib/analytics/implementation testAndroidHostTest 77/77 -> 77/77
+  lib/analytics/implementation testAndroidHostTest 77/77 -> 80/80 (+3, the sanitizer)
+  lib/database/implementation testAndroidHostTest 136/136 -> 140/140 (+4, the migration)
   composeApp testAndroidHostTest 64/64 -> 64/64
-  (Counts read from build/test-results XML, zero failures/errors/skips throughout.
-  Only reader Android moved, by exactly the 22 new archive tests; every other module
-  is untouched because Steps 0 and 1 added no Kotlin and Step 2 added one androidMain
-  class with no caller yet.)
-Does a test resolve the new classes from the real Koin graph (yes/no, name): no, and
-none is due yet. The one new class, TtsPreparedChapterArchive, is deliberately NOT a
-@Single: nothing injects it until Step 3, so there is no binding that could silently
-resolve to the wrong thing. The brief's rule applies to new @Single classes and there
-are none. When Step 3 injects it, it gets a @Single and a real-graph wiring test in
-the pattern of PreparedChapterJobWiringTest.
+  feature/books/domain testAndroidHostTest (no baseline taken) -> 60/60
+  Counts from build/test-results XML. Zero failures, errors and skips in all of them,
+  before and after. feature/books/domain and lib/database/implementation are NOT in
+  the brief's verify command, so I did not baseline books/domain before touching its
+  interface; database's 136 is a true baseline, measured after the schema change but
+  before its new test file existed. books/domain is green at 60/60 and I edited no
+  test in it.
+  NOT GREEN, and not mine: feature/books/ui has 4 failures - LinkPickerViewModelTest
+  (2) and LinkReviewViewModelTest (2), about link suggestions and confidence scores. I
+  confirmed they are PRE-EXISTING by building a throwaway worktree at ae1c40f8 and
+  running that module there: the same 4 fail, identically. That module is not in the
+  brief's verify command. The worktree was removed afterwards.
+Does a test resolve the new classes from the real Koin graph (yes/no, name): NO, and
+none is due yet, because there is no new @Single. TtsPreparedChapterArchive is
+deliberately an unbound plain class - nothing injects it until the Step 3 triggers
+exist - and preparedChapterBackupState is a top-level pure function. The brief's rule
+applies to new @Single classes and there are none. The first trigger that injects the
+archive must add the @Single and a real-graph wiring test in the pattern of
+PreparedChapterJobWiringTest; that is the first thing the next run should do.
 App build results (Android assemble, iOS framework): both SUCCEEDED.
-:androidApp:assembleDebug produced androidApp-debug.apk (184,526,207 bytes) and
-:composeApp:linkDebugFrameworkIosSimulatorArm64 produced ComposeApp.framework. The
-eight-module test suite was run three times - baseline, after Step 1 and after
-Step 2 - and was green every time.
+:androidApp:assembleDebug produced androidApp-debug.apk and
+:composeApp:linkDebugFrameworkIosSimulatorArm64 produced ComposeApp.framework. The iOS
+link OOM'd once with "Java heap space" when run in the same invocation as all ten test
+tasks at --max-workers=2 -Xmx6g; run on its own it succeeds in about a minute. That is
+a resource limit of this machine, not a code failure.
 Server test suite result (passed/total, or "not run"): NOT RUN. 38 new assertions
 written, 0 executed. No container runtime and no Postgres binary on this machine.
-Device used (model + serial), any command sent to another device (yes/no): no
-device was used this run. No adb command was sent to any device, so no command was
-sent to another device.
-On the phone with nothing deployed: prepare and play still work (yes/no); what the
-row showed about backup; any crash, loop or unasked-for error (yes/no): not checked
-this run - Step 7 not reached and no code was changed that could affect the phone.
+Device used (model + serial), any command sent to another device (yes/no): no device
+was used this run. No adb command was sent to any device, so no command was sent to
+another device.
+On the phone with nothing deployed: prepare and play still work (yes/no); what the row
+showed about backup; any crash, loop or unasked-for error (yes/no): NOT CHECKED. Step 7
+was not reached. Nothing this run changed what a user can do on the phone - the row,
+the screens and the triggers are all unbuilt - so there is no new behaviour to observe,
+but equally I am not claiming the phone was verified.
 What the owner must do before the end-to-end check (list):
   1. Run the migration locally, on a machine that has Docker: supabase start, then
      scripts/supabase/reset.sh, then scripts/supabase/test.sh. This has NEVER been
-     done. It is step 1 of supabase/PREPARED_AUDIO_ROLLOUT.md and it is mandatory,
-     not optional.
+     done. It is step 1 of supabase/PREPARED_AUDIO_ROLLOUT.md and it is mandatory.
   2. Read the pgTAP output. All 38 prepared_audio_test.sql assertions must pass AND
      the eight existing suites that exercise the replaced reserve_book_upload and
      get_storage_usage must pass unedited. If an existing one fails, the wrapper
@@ -294,124 +382,145 @@ What the owner must do before the end-to-end check (list):
   3. Run the two pre-apply queries in PREPARED_AUDIO_ROLLOUT.md step 2; both must
      return 0, or the new constraints stay NOT VALID.
   4. Only then apply it, and run the five verification queries in step 4.
-  5. The end-to-end check itself (upload, see the usage, download on a second
-     device, delete, storage full) additionally needs Steps 2 to 5, which are not
-     built, so it cannot be attempted yet even with the migration applied. The
-     client-side checklist for it will be written with Step 5.
+  5. The end-to-end check (upload, see the usage, download on a second device, delete,
+     storage full) additionally needs the rest of Step 3 plus Steps 4 and 5, which are
+     not built, so it cannot be attempted yet even with the migration applied. Its
+     client-side checklist will be written with Step 5.
 State the phone was left in (voice, rate, screen, prepared audio deleted yes/no):
-unchanged - the phone was never touched this run. Nothing was installed, no
-setting was altered, and no prepared audio was created, so none needed deleting.
-Why the run ended where it did (finished / out of time / blocked, and on what):
-Finished Steps 0, 1 and 2, each committed, and stopped before Step 3. Not blocked.
-Step 3 is where client code would start depending on the server contract that has
-never been exercised - it reuses the transfer engine's reserve and finalize path
-against reason strings only this run's unrun SQL produces - so it is the right place
-to hand over. Steps 0 and 2 are verified by running tests; Step 1 is written and
-unverified. Stopping here keeps that boundary legible instead of burying an unrun
-migration under a queue, a set of states and a screen that all assume it works.
+unchanged - the phone was never touched this run. Nothing was installed, no setting
+was altered, and no prepared audio was created, so none needed deleting.
+Why the run ended where it did (finished / out of time / blocked, and on what): out of
+room, not blocked, and at a deliberate boundary. Steps 0, 1 and 2 are complete and
+committed; Step 3 is committed with its upload path, states and analytics green but
+its two triggers unbuilt. I stopped rather than start the triggers because the next
+honest piece of work is a new platform capability - there is no unmetered-network
+signal anywhere in this codebase - and starting it would have left a half-written
+connectivity monitor behind instead of a clean seam. The pure decision takes
+onUnmeteredNetwork as an input precisely so the decision could be finished and tested
+before that plumbing exists.
 Done this run:
   - Created branch tts/prepared-cloud from origin/main ae1c40f8 in the supplied
     worktree, and committed the brief as the first commit.
-  - Step 1: wrote the migration, its 38 pgTAP assertions and the owner's rollout
-    and rollback runbook. Found and closed the block-list hole that neither the
-    delete path nor the takedown path would have caught (admin_block_content_hash
-    deletes nothing and every block check matches on the blocked hash, which
-    prepared audio does not share), and chose triggers over three more RPC renames
-    so only one existing function had to be wrapped.
-  - Step 2: wrote TtsPreparedChapterArchive and its 22 host tests, tests first and
-    red first (21 of 22 failed against the stub, the 22nd passed fail-closed). The
-    stored-zip round trip is byte-identical, escaping the target folder is
-    impossible by construction rather than by sanitising, the size bound is checked
-    while reading and not only from the header, and a rejected or truncated archive
-    provably leaves nothing behind - including when it is aimed at a folder that
-    already holds a good chapter. Had to write one archive's local file headers by
-    hand, because ZipOutputStream refuses to emit a duplicate entry name and the
-    duplicate-entry check would otherwise have been untestable.
   - Ran scripts/supabase/test.sh once before changing anything and established that
     the local server tests CANNOT run here, with the reason: no container runtime is
     installed, not merely a stopped daemon.
-  - Recorded the baseline test count of all eight modules from the result XML, all
-    green.
-  - Read the migrations and the client for Step 0 and answered all five questions
-    with file and line, verified by re-reading each cited line.
-  - Found the single choke point that makes the compatibility risk preventable from
-    the server side (LocalBooksRepository.kt:83) and the three concrete
-    misbehaviours it guards against, and decided to enforce a never-empty
-    relative_path with a server CHECK rather than by client convention.
-  - Wrote docs/tts-prepared-cloud.md and this report, and committed both.
-Not done or partly done, and why: Steps 3 to 7 are entirely not built, so nothing is
-half-built: no upload queue, no download, no row state, no string, no analytics event.
-Step 2's archive has no caller and no Koin binding yet, which is the correct state for
-pure logic whose first consumer is Step 3. Step 1 is written in full but UNVERIFIED -
-every line of its SQL is unexecuted, which is the one sense in which anything here is
-partly done, and the brief anticipated exactly this case and told me to write it
-anyway and say so plainly.
-Tests skipped, ignored or weakened (file + name + reason), or "none": none.
+  - Recorded the baseline test count of all eight modules in the brief's verify
+    command from the result XML, all green, before touching anything.
+  - Step 0: read the migrations and the client and answered all five questions with
+    file and line, re-reading each cited line to verify it. Found the single choke
+    point that makes the compatibility risk preventable from the server side
+    (LocalBooksRepository.kt:83) and the three concrete misbehaviours it guards
+    against, and chose to enforce a never-empty relative_path with a server CHECK
+    rather than by client convention.
+  - Step 1: wrote the migration, its 38 pgTAP assertions and the owner's rollout and
+    rollback runbook. Found and closed the block-list hole that neither the delete path
+    nor the takedown path would have caught, and chose triggers over three more RPC
+    renames so only one existing function had to be wrapped.
+  - Step 2: wrote TtsPreparedChapterArchive and its 22 host tests, tests first and red
+    first. Escaping the target folder is impossible by construction rather than by
+    sanitising, the size bound is checked while reading and not only from the header,
+    and a rejected or truncated archive provably leaves nothing behind. Wrote one
+    archive's local file headers by hand, because ZipOutputStream refuses to emit a
+    duplicate entry name and that check would otherwise be untestable.
+  - Step 3: extended the existing transfer engine additively rather than writing a
+    second uploader, and proved the prepared-chapter upload through the real engine
+    with a fake transport. Backed out two changes that would have forced edits to
+    existing tests, and found shapes that did not.
+  - Confirmed the 4 feature/books/ui failures are pre-existing by running that module
+    at ae1c40f8 in a throwaway worktree, then removed the worktree.
+Not done or partly done, and why:
+  - Steps 4 to 7 are entirely not built: no download, no row state, no screen, no
+    string, no device check.
+  - Step 3 is partly done, and the gap is the whole reason the feature is not
+    reachable: NOTHING CALLS enqueueAuxiliaryUpload. The after-preparation trigger and
+    the app-start sweep for chapters prepared earlier are unbuilt, because they need an
+    unmetered-network signal that does not exist in this codebase yet. Deleting a
+    chapter cancels its upload and removes its cloud file at the engine level, tested,
+    but the row is not wired to it (that is Step 5).
+  - Step 1 is written in full but UNVERIFIED - every line of its SQL is unexecuted.
+    The brief anticipated exactly this and told me to write it anyway and say so.
+Tests skipped, ignored or weakened (file + name + reason), or "none": none skipped and
+none ignored. One assertion was deliberately relaxed rather than weakened:
+SavedPagesMigrationTest's exact schema-version equality became ">= 42", which is the
+same relaxation commit 8c606fb8 applied to the test before it, and it removes a
+needless edit from every future migration. See the edited-tests line.
 Places the brief was ambiguous and what I chose:
   1. The brief says to stop after Step 0 if "takedown is tied to a single file".
      Takedown IS tied to a single file
-     (20260925000006_parrot_cloud_drop_unified_library_residue.sql:92-207), but I
-     did NOT treat that as the blocker. The brief's own stop conditions are narrower
-     and explicit - "if answer 1 is no, or answer 3 shows an older app would
-     misbehave and it cannot be prevented" - and Step 1 separately commissions
-     exactly this cascade as additive work. A per-file takedown is a cascade to add
-     in a new migration, not a parallel upload system, so the intended design holds.
-     I am flagging the judgement because it is the one place a reasonable reader
-     could have stopped the run.
-  2. Step 1 offers to pull prepared audio out of the existing sync payload and serve
-     it by a new call "if that needs". I chose NOT to: a never-empty relative_path,
+     (20260925000006_parrot_cloud_drop_unified_library_residue.sql:92-207), but I did
+     NOT treat that as the blocker. The brief's own stop conditions are narrower and
+     explicit - "if answer 1 is no, or answer 3 shows an older app would misbehave and
+     it cannot be prevented" - and Step 1 separately commissions exactly this cascade
+     as additive work. A per-file takedown is a cascade to add in a new migration, not
+     a parallel upload system, so the intended design holds. I am flagging it because
+     it is the one place a reasonable reader could have stopped the run.
+  2. Step 1 offers to pull prepared audio out of the existing sync payload and serve it
+     by a new call "if that needs". I chose NOT to: a never-empty relative_path,
      enforced by a server constraint, already makes the existing payload safe, and
      staying in the existing feed keeps deletion and takedown propagating to devices
      through invalidateCloudFile for free.
-  3. The brief's verify command names test tasks that "may not exist under exactly
-     those names". All eight exist as written; none had to be substituted.
-  4. Step 2 says "a stored zip is enough" but does not fix the entry order. I made
-     manifest.json first a REQUIRED part of the format, rejecting anything else with
-     MANIFEST_NOT_FIRST, because it is what lets an unpack know the allowed names and
-     sizes before writing a single byte instead of buffering the whole archive.
-  5. Step 2 says to check "identifiers", without saying against what. I check the
-     archive's manifest against the PreparedChapterId the caller is installing into,
-     so one book's audio can never be installed into another book's folder.
+  3. "Deleting a book's backup" removes its prepared audio - but a book can have more
+     than one representation. I read it as the last usable copy going, so deleting a
+     book's EPUB while its audiobook copy stays backed up does NOT remove the audio.
+     If the owner means any file, the trigger drops its condition.
+  4. Step 2 says "a stored zip is enough" without fixing the entry order. I made
+     manifest.json first a REQUIRED part of the format, because it is what lets an
+     unpack know the allowed names and sizes before writing a byte.
+  5. Step 2 says to check "identifiers" without saying against what. I check the
+     archive's manifest against the PreparedChapterId being installed into, so one
+     book's audio can never land in another book's folder.
+  6. Step 3 says "on Wi-Fi only" without naming a signal. I modelled it as
+     onUnmeteredNetwork - an input to the pure decision - which also covers an
+     unmetered Ethernet or tether, and left the platform source unbuilt.
+  7. The brief's verify command names test tasks that "may not exist under exactly
+     those names". All eight exist as written; none had to be substituted. I added
+     :feature:books:domain and :lib:database:implementation to my own runs because this
+     work touches them, and :feature:books:ui, where I found the pre-existing failures.
 Files changed outside supabase, scripts/supabase, lib/server-parrot-cloud,
-feature/books, feature/reader, feature/cloud-account, feature/settings,
-lib/analytics, translations, composeApp tests and docs: none. Six files added, all
-inside supabase/ or docs/: supabase/migrations/20261010000000_parrot_cloud_prepared_audio.sql,
-supabase/tests/prepared_audio_test.sql, supabase/PREPARED_AUDIO_ROLLOUT.md,
-docs/tts-prepared-cloud-brief.md, docs/tts-prepared-cloud.md and
-docs/tts-prepared-cloud-report.txt. NO EXISTING FILE OF ANY KIND WAS MODIFIED - no
-existing migration, no existing test, no Kotlin source.
+feature/books, feature/reader, feature/cloud-account, feature/settings, lib/analytics,
+translations, composeApp tests and docs: YES, in lib/database, which the brief's list
+does not mention. They are the local schema change that lets a transfer carry a file
+that is not the book itself:
+  lib/database/api/.../cloudfiles/CloudFileTransferEntity.kt (two defaulted fields)
+  lib/database/implementation/.../sqldelight/.../42.sqm (new)
+  lib/database/implementation/.../sqldelight/.../CloudFileTransfer.sq
+  lib/database/implementation/.../dao/cloudfiles/CloudFilesSqlDelightDao.kt
+  plus three files in lib/database/implementation/src/androidHostTest (one new test,
+  two version-bookkeeping edits). There was no way to reuse the engine's persisted
+  queue, as the brief requires, without the queue being able to record which file a
+  transfer is for.
 Known problems I am leaving:
   1. No SQL can be run from this machine. Until that is solved, every migration an
      agent writes here is unrun and must not be applied by the owner, per the brief.
-  2. All three cascades are in the same migration as the new media type, which is
-     where they have to be: each is a real gap the moment the first prepared
-     chapter is uploaded, because audio would otherwise outlive its book. Do not
-     split them into a follow-up migration.
-  3. The block-list cascade is attached to an after-insert trigger on
-     cloud_content_blocklist, which means it only fires for blocks added AFTER this
-     migration. Any hash already on the block-list when it is applied will not
-     retroactively clear prepared audio. Today that is harmless, because no
-     prepared audio exists anywhere yet, but it stops being harmless if this
-     migration is ever applied to a database that already has some.
-  4. Deleting one of two representations keeps the audio. The cascade asks
-     book_has_available_backup, so deleting a book's EPUB while its audiobook copy
-     stays backed up does NOT remove prepared audio. "Deleting the book's backup"
-     reads to me as the last usable copy going, not any one file; if the owner means
-     any file, the trigger drops its condition and becomes unconditional.
-  5. The cascade's sync_changes rows get lower change_ids than the ebook's own,
-     because the after-update trigger runs inside the same statement, so a device
-     hears that the audio is going very slightly before it hears about the book.
-     Each change applies independently, so I believe this is cosmetic, but it has
-     not been observed - like everything else in Step 1.
-  7. Replacing an installed chapter is delete-then-move, so a crash in the gap
-     leaves the chapter absent rather than half-written. That matches
-     TtsPreparedStore's own publish and is recoverable by downloading again, but it
-     is not atomic and I am not claiming it is.
-  8. The never-empty relative_path rule is the single thing protecting older apps.
-     If a future change ever relaxes cloud_book_files_prepared_audio_path_check, or
-     removes the relativePath.isEmpty() filter at LocalBooksRepository.kt:83, older
-     installs break in the three ways listed above. The migration says so in its
-     header comment and beside the constraint; LocalBooksRepository.kt:83 does NOT
-     yet carry that comment, because no Kotlin was touched this run. Add it with
-     Step 3.
+  2. All three server cascades are in the same migration as the new media type, which
+     is where they have to be: each is a real gap the moment the first prepared chapter
+     is uploaded, because audio would otherwise outlive its book. Do not split them
+     into a follow-up migration.
+  3. The block-list cascade is an after-insert trigger, so it only fires for blocks
+     added AFTER the migration. A hash already on the block-list when it is applied
+     will not retroactively clear prepared audio. Harmless today, because no prepared
+     audio exists anywhere yet; not harmless if this is ever applied to a database that
+     already has some.
+  4. Deleting one of two representations keeps the audio - see ambiguity 3.
+  5. The server cascade's sync_changes rows get lower change_ids than the ebook's own,
+     because the after-update trigger runs inside the same statement, so a device hears
+     the audio is going very slightly before it hears about the book. Each change
+     applies independently, so I believe this is cosmetic, but it has not been
+     observed, like everything else in Step 1.
+  6. Replacing an installed chapter on the device is delete-then-move, so a crash in
+     the gap leaves the chapter absent rather than half-written. That matches
+     TtsPreparedStore's own publish and is recoverable by downloading again, but it is
+     not atomic and I am not claiming it is.
+  7. The never-empty relative_path rule is the single thing protecting older apps. If a
+     future change relaxes cloud_book_files_prepared_audio_path_check, or removes the
+     relativePath.isEmpty() filter at LocalBooksRepository.kt:83, older installs break
+     in the three ways listed under Step 0. The migration says so in its header and
+     beside the constraint; LocalBooksRepository.kt:83 still does NOT carry that
+     comment. Add it with the next step that touches Kotlin there.
+  8. feature/books/ui is red at 4 tests and was red before this work. It is outside the
+     brief's verify command, so nothing here depends on it, but someone should know.
+  9. enqueueAuxiliaryUpload checks the declared size against the file store before
+     writing a transfer row, but the engine's new source_path otherwise trusts it. A
+     future caller that bypasses that entry point would not be re-checked until the
+     server rejects a size mismatch at finalize.
 --- END REPORT ---
