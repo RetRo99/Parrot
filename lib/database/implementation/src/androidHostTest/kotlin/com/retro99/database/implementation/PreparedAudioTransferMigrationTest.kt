@@ -115,6 +115,72 @@ class PreparedAudioTransferMigrationTest {
         }
     }
 
+    @Test
+    fun `an upgraded transfer reads back field for field through the query the DAO uses`() {
+        val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+        try {
+            // Given: a device already carrying a real transfer, at the version
+            // before 42.sqm.
+            executeScript(driver, readResource("v28_schema.sql"))
+            AppDatabase.Schema.migrate(driver, oldVersion = 28, newVersion = 42)
+            driver.execute(
+                null,
+                """
+                INSERT INTO cloud_file_transfers(
+                    transfer_id, server_id, direction, library_book_id, cloud_book_file_id,
+                    media_type, staging_path, size_bytes, bytes_transferred, content_hash,
+                    content_hash_algorithm, upload_id, storage_path, tus_upload_url,
+                    tus_expires_at, rights_attestation, state, attempt_count,
+                    next_attempt_at, last_error, created_at, updated_at
+                ) VALUES ('old-1', 'parrot-cloud', 'upload', 'book-1', 'file-1',
+                    'ebook', '/staging/book.epub', 9001, 4096, 'hash-1',
+                    'sha256', 'upload-1', 'users/u/book.epub', 'https://tus/1',
+                    '2026-01-01T00:00:00Z', 'attested', 'transferring', 3,
+                    '2026-01-02T00:00:00Z', 'a transient failure',
+                    '2026-01-01T00:00:00Z', '2026-01-03T00:00:00Z')
+                """.trimIndent(),
+                0,
+            )
+
+            // When
+            AppDatabase.Schema.migrate(driver, oldVersion = 42, newVersion = 43)
+
+            // Then: every field is what was written. The DAO reads this row
+            // through a SELECT * whose generated reader takes columns by
+            // position, so a column added in the middle of the .sq table reads
+            // from the wrong slot on every existing install.
+            val row = AppDatabase(driver).cloudFileTransferQueries
+                .getCloudFileTransfer("old-1")
+                .executeAsOne()
+            assertEquals("old-1", row.transfer_id)
+            assertEquals("parrot-cloud", row.server_id)
+            assertEquals("upload", row.direction)
+            assertEquals("book-1", row.library_book_id)
+            assertEquals("file-1", row.cloud_book_file_id)
+            assertEquals("ebook", row.media_type)
+            assertEquals("/staging/book.epub", row.staging_path)
+            assertEquals(9001L, row.size_bytes)
+            assertEquals(4096L, row.bytes_transferred)
+            assertEquals("hash-1", row.content_hash)
+            assertEquals("sha256", row.content_hash_algorithm)
+            assertEquals("upload-1", row.upload_id)
+            assertEquals("users/u/book.epub", row.storage_path)
+            assertEquals("https://tus/1", row.tus_upload_url)
+            assertEquals("2026-01-01T00:00:00Z", row.tus_expires_at)
+            assertEquals("attested", row.rights_attestation)
+            assertEquals("transferring", row.state)
+            assertEquals(3L, row.attempt_count)
+            assertEquals("2026-01-02T00:00:00Z", row.next_attempt_at)
+            assertEquals("a transient failure", row.last_error)
+            assertEquals("2026-01-01T00:00:00Z", row.created_at)
+            assertEquals("2026-01-03T00:00:00Z", row.updated_at)
+            assertEquals("", row.relative_path)
+            assertNull(row.source_path)
+        } finally {
+            driver.close()
+        }
+    }
+
     private fun insertBookFile(transferId: String) =
         """
         INSERT INTO cloud_file_transfers(

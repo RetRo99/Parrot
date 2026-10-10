@@ -473,6 +473,45 @@ upgrade reading as the book's own file, and the upgraded table matches a fresh o
 `pruneSupersededTransfers` now also keys on the relative path, so one chapter's
 finished transfer is no longer mistaken for another's.
 
+#### The schema mismatch the first run left, and what it actually was
+
+`42.sqm` adds the two columns with `ALTER TABLE ... ADD COLUMN`, which puts them at the
+**end** of the table on an upgraded device, but `CloudFileTransfer.sq` first listed them
+in the **middle** of `CREATE TABLE`, after `rights_attestation`. So a freshly created
+database and an upgraded one disagreed on column order and
+`:lib:database:implementation:verifySqlDelightMigration` **failed**, naming the three
+index `ordinalPosition` values that moved. The two columns are now at the end of the
+`CREATE TABLE`, with a comment saying why, and the task passes. `42.sqm` was not
+touched, and no earlier migration was touched. These are the only two files on this
+branch that changed a `.sq` or a `.sqm`.
+
+What this was **not** is data corruption, and the record should say so plainly rather
+than repeat the expected diagnosis. The worry was that the six `SELECT *` queries in
+that file would read every column of an upgraded row from the wrong slot. They do not.
+SQLDelight **expands `SELECT *` at generation time into an explicit, named column
+list** — the generated `GetCloudFileTransferQuery` issues
+`SELECT cloud_file_transfers.transfer_id, cloud_file_transfers.server_id, ... FROM
+cloud_file_transfers WHERE transfer_id = ?` — so the positional
+`cursor.getString(n)` calls in the generated reader are positional over a projection
+the generated SQL itself names, in the `.sq` file's declared order, not over the
+physical table. No literal `SELECT *` survives anywhere in the generated code
+(`grep -c` over the whole generated tree: 0). Every insert statement in this file names
+its columns too. So on an upgraded install reads were already correct, and the failure
+was a schema-equivalence failure only.
+
+That is pinned by a test, written before the fix:
+`PreparedAudioTransferMigrationTest."an upgraded transfer reads back field for field
+through the query the DAO uses"` builds the database at version 42, inserts a transfer
+with a distinct value in all 22 of the then-existing columns and a real `state` of
+`transferring`, migrates to 43, and reads the row back through
+`cloudFileTransferQueries.getCloudFileTransfer` — the generated query the DAO's
+`getTransfer` calls. All 24 fields are asserted: `state`, `attempt_count`, all three
+timestamps and every other value are what was written, `relative_path` is `""` and
+`source_path` is null. **It passed before the fix as well as after**, for the reason
+above. It is kept because it is the assertion that makes the reason true rather than
+believed: if a future change makes a reader positional over the physical table, this
+test fails and `verifySqlDelightMigration` alone would not say what broke.
+
 New domain members, each **defaulted on the interface** so no other implementation --
 including two existing test fakes -- had to change: `enqueueAuxiliaryUpload`,
 `cancelUpload`, `deleteRemoteFile`. `deleteRemoteBackup` keeps its exact signature and

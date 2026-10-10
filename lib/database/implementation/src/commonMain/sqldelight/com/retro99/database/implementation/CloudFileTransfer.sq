@@ -15,14 +15,18 @@ CREATE TABLE IF NOT EXISTS cloud_file_transfers (
     tus_upload_url TEXT,
     tus_expires_at TEXT,
     rights_attestation TEXT,
-    relative_path TEXT NOT NULL DEFAULT '',
-    source_path TEXT,
     state TEXT NOT NULL,
     attempt_count INTEGER NOT NULL DEFAULT 0,
     next_attempt_at TEXT,
     last_error TEXT,
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    -- Added by 42.sqm. A column added here must stay at the END of the table,
+    -- where ALTER TABLE ... ADD COLUMN puts it on an upgraded device, or a
+    -- freshly created database and an upgraded one disagree and
+    -- verifySqlDelightMigration fails.
+    relative_path TEXT NOT NULL DEFAULT '',
+    source_path TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_cloud_file_transfers_eligible
