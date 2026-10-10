@@ -93,11 +93,32 @@ class TtsPreparationMeasurementTest {
         assertEquals(TtsChapterPreparationState.Completed(id.chapterHref), core.state.value)
         assertEquals(
             listOf<Pair<String?, TtsPreparationSample>>(
-                "voice-a" to TtsPreparationSample(workMs = 17 * 30L, characters = 17),
-                "voice-a" to TtsPreparationSample(workMs = 6 * 30L, characters = 6),
+                "voice-a" to TtsPreparationSample(workMs = 17 * 30L, characters = 17, audioMs = 1_000),
+                "voice-a" to TtsPreparationSample(workMs = 6 * 30L, characters = 6, audioMs = 1_000),
             ),
             recorded,
         )
+    }
+
+    @Test fun `audio made at another speed is recorded as its length at normal speed`() = runTest {
+        val recorded = mutableListOf<TtsPreparationSample>()
+        val chapters = PreparationTestChapters()
+        val core = TtsChapterPreparationCore(
+            sentences = PreparationTestSource(chapters),
+            chapters = chapters,
+            scope = this,
+            analytics = {},
+            usableBytes = { Long.MAX_VALUE },
+            speed = { _, sample -> recorded += sample },
+        )
+        // The fake's audio is 1 000 ms long; spoken at 1.5x that is 1 500 ms of normal speech.
+        core.start(
+            TtsChapterPreparationInput(
+                id, settings.copy(rate = 1.5f), TtsPreparationVoiceKind.NEURAL, listOf("A sentence."),
+            ),
+        )
+        advanceUntilIdle()
+        assertEquals(listOf(1_500L), recorded.map { sample -> sample.audioMs })
     }
 
     @Test fun `the record is kept in its own file and read back by a new instance`() {

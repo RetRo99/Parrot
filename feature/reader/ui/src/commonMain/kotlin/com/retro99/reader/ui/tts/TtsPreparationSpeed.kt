@@ -48,6 +48,10 @@ data class TtsPreparationSpeedRecord(
     /** Null when this voice has not been measured enough; another voice's record never answers. */
     fun msPerCharacter(voiceId: String?): Double? =
         preparationMsPerCharacter(samplesByVoice[voiceId.orEmpty()].orEmpty())
+
+    /** Length of audio per character at normal speed for this voice, or null when not measured. */
+    @Suppress("UnusedParameter", "FunctionOnlyReturningConstant")
+    fun audioMsPerCharacter(voiceId: String?): Double? = null
 }
 
 /** One measurement per line: work, characters, audio length, then the voice id as it is. */

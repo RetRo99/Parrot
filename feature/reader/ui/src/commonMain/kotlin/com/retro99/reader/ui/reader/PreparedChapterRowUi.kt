@@ -57,6 +57,9 @@ internal data class PreparedChapterRowUi(
     val progress: Float? = null,
     val isFailure: Boolean = false,
     val actions: List<PreparedChapterAction> = emptyList(),
+    /** A second, quieter line under the status; null means none. */
+    val detail: StringResource? = null,
+    val detailArgs: List<Any> = emptyList(),
 )
 
 /** Bytes as the row says them; the same wording the Settings total uses. */

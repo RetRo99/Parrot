@@ -11,6 +11,8 @@ internal data class PreparedChapterEstimate(
     /** Rounded whole minutes. Zero means "under a minute". */
     val minutes: Int,
     val bytes: Long,
+    /** Rounded length of the audio the chapter becomes; null when the row does not say it. */
+    val audioMinutes: Int? = null,
 )
 
 /** The three kinds of voice that prepare at visibly different speeds and sizes. */
@@ -31,7 +33,22 @@ data class PreparedChapterMeasured(
     val bytesPerSentence: Long? = null,
     /** Synthesis and encoding time per character of text, from this device's own record. */
     val msPerCharacter: Double? = null,
+    /** Length of the audio per character of text at normal speed, from the same record. */
+    val audioMsPerCharacter: Double? = null,
 )
+
+/**
+ * Roughly how long the chapter will be to listen to at [rate], rounded as the preparation
+ * time is. Null when the sentence count is not known.
+ */
+@Suppress("UnusedParameter", "FunctionOnlyReturningConstant")
+internal fun preparedChapterAudioMinutes(
+    sentenceCount: Int?,
+    characterCount: Int?,
+    voiceKind: PreparedVoiceKind,
+    measured: PreparedChapterMeasured? = null,
+    rate: Float = 1f,
+): Int? = null
 
 /**
  * The starting figures, from the six-sentence measurements on the Samsung in
