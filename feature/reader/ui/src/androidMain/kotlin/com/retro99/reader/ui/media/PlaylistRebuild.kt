@@ -14,5 +14,7 @@ internal fun <T> playlistNeedsRebuild(
     cachedAudioHrefs: List<T>,
     chapterAudioHrefs: List<T>,
     cachedTrackIndexes: Map<T, Int>,
-    @Suppress("UNUSED_PARAMETER") playlistBelongsToCurrentPlayer: Boolean,
-): Boolean = cachedAudioHrefs != chapterAudioHrefs || cachedTrackIndexes.isEmpty()
+    playlistBelongsToCurrentPlayer: Boolean,
+): Boolean = !playlistBelongsToCurrentPlayer ||
+    cachedAudioHrefs != chapterAudioHrefs ||
+    cachedTrackIndexes.isEmpty()
