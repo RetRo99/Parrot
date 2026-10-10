@@ -14,7 +14,7 @@ from the server side.
 
 Step 1 is written but **its SQL has NOT been run** — see below; nothing could be
 executed on this machine, and that is still true: there is still no container runtime
-here. Steps 2, 3, 4 and 5 are complete. Steps 6 and 7 are not built.
+here. Steps 2, 3, 4, 5 and 6 are complete. Step 7 is not done.
 
 ### Can the local Supabase stack run here?
 
@@ -973,6 +973,172 @@ In `translations/src/commonMain/composeResources/values/strings.xml`:
 23 keys, all in the form of the existing `reader_tts_prepared_` entries, all with
 `tools:ignore="MissingTranslation"` as the surrounding block has.
 
-## Steps 6 and 7
+## Step 6: what this is, all together
 
-Not built.
+### The server contract, in one place
+
+| Thing | Value |
+| --- | --- |
+| Media type | `tts_prepared_audio` |
+| Relative path | `tts-prepared/<sha256(chapter href)>/<sha256(voice id, model version, rate, pitch)>.zip` |
+| Size cap | 64 MiB per chapter file, enforced by a table constraint and by `reserve_book_upload` |
+| Quota | the same allowance as books; reserved, committed and released identically |
+| Gate | the existing `cloud_feature_allowlist`, checked first for this media type |
+| Also required | the caller owns the book, and the book has an available file that is not prepared audio and whose hash is not blocked |
+| Refusals | `uploads_not_enabled`, `invalid_upload_metadata`, `file_too_large`, `cloud_book_not_owned`, `content_blocked`, `book_backup_unavailable`, `quota_exceeded` |
+| Cascade | deleting the book's backup, an admin takedown, a block-list insert and account deletion each remove the book's prepared audio and release its bytes |
+| Usage | `get_storage_usage` gains `books_bytes` and `prepared_audio_bytes`; all five existing keys keep their name and meaning |
+| Client hash | the engine's own `sha-256-v1` over the archive file |
+
+**None of it has been run.** See "Can the local Supabase stack run here?" above.
+
+### The archive format, in one place
+
+A **stored** zip, so the AAC is never recompressed and the payload is byte-identical
+through the round trip.
+
+1. `manifest.json`, **always first**, so an unpack knows what names and sizes it may
+   accept before it writes a byte. Format version 2, the same manifest
+   `TtsPreparedStore` writes: book id, server id, chapter href, voice id, model version,
+   rate, pitch, the ordered sentence keys with their durations and byte counts, and the
+   completion flag.
+2. One `<64 hex sentence key>.m4a` per distinct key, in manifest order. Duplicate keys
+   share one file while the manifest keeps their repeated ordered positions.
+
+Nothing else is accepted. Escaping the target folder is impossible **by construction**
+rather than by sanitising: the only name an unpack accepts is a 64-character lowercase
+hex key plus `.m4a`, which cannot contain a separator or a `..` segment at all.
+
+### Every state, in one place
+
+- **Preparing, on this device** — `PreparedChapterRowState`, unchanged by this work:
+  `NotPrepared`, `Preparing`, `PreparingAnotherChapter`, `Ready`, `OtherSettings`,
+  `Partly`, `Failed`, `VoiceUnusable`.
+- **Backing up** — `PreparedChapterBackupState`, 12: `NotApplicable`, `NotAllowed`,
+  `BackupOff`, `WaitingForBooks`, `WaitingForBookBackup`, `WaitingForWifi`, `Queued`,
+  `Uploading`, `BackedUp`, `StorageFull`, `FailedWillRetry`, `Failed`.
+- **Downloading** — `PreparedChapterDownloadState`, 9: `NotInCloud`, `Installed`,
+  `AvailableInCloud`, `Downloading`, `Installing`, `FailedDeviceFull`,
+  `FailedNoNetwork`, `FailedArchiveRejected`, `FailedGoneFromCloud`.
+- **Refusing an archive** — `PreparedArchiveRejection`, 11: `CHAPTER_INCOMPLETE`,
+  `UNREADABLE`, `MANIFEST_NOT_FIRST`, `UNSUPPORTED_VERSION`, `UNSAFE_ENTRY`,
+  `UNLISTED_ENTRY`, `DUPLICATE_ENTRY`, `MISSING_ENTRY`, `SIZE_MISMATCH`, `TOO_LARGE`,
+  `IDENTITY_MISMATCH`.
+
+Every string is listed under Step 5.
+
+### What has been run, and what has not
+
+| | |
+| --- | --- |
+| Android host tests | **run**, green; counts in `docs/tts-prepared-cloud-report.txt` |
+| iOS host tests (`iosSimulatorArm64Test`) | **run**, green |
+| `verifySqlDelightMigration` | **run**, passes |
+| `:androidApp:assembleDebug` | **run**, succeeds |
+| `:composeApp:linkDebugFrameworkIosSimulatorArm64` | **run**, succeeds |
+| The pgTAP suite | **NEVER RUN.** No container runtime on this machine |
+| The migration, anywhere | **NEVER APPLIED** |
+| Anything on a phone | **NOT CHECKED** for this work's behaviour |
+
+### Known limits
+
+1. **The server side is entirely unverified.** 38 written assertions, 0 executed.
+2. **A device cannot tell which other voice or speed a cloud archive was made for**,
+   because that part of the relative path is a hash. The row says "made for other
+   settings" and the real settings appear once the manifest is on disk. See Step 4.
+3. **A refused download is remembered in memory only.** After a restart the row offers
+   Download again. That is the right offer — the cloud may hold a different file — but it
+   means a permanently bad archive can be fetched once per app start.
+4. **The app-start sweep is unbounded.** It offers every finished chapter to the engine in
+   turn; with many prepared chapters it hands the engine a long queue at once.
+5. **One outcome-watcher coroutine per queued chapter**, living until the engine finishes
+   with it. Cheap, but unbounded.
+6. **Replacing an installed chapter is delete-then-move**, so a crash in the gap leaves
+   the chapter absent rather than half-written. That matches `TtsPreparedStore`'s own
+   publish and is recoverable by downloading again, but it is not atomic.
+7. **The block-list cascade is an after-insert trigger**, so it only fires for blocks
+   added after the migration is applied. Harmless while no prepared audio exists
+   anywhere; not harmless afterwards.
+8. **Deleting one of two representations of a book keeps its prepared audio.** "Deleting
+   a book's backup" is read as the last usable copy going.
+9. **The never-empty `relative_path` rule is the single thing protecting older apps.** If
+   a future change relaxes `cloud_book_files_prepared_audio_path_check`, or removes the
+   `relativePath.isEmpty()` filter at `LocalBooksRepository.kt:83`, older installs break
+   in the three ways listed under Step 0.
+10. **Re-attestation is never asked for by prepared audio.** A chapter reads `NotAllowed`
+    and waits for the next book backup to ask.
+11. **`RecapCloudSync.sq:22` inserts without a column list**, so it is positional over
+    the physical table. Pre-existing and out of scope, but a future `ALTER TABLE` on
+    `recap_cloud_cursor` would break it.
+
+### The end-to-end checklist, for when the migration is applied
+
+This needs the migration applied and two Android devices signed into the same account,
+both allow-listed for uploads. **Do not attempt any of it before the pgTAP suite has
+been run and passed.**
+
+1. **Baseline.** On device A, with auto-backup on and on Wi-Fi, back a book up and
+   confirm `get_storage_usage` still returns its five original keys with their old
+   meanings, and that the storage card shows the total as it always did.
+2. **Upload.** Prepare a chapter of that book on device A. The row should go
+   `Waiting to back up` → `Backing up to Parrot Cloud…` → `Backed up to Parrot Cloud`
+   without being touched. Confirm one `cloud_book_files` row with media type
+   `tts_prepared_audio` and a two-hash relative path, status `available`.
+3. **Usage.** The cloud account screen should now show `Books` and `Prepared audio` under
+   the total, and the two should add up to the total.
+4. **Books first.** Add a second book, prepare a chapter of the first, and confirm the
+   chapter reads `Will back up after your books` until the book's own upload finishes.
+5. **Wi-Fi only.** Prepare a chapter on mobile data. It must read `Will back up on Wi-Fi`
+   and nothing must be uploaded. Rejoin Wi-Fi, restart the app, and confirm the sweep
+   picks it up.
+6. **No book backup.** Prepare a chapter of a book that is not backed up. It must read
+   `Will back up once this book is backed up`, and the server must refuse it with
+   `book_backup_unavailable` if anything does try.
+7. **Download.** On device B, sign in, sync, open the same book at the same chapter with
+   the same voice and speed. The row should read `In Parrot Cloud, plays instantly · <size>`
+   with a **Download** button. Press it; it should install and then play **instantly**.
+8. **Other settings.** On device B change the speed, and confirm the row reads
+   `In Parrot Cloud, made for other settings`; download it, and confirm the row then says
+   what it was made for, as it does for local audio.
+9. **Delete.** On device A delete the chapter. The confirmation must mention Parrot
+   Cloud. Afterwards the `cloud_book_files` row must be gone and device B's row must
+   stop offering Download.
+10. **Cascade.** Delete the book's backup on device A, and confirm the chapter's
+    `cloud_book_files` row goes with it and the bytes are credited back. Repeat with an
+    admin takedown and with a block-list insert.
+11. **Storage full.** Fill the allowance, then prepare a chapter. The row must read
+    `Parrot Cloud storage is full…` with **Manage storage**, it must **not** retry in a
+    loop, and the message must appear once.
+12. **Account deletion.** Delete the account and confirm no `cloud_book_files` row and no
+    storage object of either kind survives.
+13. **iPhone.** With prepared audio in the cloud, open the same book on iPhone and
+    confirm the library, the book detail screen and "Remove from Parrot Cloud" behave
+    exactly as before, and that nothing tries to download a chapter archive as a book.
+
+### For the paid storage project
+
+- **The hook.** `GetMoreStorageSlot()` in
+  `feature/cloud-account/ui/.../CloudAccountScreen.kt`, a private `@Composable` that
+  renders nothing. It sits at the bottom of the storage card, under the allowance and its
+  breakdown. Attaching a "get more storage" action is a change to that function and
+  nothing else on that screen.
+- **Where usage is shown**, and so where a new allowance has to be reflected:
+  1. `ParrotCloudStorageCard` in `CloudAccountScreen.kt` — the total, the bar, the
+     almost-full notice and the breakdown.
+  2. `cloudStorageBreakdown` in `CloudStorageBreakdown.kt` — the two parts.
+  3. `storageLabel` and `isStorageAlmostFull` in `ParrotCloudPresentation.kt` — the
+     wording and the 90% threshold.
+  4. `CloudStorageUsage` in `feature/cloud-account/domain` and
+     `SupabaseCloudStorageUsageRepository` — the shape and the `get_storage_usage` call.
+     A paid tier changes `quota_bytes`; nothing else here needs to know how.
+  5. The prepared-chapter row's `StorageFull` line and its **Manage storage** button
+     (`PreparedChapterCloudUi.kt`), which is the one place in the reader that leads to
+     the storage screen.
+  6. `BookLocationsCard.kt`'s `quota_exceeded` message, for books rather than audio.
+- **What the server already gives you.** `quota_exceeded` returns the used and total
+  bytes, and `get_storage_usage` returns the breakdown, so a tier change is a quota
+  change on the account and not a client change.
+
+## Step 7: the checks
+
+Not done.
