@@ -25,11 +25,11 @@ Delete from the row, settings total, Delete all (result of each): not built.
 System voice chapter prepared and played (yes/no): no; not built.
 States of the row seen on the phone (list), and states not reached: none; all not built.
 State the phone was left in (voice, rate, screen, prepared audio deleted yes/no): System voice, 1x, Listening sheet in first text chapter, paused; no prepared audio created.
-Why the run ended where it did (finished / out of time / blocked, and on what): ongoing; green fix checkpoint before device retest and step 1.
+Why the run ended where it did (finished / out of time / blocked, and on what): ongoing; step 1 native pump red checkpoint, three tests intentionally failing before implementation.
 Done this run: brief committed, comparison worktree removed, Play path extracted, regression failed for the expected reason and fixed unedited; six-module tests and both builds green; phone confirmed Play fix.
 Not done or partly done, and why: native encoder pending; steps 2-8 not started.
 Tests skipped, ignored or weakened (file + name + reason), or "none": none.
 Places the brief was ambiguous and what I chose: none so far.
 Files changed outside feature/reader/ui, feature/settings/ui, lib/analytics, translations, androidApp/src/main/AndroidManifest.xml, composeApp tests and docs: none.
-Known problems I am leaving: native encoder and measurement not built.
+Known problems I am leaving: native pump deliberately unimplemented at the red checkpoint (3/3 fail); native adapter and measurement next.
 --- END REPORT ---

@@ -4,6 +4,13 @@
 
 ### Continuation checkpoint
 
+Step 1 native-loop red checkpoint: `TtsPreparedAacPumpTest` adds three
+tests for bounded PCM feeding, sample timestamps/EOS and measured muxed
+duration, stall timeout/cleanup, and cancellation propagation/cleanup.
+All three fail against the unimplemented pump; the initial test-only
+ByteBuffer return-type compile error was corrected before the red run.
+Native MediaCodec adapter and six-sentence measurement remain pending.
+
 Owner brief committed first as `542736b3`. The clean nested comparison
 worktree was removed with `git worktree remove` after an empty `git status --short`.
 All commands continue in the primary `tts-investigation` worktree.
