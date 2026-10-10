@@ -1,9 +1,7 @@
 -- Prepared chapter audio as one more cloud_book_files row (20261010000000).
 --
--- NOTE: this file has never been executed. The machine it was written on has no
--- container runtime at all, so the local Supabase stack could not be started
--- and scripts/supabase/test.sh could not run. The owner must run it before the
--- migration is applied anywhere. See docs/tts-prepared-cloud.md.
+-- Run against the linked development project on 2026-10-11, after applying
+-- 20261010000000. See docs/manual-qa-evidence/2026-10-11/tts-prepared-cloud/.
 begin;
 
 create extension if not exists pgtap with schema extensions;
@@ -103,11 +101,16 @@ select is(
     'available', 'the book ebook row is untouched beside it'
 );
 
+-- cloud_user_storage is private: no select for authenticated, the app reads it
+-- through get_storage_usage. Drop to the session role to read it directly, as
+-- the other test files do.
+reset role;
 select is(
     (select reserved_bytes from public.cloud_user_storage
      where cloud_user_id = '10000000-0000-0000-0000-0000000000a1'),
     4096::bigint, 'prepared audio reserves quota exactly like a book file'
 );
+set local role authenticated;
 
 -- A second chapter of the same book is a second slot, not a conflict.
 select is(
@@ -214,11 +217,22 @@ select is(
 -- Quota
 -- ---------------------------------------------------------------------------
 
+-- The 64 MiB per-chapter cap is checked before the allowance (asserted above),
+-- so a quota rejection has to be provoked with a chapter that is under the cap
+-- and still too big for what is left. Lower this account's allowance to 20 MiB,
+-- ask for 32 MiB, then put the allowance back so the byte accounting further
+-- down is unaffected.
+reset role;
+update public.cloud_user_storage
+   set quota_bytes = 20971520
+ where cloud_user_id = '10000000-0000-0000-0000-0000000000a1';
+set local role authenticated;
+
 select is(
     (public.reserve_book_upload(
         '20000000-0000-0000-0000-0000000000a1', 'tts_prepared_audio',
         'tts-prepared/' || repeat('1', 64) || '/' || repeat('b', 64) || '.zip',
-        'chapter.zip', 209715200, 'sha-256-v1', repeat('f', 64),
+        'chapter.zip', 33554432, 'sha-256-v1', repeat('f', 64),
         '{"attested_at":"2026-10-10T00:00:00Z","tos_version":"test","attestation_version":"test"}'::jsonb
     )->>'reason'),
     'quota_exceeded', 'a prepared chapter that does not fit the allowance is refused'
@@ -228,21 +242,27 @@ select is(
     (public.reserve_book_upload(
         '20000000-0000-0000-0000-0000000000a1', 'tts_prepared_audio',
         'tts-prepared/' || repeat('1', 64) || '/' || repeat('b', 64) || '.zip',
-        'chapter.zip', 209715200, 'sha-256-v1', repeat('f', 64),
+        'chapter.zip', 33554432, 'sha-256-v1', repeat('f', 64),
         '{"attested_at":"2026-10-10T00:00:00Z","tos_version":"test","attestation_version":"test"}'::jsonb
     )->>'quota_bytes'),
-    '209715200', 'the quota rejection carries the total bytes'
+    '20971520', 'the quota rejection carries the total bytes'
 );
 
 select ok(
     (public.reserve_book_upload(
         '20000000-0000-0000-0000-0000000000a1', 'tts_prepared_audio',
         'tts-prepared/' || repeat('1', 64) || '/' || repeat('b', 64) || '.zip',
-        'chapter.zip', 209715200, 'sha-256-v1', repeat('f', 64),
+        'chapter.zip', 33554432, 'sha-256-v1', repeat('f', 64),
         '{"attested_at":"2026-10-10T00:00:00Z","tos_version":"test","attestation_version":"test"}'::jsonb
     ) ? 'used_bytes'),
     'the quota rejection carries the used bytes'
 );
+
+reset role;
+update public.cloud_user_storage
+   set quota_bytes = 209715200
+ where cloud_user_id = '10000000-0000-0000-0000-0000000000a1';
+set local role authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Finalize commits the bytes, as for a book file
@@ -265,11 +285,13 @@ select is(
     'available', 'a prepared chapter finalizes through the existing path'
 );
 
+reset role;
 select is(
     (select used_bytes from public.cloud_user_storage
      where cloud_user_id = '10000000-0000-0000-0000-0000000000a1'),
     5196::bigint, 'finalizing commits the prepared chapter bytes into used bytes'
 );
+set local role authenticated;
 
 -- ---------------------------------------------------------------------------
 -- The storage usage breakdown
@@ -367,7 +389,10 @@ select is(
 );
 
 -- The bytes come back through the same handshake the ebook uses.
+-- Stand in for the Storage API remove() call, as the other test files do:
+-- storage.protect_delete() refuses a direct delete without this.
 reset role;
+set local storage.allow_delete_query = 'true';
 delete from storage.objects
 where bucket_id = 'book-files'
   and name = (select storage_path from prepared_upload);
@@ -380,11 +405,13 @@ select is(
     'removed', 'the prepared chapter row is removed once its object is gone'
 );
 
+reset role;
 select is(
     (select used_bytes from public.cloud_user_storage
      where cloud_user_id = '10000000-0000-0000-0000-0000000000a1'),
     1100::bigint, 'completing the deletion releases the prepared chapter bytes'
 );
+set local role authenticated;
 
 -- A takedown of the book reaches its prepared audio as well.
 reset role;
