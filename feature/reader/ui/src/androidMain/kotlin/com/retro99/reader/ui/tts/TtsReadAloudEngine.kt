@@ -354,7 +354,13 @@ class TtsReadAloudEngine(
     }
 
     fun stop() {
-        stopInternal()
+        // With nothing loaded there is no session to end, so this stop must not take the
+        // media service down: it is the locator move a completed chapter causes, which
+        // reaches the controller before the next chapter starts, and a service stopped
+        // here would have to be started again from the background, which the system
+        // refuses to promote (TTS-F30). A stop with a sentence loaded is the user really
+        // stopping, and still lets the service go.
+        stopInternal(keepSharedPlayer = currentIndex < 0)
     }
 
     fun skipToNextSentence() {
