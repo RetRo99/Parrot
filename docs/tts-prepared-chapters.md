@@ -4,6 +4,13 @@
 
 ### Continuation checkpoint
 
+Step 2 red checkpoint: 11 new `TtsPreparedStoreTest` cases all fail against
+the unimplemented store. They cover ordered/resumable partials, other settings,
+atomic failure, malformed/unknown manifests, orphan cleanup, missing/truncated
+audio, hostile paths and symlinks, oldest-first eviction with protections,
+deletion/size including manifests, and repeated keys/completion safety. Step 1
+is committed green (`0b19d065`) before starting these tests.
+
 **Current format decision: WAV fallback.** The native AAC candidate is built
 and tested on Samsung but fails the duration gate. The production interface
 binding `AndroidTtsPreparedAudioEncoder` now atomically copies the WAV, with
