@@ -40,9 +40,9 @@ class PreparedChapterAudioLengthTest {
     }
 
     @Test fun `without a record the audio length comes from the fixed spoken length per sentence`() {
-        // 369 sentences at 2.2 s is 13.5 minutes, said as 15.
-        assertEquals(15, preparedChapterAudioMinutes(369, 30_000, PreparedVoiceKind.SUPERTONIC))
-        assertEquals(15, preparedChapterAudioMinutes(369, null, PreparedVoiceKind.SUPERTONIC))
+        // 369 sentences at 3.9 s is 24 minutes, said as 25.
+        assertEquals(25, preparedChapterAudioMinutes(369, 30_000, PreparedVoiceKind.SUPERTONIC))
+        assertEquals(25, preparedChapterAudioMinutes(369, null, PreparedVoiceKind.SUPERTONIC))
     }
 
     @Test fun `the device's own audio length for this voice replaces the fixed figure`() {

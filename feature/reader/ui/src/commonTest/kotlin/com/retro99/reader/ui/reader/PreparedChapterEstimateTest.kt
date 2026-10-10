@@ -45,15 +45,17 @@ class PreparedChapterEstimateTest {
     @Test
     fun `kokoro uses its own measured figures`() {
         val estimate = preparedChapterEstimate(100, PreparedVoiceKind.KOKORO)
-        // 100 * 2200 ms = 220 s = 3.67 min -> 4; 100 * 14000 B = 1.4 MB
-        assertEquals(PreparedChapterEstimate(minutes = 4, bytes = 1_400_000), estimate)
+        // 100 * 2200 ms = 220 s = 3.67 min -> 4. The size is the audio, not the count:
+        // 100 * 3900 ms = 390 s at 6 000 B/s, plus 1 050 B a file.
+        assertEquals(PreparedChapterEstimate(minutes = 4, bytes = 2_445_000), estimate)
     }
 
     @Test
     fun `a system voice is slower and larger per sentence than kokoro`() {
         val system = preparedChapterEstimate(100, PreparedVoiceKind.SYSTEM)!!
         val kokoro = preparedChapterEstimate(100, PreparedVoiceKind.KOKORO)!!
-        assertEquals(PreparedChapterEstimate(minutes = 4, bytes = 1_600_000), system)
+        // 100 * 4400 ms = 440 s at 6 000 B/s, plus 1 050 B a file.
+        assertEquals(PreparedChapterEstimate(minutes = 4, bytes = 2_745_000), system)
         assertEquals(true, system.bytes > kokoro.bytes)
     }
 
@@ -70,8 +72,9 @@ class PreparedChapterEstimateTest {
         // The chapter size the device checks use. 151 * 2200 ms = 332 s = 5.5 min -> 6.
         val estimate = preparedChapterEstimate(151, PreparedVoiceKind.KOKORO)!!
         assertEquals(6, estimate.minutes)
-        assertEquals(151 * 14_000L, estimate.bytes)
-        assertEquals("2 MB", preparedChapterEstimateSizeLabel(estimate.bytes))
+        // 151 * 3900 ms = 588.9 s at 6 000 B/s, plus 151 * 1 050 B.
+        assertEquals(3_691_950L, estimate.bytes)
+        assertEquals("4 MB", preparedChapterEstimateSizeLabel(estimate.bytes))
     }
 
     // --- the device's own measurements win ------------------------------------------
