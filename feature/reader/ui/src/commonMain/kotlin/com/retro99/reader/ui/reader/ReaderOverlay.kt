@@ -769,6 +769,7 @@ internal fun ReaderOverlayContent(
                     text = viewState.preparedChapterText,
                     voiceKind = preparedVoiceKind(selectedVoice),
                     measured = viewState.preparedChapterMeasured,
+                    rate = settings.ttsRate,
                 ),
                 preparedChapterVoiceLabel = (viewState.preparedChapterAudio as? TtsPreparedChapterAudio.OtherSettings)
                     ?.let { other ->

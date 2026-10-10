@@ -50,8 +50,12 @@ data class TtsPreparationSpeedRecord(
         preparationMsPerCharacter(samplesByVoice[voiceId.orEmpty()].orEmpty())
 
     /** Length of audio per character at normal speed for this voice, or null when not measured. */
-    @Suppress("UnusedParameter", "FunctionOnlyReturningConstant")
-    fun audioMsPerCharacter(voiceId: String?): Double? = null
+    fun audioMsPerCharacter(voiceId: String?): Double? {
+        val usable = samplesByVoice[voiceId.orEmpty()].orEmpty()
+            .filter { sample -> sample.audioMs > 0 && sample.characters > 0 }
+        if (usable.size < PREPARATION_MIN_SAMPLES) return null
+        return usable.sumOf { sample -> sample.audioMs }.toDouble() / usable.sumOf { sample -> sample.characters }
+    }
 }
 
 /** One measurement per line: work, characters, audio length, then the voice id as it is. */

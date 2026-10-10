@@ -7,6 +7,9 @@ import org.jetbrains.compose.resources.StringResource
 import resources.translations.general_cancel
 import resources.translations.general_retry
 import resources.translations.reader_tts_delete
+import resources.translations.reader_tts_prepared_chapter_audio_length
+import resources.translations.reader_tts_prepared_chapter_audio_length_hours
+import resources.translations.reader_tts_prepared_chapter_audio_length_short
 import resources.translations.reader_tts_prepared_chapter_continue
 import resources.translations.reader_tts_prepared_chapter_estimate
 import resources.translations.reader_tts_prepared_chapter_estimate_hours
@@ -92,6 +95,8 @@ internal fun preparedChapterRowUi(
         status = notPreparedStatus(estimate),
         statusArgs = notPreparedArgs(estimate),
         actions = listOf(PreparedChapterAction.PREPARE),
+        detail = audioLengthDetail(estimate?.audioMinutes),
+        detailArgs = audioLengthArgs(estimate?.audioMinutes),
     )
 
     is PreparedChapterRowState.Preparing -> PreparedChapterRowUi(
@@ -171,6 +176,19 @@ private fun notPreparedArgs(estimate: PreparedChapterEstimate?): List<Any> {
         )
         else -> listOf(estimate.minutes, size)
     }
+}
+
+private fun audioLengthDetail(minutes: Int?): StringResource? = when {
+    minutes == null -> null
+    minutes == 0 -> StringRes.reader_tts_prepared_chapter_audio_length_short
+    minutes >= MINUTES_PER_HOUR -> StringRes.reader_tts_prepared_chapter_audio_length_hours
+    else -> StringRes.reader_tts_prepared_chapter_audio_length
+}
+
+private fun audioLengthArgs(minutes: Int?): List<Any> = when {
+    minutes == null || minutes == 0 -> emptyList()
+    minutes >= MINUTES_PER_HOUR -> listOf(minutes / MINUTES_PER_HOUR, minutes % MINUTES_PER_HOUR)
+    else -> listOf(minutes)
 }
 
 private const val MINUTES_PER_HOUR = 60

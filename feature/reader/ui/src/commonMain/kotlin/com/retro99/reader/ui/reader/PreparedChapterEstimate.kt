@@ -41,14 +41,24 @@ data class PreparedChapterMeasured(
  * Roughly how long the chapter will be to listen to at [rate], rounded as the preparation
  * time is. Null when the sentence count is not known.
  */
-@Suppress("UnusedParameter", "FunctionOnlyReturningConstant")
 internal fun preparedChapterAudioMinutes(
     sentenceCount: Int?,
     characterCount: Int?,
     voiceKind: PreparedVoiceKind,
     measured: PreparedChapterMeasured? = null,
     rate: Float = 1f,
-): Int? = null
+): Int? {
+    if (sentenceCount == null || sentenceCount <= 0) return null
+    val measuredMs = measured?.audioMsPerCharacter?.takeIf { it > 0 }?.let { audioMsPerCharacter ->
+        characterCount?.takeIf { it > 0 }?.let { characters -> characters * audioMsPerCharacter }
+    }
+    // The fixed per-sentence figures are spoken lengths at normal speed, which is what is
+    // wanted here.
+    val atNormalSpeed = measuredMs ?: (sentenceCount * FIXED_MS_PER_SENTENCE.getValue(voiceKind)).toDouble()
+    return roundedMinutes((atNormalSpeed / rate.coerceAtLeast(MIN_AUDIO_RATE)).toLong())
+}
+
+private const val MIN_AUDIO_RATE = 0.1f
 
 /**
  * The starting figures, from the six-sentence measurements on the Samsung in

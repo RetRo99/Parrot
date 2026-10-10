@@ -784,15 +784,21 @@ class AndroidTtsController(
 
     private fun readPreparedChapterMeasured(): PreparedChapterMeasured = runCatching {
         val voice = voiceId
-        val msPerCharacter = chapterPreparationJob.measuredSpeed().msPerCharacter(voice)
+        val speed = chapterPreparationJob.measuredSpeed()
+        val msPerCharacter = speed.msPerCharacter(voice)
+        val audioMsPerCharacter = speed.audioMsPerCharacter(voice)
         val matching = preparedAudioStore.store.completeChapters()
             .filter { it.settings.voiceId == voice && it.sentences > 0 }
-        if (matching.isEmpty()) return@runCatching PreparedChapterMeasured(msPerCharacter = msPerCharacter)
+        if (matching.isEmpty()) return@runCatching PreparedChapterMeasured(
+            msPerCharacter = msPerCharacter,
+            audioMsPerCharacter = audioMsPerCharacter,
+        )
         val sentences = matching.sumOf { it.sentences.toLong() }
         val bytes = matching.sumOf { it.totalBytes }
         PreparedChapterMeasured(
             bytesPerSentence = if (sentences > 0) bytes / sentences else null,
             msPerCharacter = msPerCharacter,
+            audioMsPerCharacter = audioMsPerCharacter,
         )
     }.getOrElse { PreparedChapterMeasured() }
 

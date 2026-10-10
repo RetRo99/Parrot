@@ -75,6 +75,7 @@ internal fun PreparedChapterCard(
     val cloudUi = preparedChapterCloudUi(cloud)
     val title = stringResource(StringRes.reader_tts_prepared_chapter_title)
     val status = stringResource(ui.status, *ui.statusArgs.toTypedArray())
+    val detail = ui.detail?.let { line -> stringResource(line, *ui.detailArgs.toTypedArray()) }
     var confirmingDelete by remember { mutableStateOf(false) }
 
     Column(
@@ -84,7 +85,7 @@ internal fun PreparedChapterCard(
             .background(colors.surface)
             .border(if (isEink) 2.dp else 1.dp, if (isEink) colors.ink else colors.line, shape)
             .padding(16.dp)
-            .semantics { contentDescription = "$title. $status" },
+            .semantics { contentDescription = listOfNotNull(title, status, detail).joinToString(". ") },
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(title, style = Ember.type.cardTitle.copy(fontSize = 17.sp), color = colors.ink)
@@ -107,6 +108,7 @@ internal fun PreparedChapterCard(
                 fontSize = 14.sp,
                 fontWeight = if (state is PreparedChapterRowState.Ready) FontWeight.Bold else FontWeight.Normal,
             )
+            detail?.let { line -> Text(line, color = colors.ink2, fontSize = 14.sp) }
         }
         // One line of status under the existing content, never a second card.
         cloudUi?.let { line ->

@@ -166,7 +166,13 @@ internal class TtsChapterPreparationCore(
     private fun measured(input: TtsChapterPreparationInput, text: String, work: PreparedSentenceWork) {
         val workMs = work.workMs?.takeIf { it > 0 } ?: return
         if (text.isEmpty()) return
-        val sample = TtsPreparationSample(workMs = workMs, characters = text.length)
+        // Audio made at 1.5x is two thirds as long as the same sentence at normal speed.
+        val audioMs = (work.encoding as? PreparedAudioEncoding.Success)?.durationMs ?: 0L
+        val sample = TtsPreparationSample(
+            workMs = workMs,
+            characters = text.length,
+            audioMs = (audioMs * input.settings.rate).toLong().coerceAtLeast(0L),
+        )
         runCatching { speed.record(input.settings.voiceId, sample) }
             .onFailure { error -> Log.e(TAG, "Could not record preparation speed", error) }
     }

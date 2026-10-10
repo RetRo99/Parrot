@@ -55,8 +55,10 @@ internal fun preparedChapterRowEstimate(
     text: PreparedChapterText?,
     voiceKind: PreparedVoiceKind,
     measured: PreparedChapterMeasured? = null,
-    @Suppress("UnusedParameter") rate: Float = 1f,
+    rate: Float = 1f,
 ): PreparedChapterEstimate? {
     if (chapterHref == null || text == null || text.chapterHref != chapterHref) return null
-    return preparedChapterEstimate(text.sentences, voiceKind, measured, text.characters)
+    return preparedChapterEstimate(text.sentences, voiceKind, measured, text.characters)?.copy(
+        audioMinutes = preparedChapterAudioMinutes(text.sentences, text.characters, voiceKind, measured, rate),
+    )
 }
