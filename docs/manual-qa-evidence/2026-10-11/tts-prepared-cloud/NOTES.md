@@ -331,3 +331,185 @@ cost, not just a migration.
   ios 401 -> **426**; every other module unchanged (reader domain 196, epub 45, books data
   151, cloud-account ui 28, settings ui 24, server-parrot-cloud 62, analytics 80,
   composeApp 65).
+
+## Part D: end to end on two devices
+
+Devices: Samsung SM-S921B serial `RFCWC0SSVDM` and the Pixel 10 Pro XL emulator serial
+`emulator-5554`. A Xiaomi (`192.168.1.248:5555`, model 2602BPC18G) was also attached for
+the whole run and **no command was sent to it**; every adb call carried `-s` with one of
+the two allowed serials.
+
+- D0 build and install: `:androidApp:assembleDebug` BUILD SUCCESSFUL, installed with
+  `adb install -r` on both devices, `Success` each. Launcher activity is
+  `com.retro99.parrot/.android.MainActivity` (not `.MainActivity`).
+- D0 **the app really does point at the project part B migrated**: the APK's
+  `com.retro99.parrot.SUPABASE_URL` metadata is the linked project's host. Checked with
+  `aapt2 dump xmltree`; the reference is not reproduced here.
+- D0 signed in on the Samsung: **yes**, already. Signed in on the emulator: **yes**,
+  already, to the same account. So decision 6 was never exercised — no Google chooser
+  appeared, and **no password and no verification code was typed on either device**.
+- D0 auto-backup was **off** on the Samsung and was turned on. Turning it on raises a
+  rights attestation dialog ("I have the right to store these books in Parrot Cloud")
+  whose checkbox must be ticked before "Turn on" does anything; the checkbox is a
+  separate 125 px node to the left of the text, not the text itself.
+
+### D1 back up a short Project Gutenberg book
+
+- Imported `iosApp/iosApp/sample-books/PrideAndPrejudice.epub` (Project Gutenberg, public
+  domain, 24,846,289 bytes — an illustrated edition, 187 entries, mostly JPEGs). Library
+  21 -> 22 books.
+- **With auto-backup on, the newly imported book was still "Only on this phone"** and had
+  to be backed up with the book's own "Add to Parrot Cloud" action. Recorded, not fixed:
+  this is book backup, which the brief puts outside this work.
+- Backed it up at 00:26:55. The book screen showed "✓ On all your devices" by 00:27:03.
+- Server: `cloud_book_files` media `ebook` status `available` went 2 -> 3 rows,
+  `sum(size_bytes)` 90,305 -> **24,936,594**; `cloud_book_uploads` 3 finalized;
+  `cloud_user_storage.used_bytes` 24,936,594. **PASS.**
+
+### D1a a short chapter had to be manufactured
+
+Every chapter of that Gutenberg edition is one large spine item: the chapter on screen
+reported **391 sentences**, and measured preparation was ~8.5 s per sentence on this
+Samsung (32 sentences in 4.5 min, started 00:34:13, cancelled at 39/391), so one chapter
+is ~55 minutes. That is too slow to repeat for checks 2 and 4 to 10.
+
+So three distinct short books were built from the repository's own 2 KB fixture
+`feature/reader/ui/src/androidMain/assets/reader-preview/sample.epub` (one chapter,
+9 sentences), each given a different title and one different sentence so the three have
+different content hashes (verified: three different md5s). They were pushed to
+`/sdcard/Download/` as `parrot-qa-short-{A,B,C}.epub`. Book **A** carries checks 2 to 5.
+The Gutenberg book carries check 1, which is what check 1 is about.
+
+The cancelled 391-sentence partial was deleted from the row first. Its confirmation read
+"Delete prepared audio? This chapter will have to be prepared again before it plays
+instantly." and **correctly did not mention the cloud**, because that chapter had never
+been backed up.
+
+### D2 prepare a short chapter with Kokoro
+
+- Book A imported (22 -> 23 books) and backed up: server `ebook` rows 3 -> 4,
+  `sum(size_bytes)` 24,936,594 -> **24,938,916** (+2,322, the epub exactly).
+- Voice set to Kokoro · Heart, rate 1×, on both devices.
+- **The estimate is shown before starting, as decision 7 asks.** For 9 sentences it read
+  "**Under a minute · about 130 kB**". Prepared at 00:46:52; "Ready, plays instantly ·
+  219 kB" by **t+17 s**.
+  - estimate vs reality: time **under a minute vs 17 s — right**. Size **130 kB vs
+    219 kB — under by 40%**; the real figure on this device is ~24 kB per sentence, not
+    the 14 kB the measurement table gave. Not tuned, per the owner's instruction that
+    this is being done on another branch.
+- Row lines, in order: "1 of 9 sentences" -> "5 of 9 sentences" -> "Ready, plays
+  instantly · 219 kB" with a second line "**Waiting to back up**".
+- Server, ~5 minutes later: `cloud_book_files` media **`tts_prepared_audio`** status
+  **`available`**, 1 row, **222,046 bytes**; `cloud_book_uploads` media
+  `tts_prepared_audio` status `finalized`, 1; `used_bytes` **25,160,962**.
+  **The upload worked end to end — the first time the app has ever talked to a server
+  that knows prepared audio.**
+- **But the row kept saying "Waiting to back up"** for over 5 minutes and across closing
+  and reopening the Listening sheet, while the server already had the file available and
+  finalized. After `am force-stop` and reopening, the same row read "**Backed up to
+  Parrot Cloud**". So the state is computed correctly and only its liveness is wrong.
+  Recorded as wrong behaviour **W2**. **PARTIAL PASS.**
+
+### D3 the usage breakdown
+
+Cloud account screen: "Parrot Cloud storage — 25.2 MB of 5.4 GB", and beneath it
+"**Books 24.9 MB**" and "**Prepared audio 222.0 KB**". Server: 24,938,916 +
+222,046 = 25,160,962. The two add up to the total. **PASS.**
+
+(This account's allowance is 5.4 GB, not the 200 MiB default; it was not changed by this
+run except in check 7, and was put back.)
+
+### D4 download on the emulator
+
+- The emulator synced and both books appeared from the cloud (library 0 -> 4 books).
+  Book A's ebook downloaded on request: "Not on this phone" -> "On this phone · 2 KB".
+- **Before** the Kokoro pack was installed, with the System voice selected, the chapter's
+  row already read "**In Parrot Cloud, made for other settings · 222 kB**" with one
+  action, **Download**. So the device learns from the cloud what is there, with its size,
+  and says what it was made for. 
+- Kokoro pack downloaded on the emulator (149 MB, ~2 min) and Heart selected at 1×. The
+  row then read "**In Parrot Cloud, plays instantly · 222 kB**" with **Download**.
+- Download tapped at 01:02:08. The store afterwards holds
+  `files/tts-prepared/<64 hex>/<64 hex>/` with **9 `.m4a` files and `manifest.json`**, and
+  `files/tts-prepared-inbox` is **empty** — the archive was verified and unpacked into
+  place and left nothing behind.
+- The row said "Downloading from Parrot Cloud…" and stayed there (same staleness, **W2**).
+  After a restart it read "**Ready, plays instantly · 219 kB**" and "**Backed up to
+  Parrot Cloud**".
+- **Play with no synthesis: PASS.** Playback reached "Sentence 7 of 9" within 25 s, and in
+  the whole logcat for that playback `grep -ci 'synthesize start'` = **0**,
+  `grep -ci 'kokoro'` = **0**, `grep -c 'FATAL EXCEPTION'` = **0**. A chapter prepared on
+  the Samsung played on the emulator without generating a single sentence.
+
+### D5 a different setting selected
+
+Covered by the voice case rather than the speed case: with the System voice selected
+instead of Kokoro, the same row read "In Parrot Cloud, made for other settings · 222 kB"
+and still offered Download, exactly as it does for local audio. The speed variant
+(same voice, rate other than 1×) was **not** tried — see "not done" below. **PASS for
+the voice case.**
+
+### D8 deleting a backed-up chapter
+
+- The confirmation read "Delete prepared audio? **This removes the prepared audio from
+  this device and from Parrot Cloud.** This chapter will have to be prepared again before
+  it plays instantly." So it mentions the cloud when the chapter is backed up, and the
+  earlier confirmation for a never-backed-up chapter correctly did not.
+- After deleting, the row returned to the plain hint and "Prepare this chapter".
+- Server: **no `tts_prepared_audio` row at all** (not even `deleting`), and
+  `used_bytes` 25,160,962 -> **24,938,916** — exactly the 222,046 bytes released.
+  **PASS.**
+- The emulator half (the download offer disappearing after a sync) was not checked: by
+  then the emulator held a local installed copy, so the row shows Ready rather than an
+  offer, and the case was no longer reachable there.
+
+## Part E: findings, recorded and not fixed
+
+**W1 — the estimate shows the previous chapter's sentence count.** Opening book A's
+9-sentence chapter immediately after leaving the 391-sentence Gutenberg chapter, the row
+read "About 15 minutes · about 5 MB". After pressing Play, so read-aloud loaded the
+chapter, it corrected to "Under a minute · about 130 kB". Cause:
+`viewState.ttsSentenceCount` comes from `ttsController.sentenceCount`, a controller-level
+value with no chapter attached, and `ReaderOverlay.kt` feeds it to
+`preparedChapterEstimate` without checking it belongs to the chapter on screen. The fix
+is a guard — carry the href the count was counted for and show no estimate unless it
+matches — plus clearing the count when the chapter changes. **Not fixed**: the owner said
+mid-run that the estimate is being built on another branch, and to keep this one and stop
+refining it.
+
+**W2 — the row's cloud line does not refresh when a transfer finishes.** Seen twice:
+"Waiting to back up" persisted for over five minutes and across reopening the Listening
+sheet while the server already had the file `available` and the upload `finalized`; and
+"Downloading from Parrot Cloud…" persisted after the archive was fully verified, unpacked
+and installed. Both corrected after `am force-stop` and reopening, so the state is
+computed correctly and only its liveness is wrong. Cause:
+`AndroidTtsController.preparedChapterAudio` and `.preparedChapterCloud` are
+`combine(chapterPreparationJob.state, preparedAudioRevision)`, and **nothing bumps
+`preparedAudioRevision` when the transfer engine settles** — `refreshPreparedAudio()` is
+called on user actions only. The seam for the fix:
+`PreparedChapterBackupQueue.watchOutcome` already observes the transfer to a terminal
+state, but it returns early when `analytics` is null and signals nobody. Give both queues
+an `onSettled: () -> Unit`, call it when the transfer reaches a terminal state
+(ungated by analytics), surface it from `TtsPreparedChapterBackup`, and have
+`AndroidTtsController` set it to `::refreshPreparedAudio`.
+`PreparedChapterBackupQueueTest` and `PreparedChapterDownloadQueueTest` already drive the
+queues with a fake transport, so the test is written there first. **Not fixed**: the owner
+said to wrap up before part E was started.
+
+**Outside this feature, recorded not fixed.** With "Add new books automatically" on, a
+book imported afterwards still read "Only on this phone" and had to be backed up with the
+book's own "Add to Parrot Cloud" action. That is book backup, which the brief puts outside
+this work.
+
+## What this run settled
+
+The two things the brief said had never happened have both now happened:
+
+1. The server SQL has been run. 22 files, 476 assertions, `Result: PASS` against the
+   development project, including the 38 prepared-audio assertions that had never
+   executed anywhere, and all 20 pre-existing files passing unedited.
+2. The app has talked to a server that knows prepared audio, in both directions: a
+   chapter prepared on the Samsung was uploaded, counted against the allowance, listed to
+   a second device with its size, downloaded there, verified, unpacked and played without
+   generating a single sentence; and deleting it from the row released its bytes and
+   removed its row.
