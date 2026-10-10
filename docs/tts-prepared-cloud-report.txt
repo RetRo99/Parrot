@@ -7,7 +7,7 @@ Commits this run (hash + subject, oldest first):
 c11e56cc feat(cloud): uploads are open to every signed-in account
 53f6370e feat(reader): say what preparing a chapter will cost before it starts
 51d875f4 docs(tts): the device evidence, and prepared audio really is in the cloud
-26871778 docs(tts): the run report, and the two findings part E did not fix
+4cd5886a docs(tts): the run report, and the two findings part E did not fix
 Parts complete (A-F):
 A complete. B complete, all eight steps. C complete as built, then the owner said
 mid-run that the estimate is being done on another branch and told me to keep it and
