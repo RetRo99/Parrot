@@ -1,10 +1,13 @@
 --- REPORT ---
 Branch: tts/prepare-time (worktree .claude/worktrees/tts-prepare-time)
 Commits this run (hash + subject, oldest first):
-6f0b4f1a Merge branch 'tts/prepared-cloud' into tts/prepare-time (Step 0)
+4fe371f2 Merge branch 'tts/prepared-cloud' into tts/prepare-time (Step 0)
 a6200e75 test(tts): the row and the notification should promise a time while they have none
 c1913c8f feat(tts): say a time is coming while preparing has not worked one out
-Steps complete (0-4): 0 and 1. Steps 2, 3 and 4 not started at this point.
+(docs commit: the final report after step 1)
+1842316f test(tts): the size should come from the audio length, not from a count of sentences
+e75a7b9b feat(tts): the size estimate is the audio's length at the encoder's bit rate
+Steps complete (0-4): 0, 1 and 2. Steps 3 and 4 not started at this point.
 Step 0: merged (yes/no, conflicts); per module after the merge, <module> <passed>/<total>, one line each:
 Yes, merged with no conflicts; only documents and evidence differed.
 feature/reader/ui testAndroidHostTest 767/767
@@ -20,7 +23,22 @@ Both read "%1$d of %2$d sentences · working out how long is left…", so
 "the notification promises a time in the same place while it has none ::
 java.lang.AssertionError: expected:<WAITING> but was:<COUNT>".
 Step 2: how the size is worked out now, with the bit rate and overhead used and where they came from; what it gives for the Samsung case (219 kB actual); tests failed first (yes/no):
-Not started.
+Size = the audio length the row already computes, at 48 000 bit/s, plus 1 050 bytes of
+container a file. The bit rate is AndroidTtsPreparedAacEncoder's own MediaFormat
+.KEY_BIT_RATE (line 43). The overhead is the mean of the six-sentence Samsung table in
+docs/tts-prepared-chapters.md: each row's M4A bytes less its measured duration at that bit
+rate leaves 954 to 1 190 bytes, mean 1 046. Because the rate is applied at synthesis, the
+file's length is the listening length, so a faster speed gives a smaller file. The fixed
+spoken length a sentence also had to rise (2.2 s -> 3.9 s Kokoro, 2.5 s -> 4.4 s system):
+at 2.2 s the new arithmetic still said 128 kB, so the owner's quarter could not be met.
+3.9 s comes from the only real chapter ever measured on a device - nine Kokoro sentences,
+219 kB of AAC, which at 48 kbit/s less the container is about 35 s - corroborated by its
+emulator playback reaching sentence 7 of 9 within 25 s. Samsung case: 220 050 bytes,
+labelled "220 kB", against 219 kB actual, 0.5% out; it said 130 kB before. The
+preparation-time figures are untouched, that estimate having been observed right.
+Yes, nine failures first, e.g. "the nine sentences the Samsung really wrote estimate to
+about their 219 kB :: java.lang.AssertionError: estimated 126000 against 219000, off by
+0.4246575342465753".
 Step 3: was the previous analysis right (yes/no, what differed); what signals the refresh now (file and function); each test, failed first (yes/no) and one failure text; wiring test name; does transfer progress reach the row (yes/no):
 Not started.
 Step 3: row right when the sheet opens after a finished transfer, and after a chapter change and back (covered by which tests):
@@ -30,23 +48,40 @@ Not started. No command has been sent to any device in this run.
 What the owner should try on the phone, as a short list of steps and what each should show:
 To be filled in when the steps are done.
 Existing tests edited (name + why), or "none":
-PreparedChapterRowUiTest "preparing counts the sentences with a progress bar and only
+Step 1: PreparedChapterRowUiTest "preparing counts the sentences with a progress bar and only
 cancel", TtsPreparationTimeLeftTest "before there is an estimate the row says only the
 count" (renamed "before there is a time left the row promises one in its place") and
 TtsPreparationTimeLeftJobTest "the notification says the same count and time left and
 names nothing": all three pinned the old count-only line that Step 1 replaces.
+Step 2: PreparedChapterEstimateTest "kokoro uses its own measured figures", "a system
+voice is slower and larger per sentence than kokoro" and "a 151 sentence chapter with
+kokoro"; PreparedChapterAudioLengthTest "without a record the audio length comes from the
+fixed spoken length per sentence"; PreparedChapterTextTest "the not prepared row shows the
+estimate once the count is known" and "a chapter change shows the new chapter's estimate
+and never the old one". All six pinned the old 14/16 kB a sentence or the old 2.2 s spoken
+length; each had its expected figure replaced, no assertion removed or weakened.
 New string keys (list):
 reader_tts_prepared_chapter_progress_waiting (commonMain),
 tts_chapter_preparation_notification_progress_waiting (androidMain).
 Per module after this run: <module> <passed>/<total>, one line each:
-Not yet re-verified since Step 1; Step 0 figures are above.
+feature/reader/ui testAndroidHostTest green after Step 2 (full module run); the other
+modules are re-verified at the end of the run.
 App build result: not attempted yet.
 Any machine-wide process kill used (must be no): no.
-Not done or partly done, and why: Steps 2, 3 and 4 remain.
+Not done or partly done, and why: Steps 3 and 4 remain.
 Tests skipped, ignored or weakened (file + name + reason), or "none": none.
 Places the prompt was ambiguous and what I chose:
-The notification text function also answers for "nothing running at all" (0 of 0
+Step 1: the notification text function also answers for "nothing running at all" (0 of 0
 sentences). I kept the bare count there and show the promise only while a run exists.
+Step 2: the brief said to keep the device's own measured figure where one exists, but there
+are two - a flat bytes-a-sentence from past manifests and a measured audio length per
+character. I prefer the audio length, because it knows this chapter's text; the flat figure
+is kept for a device that has one but no audio length. The brief also did not ask for the
+fixed spoken length to change, but its acceptance test cannot pass without it, so I raised
+it and left the preparation-time figures alone.
 Files changed outside feature/reader, feature/books, translations, composeApp tests and docs: none.
-Known problems I am leaving: none new so far.
+Known problems I am leaving:
+The 3.9 s fixed spoken length rests on one nine-sentence chapter, so a device that has
+prepared nothing yet still has a rough figure; it is replaced by that device's own record
+after three sentences. The container overhead is an average, not the exact per-file cost.
 --- END REPORT ---
