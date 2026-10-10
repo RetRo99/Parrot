@@ -1,0 +1,12 @@
+-- A transfer can now carry a file that is not the book itself.
+--
+-- relative_path was always "" for a book file, which is still exactly what an
+-- existing row means and what the default reproduces. A prepared chapter is one
+-- more file of its book, told apart by its relative path.
+--
+-- source_path lets a transfer name its own bytes. A book file is found through
+-- the device-files table from (book, media type); a prepared chapter archive is
+-- not a device file and has no row there, so it carries its path instead. NULL
+-- means "look it up the old way", so every existing row behaves as before.
+ALTER TABLE cloud_file_transfers ADD COLUMN relative_path TEXT NOT NULL DEFAULT '';
+ALTER TABLE cloud_file_transfers ADD COLUMN source_path TEXT;

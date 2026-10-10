@@ -161,6 +161,34 @@ interface BookFileTransferManager {
         rightsAttestation: UploadRightsAttestation,
     ): String
 
+    /**
+     * A file of a book that is not the book itself -- today, a prepared chapter
+     * archive. The caller owns the bytes and names them, because there is no
+     * device-files row to find them through; everything after that is the same
+     * reserve, resumable upload, finalize and retry path a book file takes.
+     *
+     * Defaulted so no other implementation has to know about it.
+     */
+    suspend fun enqueueAuxiliaryUpload(
+        serverId: String,
+        libraryBookId: String,
+        mediaType: String,
+        relativePath: String,
+        sourcePath: String,
+        sizeBytes: Long,
+        contentHash: String,
+        contentHashAlgorithm: String,
+        rightsAttestation: UploadRightsAttestation,
+    ): String = throw UnsupportedOperationException("Auxiliary uploads are not supported")
+
+    /** Cancels a transfer still in flight for one slot, if there is one. */
+    suspend fun cancelUpload(
+        serverId: String,
+        libraryBookId: String,
+        mediaType: String,
+        relativePath: String,
+    ) = Unit
+
     suspend fun backupAll(
         serverId: String,
         rightsAttestation: UploadRightsAttestation,
@@ -171,6 +199,17 @@ interface BookFileTransferManager {
     suspend fun removeDownload(serverId: String, libraryBookId: String, mediaType: String)
 
     suspend fun deleteRemoteBackup(serverId: String, libraryBookId: String, mediaType: String)
+
+    /**
+     * Deletes one named file of a book rather than the book's own file.
+     * Defaulted so no other implementation has to know about it.
+     */
+    suspend fun deleteRemoteFile(
+        serverId: String,
+        libraryBookId: String,
+        mediaType: String,
+        relativePath: String,
+    ) = Unit
 
     /** Removes only app-provisioned replicas associated with a deleted cloud file. */
     suspend fun invalidateCloudFile(cloudBookFileId: String)

@@ -17,7 +17,7 @@ import kotlin.test.assertTrue
 class SavedPagesMigrationTest {
 
     @Test
-    fun `a new database is at version 42 and a saved page round-trips the address it was served from`() = runBlocking {
+    fun `a new database is at version 42 or later and a saved page round-trips the address it was served from`() = runBlocking {
         val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
         try {
             // Given
@@ -39,7 +39,7 @@ class SavedPagesMigrationTest {
             documents.upsert(page)
 
             // Then
-            assertEquals(42L, AppDatabase.Schema.version)
+            assertTrue(AppDatabase.Schema.version >= 42L)
             val stored = assertNotNull(documents.get("source-1", 3, "http://books.example/opds"))
             assertEquals("https://books.example/opds/", stored.effectiveUrl)
             assertContentEquals(byteArrayOf(1, 2, 3), stored.payload)

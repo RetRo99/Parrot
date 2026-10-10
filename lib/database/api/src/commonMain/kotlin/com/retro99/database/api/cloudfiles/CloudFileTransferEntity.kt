@@ -17,6 +17,10 @@ data class CloudFileTransferEntity(
     val tusUploadUrl: String?,
     val tusExpiresAt: String?,
     val rightsAttestation: String?,
+    /** "" for the book's own file; a prepared chapter is told apart by this. */
+    val relativePath: String = "",
+    /** Where the bytes are. Null means the device-files row for (book, media type). */
+    val sourcePath: String? = null,
     val state: String,
     val attemptCount: Int,
     val nextAttemptAt: String?,

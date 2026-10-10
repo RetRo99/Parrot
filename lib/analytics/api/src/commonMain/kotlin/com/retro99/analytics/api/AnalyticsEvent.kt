@@ -671,6 +671,25 @@ sealed interface ReaderAnalyticsEvent : AnalyticsEvent {
     }
 
     /**
+     * One event per prepared-chapter backup outcome, never one per attempt and
+     * never one per sentence. Size and outcome only: no book, chapter, voice or
+     * server reason, because the archive's size is the only thing about it that
+     * is not either an identifier or content.
+     */
+    data class TtsPreparedAudioBackupEnded(
+        val outcome: String,
+        val sizeBytes: Long,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "tts_prepared_audio_backup_ended"
+        override val parameters: Map<String, Any> = mapOf(
+            "operation" to "tts_prepared_audio_backup",
+            "stage" to "ended",
+            "outcome" to outcome,
+            "size_bytes" to sizeBytes,
+        )
+    }
+
+    /**
      * Records one TTS playback attempt or terminal result with bounded, non-content dimensions.
      * Voice IDs, book IDs, narration text and exception messages are intentionally excluded.
      */

@@ -444,6 +444,131 @@ chapter has to be playable by the store on the other device, not merely present.
 - Nothing calls this yet. It has no Koin binding, because nothing injects it until
   Step 3, so there is no new `@Single` to resolve from the real graph at this step.
 
-## Steps 3 to 7
+## Step 3: upload
+
+**Partly built.** The upload path, its states and its analytics are built and tested;
+the two device-side triggers that would start it by themselves are not. See "What is
+missing" at the end of this section — the feature is not reachable by a user yet.
+
+### No second uploader
+
+The brief forbids a second uploader, and there is not one. `BookFileTransferEngine`
+gained exactly two things, both additive, so that a prepared chapter can go through its
+existing reserve, resumable upload, finalize, retry and persisted queue:
+
+- **`cloud_file_transfers.relative_path`**, defaulting to `''`. The engine previously
+  hard-coded `relativePath = ""` in `createRequest`, `failPermanently` and
+  `cancelTransfer`; those now read the transfer's own path, and `''` is exactly what an
+  existing row means.
+- **`cloud_file_transfers.source_path`**, nullable. A book file's bytes are found
+  through the device-files row for `(book, media type)`; a prepared chapter archive is
+  not a device file and has no row there, so it names its own path. `NULL` means "look
+  it up the old way".
+
+Local schema migration `42.sqm` (version 42 → 43), with
+`PreparedAudioTransferMigrationTest`: a new database round-trips both columns, a book
+file still means the empty path and no source, an existing version-42 row survives the
+upgrade reading as the book's own file, and the upgraded table matches a fresh one.
+
+`pruneSupersededTransfers` now also keys on the relative path, so one chapter's
+finished transfer is no longer mistaken for another's.
+
+New domain members, each **defaulted on the interface** so no other implementation --
+including two existing test fakes -- had to change: `enqueueAuxiliaryUpload`,
+`cancelUpload`, `deleteRemoteFile`. `deleteRemoteBackup` keeps its exact signature and
+simply delegates to `deleteRemoteFile` with the empty path.
+
+`BookFileTransferEngine` also gained an optional `queueContext`, defaulting to
+`Dispatchers.Default`. Production is unchanged; a host test passes its own dispatcher so
+the queue it enqueued onto is one `runTest` can drive. Without it the engine's work
+runs on real threads while `runTest`'s clock is virtual, and nothing can be awaited.
+
+### The states
+
+`preparedChapterBackupState` (`feature/reader/ui/.../reader/PreparedChapterBackupState.kt`),
+pure and in commonMain, with 20 commonTest cases that run on Android and iOS. Twelve
+states, including all six the brief names:
+
+| State | Meaning |
+| --- | --- |
+| `BackedUp` | **uploaded** |
+| `WaitingForWifi` | **waiting for Wi-Fi** |
+| `WaitingForBookBackup` | **waiting for the book's backup** |
+| `StorageFull` | **storage full** — permanent, no retry loop, one message |
+| `FailedWillRetry` | **failed and will retry** |
+| `NotAllowed` | **not allowed** to upload |
+| `WaitingForBooks` | books are uploaded before audio |
+| `BackupOff` | the auto-backup switch is off |
+| `Queued` | every condition met; the only state that hands work to the engine |
+| `Uploading`, `Failed`, `NotApplicable` | |
+
+The order is the order of what the user needs to know first. **What has already
+happened beats what might**: a chapter that is up reads as backed up whatever the
+switches now say, and a full allowance is reported even after the device leaves Wi-Fi,
+because the user has to act on it. Only then do the gates speak, outermost first — no
+account, not allowed, switched off — and only then the things that resolve on their
+own. A table-driven test builds one input set per state and asserts that `Queued` is
+the *only* one that returns true from `shouldQueuePreparedChapterUpload`.
+
+A server refusal of `book_backup_unavailable` is deliberately reported as
+`WaitingForBookBackup`, not `Failed`: it is the same fact the gate reports, and the
+gate's wording is the one a user can act on.
+
+### Tested with a fake transport
+
+`PreparedAudioUploadTest` (`feature/books/data`, 17 cases) drives the **real engine**
+through a fake transport, not a mock of the engine:
+
+- the chapter is reserved at its own relative path with media type
+  `tts_prepared_audio`, uploaded, finalized, and becomes one more `available` file of
+  its book, with the book's own row untouched beside it;
+- the bytes that go up are the archive's, from the source path, not the book's;
+- preparing the same chapter with the same settings does not upload twice (same
+  transfer id, one reservation); with other settings it is a different file (two
+  reservations, two rows);
+- `quota_exceeded`, `uploads_not_enabled` and `book_backup_unavailable` each end
+  `failed` with **no retry scheduled**; `too_many_pending_uploads` with a
+  `retry_after_ms` ends `pending` with an attempt counted and a next attempt set;
+- `already_available` completes without uploading anything;
+- deleting the chapter cancels a pending upload and leaves no transfer, and
+  `deleteRemoteFile` removes only its own cloud row while the book's backup stays;
+- an empty relative path, a size that does not match the archive, and a book whose
+  metadata has not synced are each refused before any transfer row is written.
+
+### Analytics
+
+`ReaderAnalyticsEvent.TtsPreparedAudioBackupEnded(outcome, sizeBytes)` — one event per
+outcome, never per attempt and never per sentence. Parameters are
+`operation=tts_prepared_audio_backup`, `stage=ended`, `outcome`, `size_bytes`: no book,
+chapter, voice, path or server reason, because the size is the only thing about the
+archive that is neither an identifier nor content.
+
+`AnalyticsParameterSanitizer` gained `size_bytes` as a bounded byte count with its own
+limit (4 GiB) rather than borrowing the one-year millisecond bound the durations use.
+Three tests: the event keeps exactly its four parameters; a book uuid, chapter href,
+title, voice id, relative path and error message under the same event all disappear;
+and a negative size, an over-bound size, a size sent as text and a size sent as an `Int`
+are each dropped. Two of the three failed before the allow-list entry existed (checked
+by removing it again); the third passes fail-closed, which is the point of it.
+
+### What is missing from Step 3
+
+Honestly: the two triggers. **Nothing calls `enqueueAuxiliaryUpload` yet.**
+
+- After a chapter finishes preparing, and at app start for chapters prepared earlier,
+  something has to read the gates, pack the archive (Step 2), and enqueue it. That
+  needs the Wi-Fi/unmetered signal, which **does not exist anywhere in the codebase
+  today** — there is no connectivity monitor to read `onUnmeteredNetwork` from, so one
+  has to be added. It is an input to the pure decision precisely so that the decision
+  could be built and tested before the platform plumbing.
+- `TtsPreparedChapterArchive` therefore still has no caller and no Koin binding, and
+  there is still no new `@Single` to resolve from the real graph.
+- Deleting the chapter from the row cancels the upload and deletes the cloud file at
+  the *engine* level, tested, but the row is not wired to it — that is Step 5.
+
+So a user cannot yet cause a prepared chapter to be uploaded. Everything that would
+carry it once something does is built and green.
+
+## Steps 4 to 7
 
 Not built.
