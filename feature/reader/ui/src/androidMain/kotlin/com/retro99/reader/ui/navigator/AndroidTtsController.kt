@@ -30,6 +30,7 @@ import com.retro99.reader.ui.reader.PreparedChapterText
 import com.retro99.reader.ui.reader.readPreparedChapterText
 import com.retro99.reader.ui.tts.TtsPreparedAudioStore
 import com.retro99.reader.ui.tts.TtsPreparedChapterBackup
+import com.retro99.reader.ui.tts.preparedAudioTriggers
 import com.retro99.reader.ui.tts.TtsPreparedChapterAudio
 import com.retro99.reader.ui.tts.TtsPlaybackInfo
 import com.retro99.reader.ui.tts.TtsPreparationProgress
@@ -747,7 +748,7 @@ class AndroidTtsController(
      * store is a few small files, and nothing else can change what is prepared for a chapter.
      */
     override fun preparedChapterAudio(chapterHref: String): Flow<TtsPreparedChapterAudio> =
-        combine(chapterPreparationJob.state, preparedAudioRevision) { _, _ -> Unit }
+        preparedAudioTriggers(chapterPreparationJob.state, preparedAudioRevision, preparedChapterBackup.settled)
             .map { withContext(Dispatchers.IO) { readPreparedChapterAudio(chapterHref) } }
 
     /**
@@ -779,7 +780,7 @@ class AndroidTtsController(
      * for that voice from the preparation job's record.
      */
     override val preparedChapterMeasured: Flow<PreparedChapterMeasured> =
-        combine(chapterPreparationJob.state, preparedAudioRevision) { _, _ -> Unit }
+        preparedAudioTriggers(chapterPreparationJob.state, preparedAudioRevision, preparedChapterBackup.settled)
             .map { withContext(Dispatchers.IO) { readPreparedChapterMeasured() } }
 
     private fun readPreparedChapterMeasured(): PreparedChapterMeasured = runCatching {
@@ -803,7 +804,7 @@ class AndroidTtsController(
     }.getOrElse { PreparedChapterMeasured() }
 
     override fun preparedChapterCloud(chapterHref: String): Flow<PreparedChapterCloudInputs> =
-        combine(chapterPreparationJob.state, preparedAudioRevision) { _, _ -> Unit }
+        preparedAudioTriggers(chapterPreparationJob.state, preparedAudioRevision, preparedChapterBackup.settled)
             .map { withContext(Dispatchers.IO) { readPreparedChapterCloud(chapterHref) } }
 
     override suspend fun downloadPreparedChapter(chapterHref: String) {

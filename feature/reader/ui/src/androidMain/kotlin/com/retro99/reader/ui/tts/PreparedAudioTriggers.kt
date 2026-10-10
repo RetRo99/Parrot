@@ -19,4 +19,4 @@ internal fun preparedAudioTriggers(
     preparation: Flow<*>,
     revision: Flow<*>,
     settled: Flow<*>,
-): Flow<Unit> = combine(preparation, revision) { _, _ -> Unit }
+): Flow<Unit> = combine(preparation, revision, settled) { _, _, _ -> Unit }

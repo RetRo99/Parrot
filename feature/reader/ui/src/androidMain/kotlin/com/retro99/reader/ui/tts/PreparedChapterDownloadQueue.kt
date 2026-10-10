@@ -16,6 +16,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -205,16 +206,34 @@ internal class PreparedChapterDownloadQueue(
     private fun cloudPossibleFor(id: PreparedChapterId): Boolean =
         id.serverId == LOCAL_SERVER_ID && id.bookId.isNotEmpty()
 
+    /**
+     * Follows this download to its end and installs what arrived. Every move of the engine
+     * is a word to the row: without it the row kept saying "Downloading from Parrot Cloud"
+     * after the archive had been verified, unpacked and installed, and only an app restart
+     * corrected it.
+     */
     private fun watchAndInstall(id: PreparedChapterId, relativePath: String, destination: File) {
         scope.launch {
             try {
+                var lastSeen: Pair<String, String?>? = null
                 val terminal = transfers.observeForBook(serverId, id.bookId)
                     .mapNotNull { rows ->
                         rows.firstOrNull { transfer ->
                             transfer.direction == DIRECTION_DOWNLOAD &&
-                                transfer.relativePath == relativePath &&
-                                transfer.state in TERMINAL_STATES
+                                transfer.relativePath == relativePath
                         }
+                    }
+                    .transformWhile { transfer ->
+                        val seen = transfer.state to transfer.lastError
+                        val isTerminal = transfer.state in TERMINAL_STATES
+                        // The end is not said here: what the row has to show then depends
+                        // on the install below, so the one word for it comes afterwards.
+                        if (seen != lastSeen && !isTerminal) {
+                            lastSeen = seen
+                            onTransferChanged()
+                        }
+                        if (isTerminal) emit(transfer)
+                        !isTerminal
                     }
                     .first()
                 if (terminal.state == STATE_COMPLETED) install(id, relativePath, destination)
@@ -223,6 +242,10 @@ internal class PreparedChapterDownloadQueue(
                 throw exception
             } catch (_: Exception) {
                 destination.delete()
+            } finally {
+                // Installed, refused or never arrived: either way the row is now wrong
+                // until it reads again.
+                onTransferChanged()
             }
         }
     }

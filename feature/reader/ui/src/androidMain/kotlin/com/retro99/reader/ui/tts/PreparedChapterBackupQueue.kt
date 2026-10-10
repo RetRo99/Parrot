@@ -16,6 +16,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.launch
 
 /**
@@ -58,8 +59,8 @@ internal class PreparedChapterBackupQueue(
     suspend fun backUp(id: PreparedChapterId, settings: PreparedVoiceSettings): PreparedChapterBackupState {
         val gathered = gather(id, settings)
         val state = preparedChapterBackupState(gathered.inputs)
-        if (!shouldQueuePreparedChapterUpload(gathered.inputs)) return state
-        val attestation = gathered.attestation ?: return PreparedChapterBackupState.NotAllowed
+        if (!shouldQueuePreparedChapterUpload(gathered.inputs)) return ended(state)
+        val attestation = gathered.attestation ?: return ended(PreparedChapterBackupState.NotAllowed)
 
         val destination = File(outbox, gathered.relativePath.substringAfterLast('/'))
         return when (val packed = archive.pack(store.chapterDirectory(id), destination)) {
@@ -85,7 +86,7 @@ internal class PreparedChapterBackupQueue(
                     // retry, and the row says so once.
                     destination.delete()
                     log("refused", packed.sizeBytes)
-                    PreparedChapterBackupState.Failed
+                    ended(PreparedChapterBackupState.Failed)
                 }
             }
 
@@ -94,11 +95,11 @@ internal class PreparedChapterBackupQueue(
                 if (packed.reason == PreparedArchiveRejection.CHAPTER_INCOMPLETE) {
                     PreparedChapterBackupState.NotApplicable
                 } else {
-                    PreparedChapterBackupState.Failed
+                    ended(PreparedChapterBackupState.Failed)
                 }
             }
 
-            is PreparedArchiveResult.Installed -> PreparedChapterBackupState.Failed
+            is PreparedArchiveResult.Installed -> ended(PreparedChapterBackupState.Failed)
         }
     }
 
@@ -209,9 +210,13 @@ internal class PreparedChapterBackupQueue(
         id.serverId == LOCAL_SERVER_ID && id.bookId.isNotEmpty()
 
     /**
-     * One event per outcome, at the end: the engine owns the attempts, so
-     * waiting for its terminal state is the only way to report the outcome
-     * rather than the intention.
+     * Follows this upload to its end: one analytics event for the outcome, and a word to
+     * the row every time the engine moves it. The engine owns the attempts, so waiting for
+     * its terminal state is the only way to report the outcome rather than the intention --
+     * and the only way the row learns an upload finished, because nothing else re-reads it.
+     *
+     * The word to the row is not gated on analytics: a build or an account without
+     * analytics still has a row to keep right.
      */
     private fun watchOutcome(
         libraryBookId: String,
@@ -219,18 +224,25 @@ internal class PreparedChapterBackupQueue(
         sizeBytes: Long,
         archiveFile: File,
     ) {
-        val analytics = analytics ?: return
         scope.launch {
             try {
+                var lastSeen: Pair<String, String?>? = null
                 val terminal = transfers.observeForBook(serverId, libraryBookId)
-                    .mapNotNull { rows ->
-                        rows.firstOrNull { transfer ->
-                            transfer.relativePath == relativePath &&
-                                transfer.state in TERMINAL_STATES
+                    .mapNotNull { rows -> rows.firstOrNull { it.relativePath == relativePath } }
+                    .transformWhile { transfer ->
+                        val seen = transfer.state to transfer.lastError
+                        if (seen != lastSeen) {
+                            lastSeen = seen
+                            // "Waiting to back up" -> "Uploading" -> "Backed up": each
+                            // step is news the row cannot get any other way.
+                            onTransferChanged()
                         }
+                        val isTerminal = transfer.state in TERMINAL_STATES
+                        if (isTerminal) emit(transfer)
+                        !isTerminal
                     }
                     .first()
-                analytics.logEvent(
+                analytics?.logEvent(
                     ReaderAnalyticsEvent.TtsPreparedAudioBackupEnded(
                         outcome = terminal.lastError ?: terminal.state,
                         sizeBytes = sizeBytes,
@@ -244,6 +256,16 @@ internal class PreparedChapterBackupQueue(
                 // No event rather than a wrong one.
             }
         }
+    }
+
+    /**
+     * An end the row has to be told about, because nothing else will. Only an end: the
+     * states that mean "later" or "nothing to do" are not news, and the app-start sweep
+     * runs over every prepared chapter.
+     */
+    private fun ended(state: PreparedChapterBackupState): PreparedChapterBackupState {
+        if (state in END_STATES) onTransferChanged()
+        return state
     }
 
     private fun log(outcome: String, sizeBytes: Long) {
@@ -262,5 +284,10 @@ internal class PreparedChapterBackupQueue(
         const val STATUS_AVAILABLE = "available"
         const val STATE_COMPLETED = "completed"
         val TERMINAL_STATES = setOf(STATE_COMPLETED, "failed", "cancelled")
+        val END_STATES = setOf(
+            PreparedChapterBackupState.NotAllowed,
+            PreparedChapterBackupState.StorageFull,
+            PreparedChapterBackupState.Failed,
+        )
     }
 }

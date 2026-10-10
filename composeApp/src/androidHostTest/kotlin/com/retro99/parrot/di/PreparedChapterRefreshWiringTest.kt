@@ -45,10 +45,11 @@ class PreparedChapterRefreshWiringTest {
                 "no $BACKUP_CLASS among the app initializers",
             )
 
+            // An internal property's getter is name-mangled, so the field is read instead.
             @Suppress("UNCHECKED_CAST")
-            val settled = backup::class.java.getDeclaredMethod("getSettled")
+            val settled = backup::class.java.getDeclaredField("settled")
                 .apply { isAccessible = true }
-                .invoke(backup) as StateFlow<Int>
+                .get(backup) as StateFlow<Int>
             assertEquals(0, settled.value, "nothing has settled yet")
 
             // Both queues are lazy, so forcing them is what proves what they were given.

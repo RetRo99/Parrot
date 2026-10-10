@@ -11,6 +11,9 @@ import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
@@ -37,6 +40,15 @@ class TtsPreparedChapterBackup(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    private val settledCount = MutableStateFlow(0)
+
+    /**
+     * Bumped whenever the transfer engine moves a prepared chapter of its own accord: an
+     * upload that reached the server, a download that was installed or refused. The reader
+     * watches it, because nothing else tells a row on screen that a transfer has moved.
+     */
+    internal val settled: StateFlow<Int> = settledCount.asStateFlow()
+
     init {
         // The preparation job knows nothing about the cloud; backup attaches
         // itself to it, so preparation is unchanged when backup never exists.
@@ -53,6 +65,7 @@ class TtsPreparedChapterBackup(
             network = network,
             scope = scope,
             analytics = analytics,
+            onTransferChanged = ::onTransferChanged,
         )
     }
 
@@ -65,7 +78,12 @@ class TtsPreparedChapterBackup(
             account = account,
             freeBytes = { context.filesDir.usableSpace },
             scope = scope,
+            onTransferChanged = ::onTransferChanged,
         )
+    }
+
+    private fun onTransferChanged() {
+        settledCount.value += 1
     }
 
     /** At app start, for every chapter prepared earlier. */
