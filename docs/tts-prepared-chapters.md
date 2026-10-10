@@ -4,6 +4,44 @@
 
 ### Continuation checkpoint
 
+### Step 3: prepared-first playback and synthesis priority
+
+Production `TtsAudioGenerator` now resolves the prepared store and selected
+encoder from Koin. Lookup order: prepared by the unchanged cache key, ordinary
+sentence cache, synthesizer. Prepared hits return manifest duration and file,
+including from valid partial chapters. `findCached` stays cache-only for words.
+No `TtsReadAloudEngine` changes: the six-sentence phone probe already demonstrated
+real WAV/M4A playback through its injected source and real ExoPlayer.
+
+The single-sentence preparation operation skips an entry already in the target
+chapter, copies a matching prepared entry from another chapter into this chapter
+so every folder stays self-contained, or takes a cached WAV/synthesizes privately,
+encodes, and adds it atomically. Skipping/copying does not mark the chapter used
+for live playback. A newly synthesized private WAV is not a published cache hit
+until encoding succeeds; failures clean private synthesis/encoding files and
+publish nothing. Existing valid cache/prepared entries are preserved. An optional
+ordinary-cache copy after success does not replace a live-generated entry.
+
+`TtsSynthesisPriorityGate` owns one permit and separate FIFO live/background
+queues. Release selects a live waiter before any background waiter; it never
+interrupts native synthesis already running. With no live work, background
+continues immediately. Cancelled requests remove themselves or hand the permit
+on under NonCancellable cleanup. The generator's per-key mutex remains for
+deduplication; encoding is outside it, so a live request is not held up by
+background encoding. A private WAV prevents encode failure deleting audio
+already handed to a live player (a test failed before this fix).
+
+Tests: initial ten tests had seven intended failures. Real-generator priority
+test drives the exact call order first preparation → live → queued preparation
+using an injected test dispatcher (production uses IO). Gate tests cover twenty
+queued background sentences, uninterrupted preparation order, and cancellation.
+Further regressions failed first for independent chapter copies and live-file
+safety during failed encoding. `PreparedGeneratorWiringTest` resolves the real
+generator and its source binding with only Context/native synthesis boundaries
+replaced. No bug-fix tests changed. Full verification green: reader Android
+469/469, iOS 324/324, settings 22/22, home 84/84, composeApp 62/62,
+analytics 75/75; zero failures/errors/skips. Step 3 complete at this commit.
+
 Step 3 red checkpoint (after green Step 2 `0ed7f197`): ten new generator/
 priority tests, seven intended failures before implementation. Prepared-first
 lookup, preparation/cache reuse/skip/failure cleanup, and live overtaking queued
@@ -284,10 +322,19 @@ preparation, iPhone TTS, TTS-F15 or TTS-F25 changes.
 
 ## For the cloud backup run
 
-There is no prepared chapter to package yet. When storage is implemented, a
-chapter must be self-contained as one folder with a versioned manifest and
-ordered audio files, so it can be packaged without reader state. Cloud backup
-is not part of this run.
+Host-testable folders now exist; the app does not yet expose preparation UI/jobs.
+Package one hashed chapter folder, its version-1 `manifest.json`, and exactly the
+distinct `.wav` files for entries with nonnull duration. Preserve ordered entry
+positions (duplicate keys share one audio file), voice/model/rate/pitch, identifiers
+and complete/partial status. Missing entries have null duration and zero bytes.
+Never package `.part` files, cache synthesis/encode staging files, or the ordinary
+sentence cache. Run store reconciliation before packaging, and do not package
+while a writer is active. Cloud restore must validate version, keys, file lengths,
+identifiers and paths and rebuild hashed folders safely; cloud conflict/account
+isolation policy is not implemented. The manifest contains required ids/href but
+no text/title fields; do not add book metadata to telemetry. Model version and
+sentence keys remain unchanged. Current payload format is WAV; the later run must
+not assume compressed AAC. No upload/download/cloud code exists in this feature.
 
 ## Previous run: resume instructions (superseded by continuation checkpoint)
 

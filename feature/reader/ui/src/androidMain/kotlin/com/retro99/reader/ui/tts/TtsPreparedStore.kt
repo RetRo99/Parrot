@@ -91,11 +91,21 @@ internal class TtsPreparedStore(
     }
 
     @Synchronized
-    fun lookup(key: String): PreparedSentenceAudio? {
+    fun lookup(id: PreparedChapterId, key: String, markUsed: Boolean = false): PreparedSentenceAudio? {
+        if (!validKey(key)) return null
+        val folder = chapterDirectory(id)
+        val manifest = read(folder) ?: return null
+        val sentence = manifest.sentences.firstOrNull { it.key == key && it.durationMs != null } ?: return null
+        if (markUsed) write(folder, manifest.copy(lastUsedTimeMs = now()))
+        return PreparedSentenceAudio(File(folder, "$key.wav"), checkNotNull(sentence.durationMs))
+    }
+
+    @Synchronized
+    fun lookup(key: String, markUsed: Boolean = true): PreparedSentenceAudio? {
         if (!validKey(key)) return null
         for ((folder, manifest) in chapters()) {
             val sentence = manifest.sentences.firstOrNull { it.key == key && it.durationMs != null } ?: continue
-            write(folder, manifest.copy(lastUsedTimeMs = now()))
+            if (markUsed) write(folder, manifest.copy(lastUsedTimeMs = now()))
             return PreparedSentenceAudio(File(folder, "$key.wav"), checkNotNull(sentence.durationMs))
         }
         return null

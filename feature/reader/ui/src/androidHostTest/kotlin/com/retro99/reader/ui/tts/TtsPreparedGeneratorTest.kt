@@ -3,6 +3,11 @@ package com.retro99.reader.ui.tts
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.runCurrent
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -10,6 +15,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class TtsPreparedGeneratorTest {
     private val root = Files.createTempDirectory("prepared-generator").toFile()
     private val cache = TtsAudioCacheStore(File(root, "cache").apply { mkdirs() })
@@ -89,6 +95,47 @@ class TtsPreparedGeneratorTest {
         assertEquals(emptyList(), cache.fileFor(key()).parentFile!!.list()!!.toList())
     }
 
+    @Test fun `real generator serves live before queued preparation after native work finishes`() = runTest {
+        val core = TtsAudioGeneratorCore(synth, cache, store, encoder, StandardTestDispatcher(testScheduler))
+        val release = CompletableDeferred<Unit>()
+        val entered = CompletableDeferred<Unit>()
+        synth.onCall = { text -> if (text == "first") { entered.complete(Unit); release.await() } }
+        store.begin(id, settings, listOf(key("first"), key("second")))
+        launch { core.prepareSentence(id, "first", "system", 1f, 1f) }
+        entered.await()
+        launch { core.prepareSentence(id, "second", "system", 1f, 1f) }
+        launch { core.synthesize("live", "system", 1f, 1f) }
+        runCurrent()
+        assertEquals(listOf("first"), synth.order)
+        release.complete(Unit); runCurrent()
+        assertEquals(listOf("first", "live", "second"), synth.order)
+    }
+
+    @Test fun `preparing the same key in another chapter stores a self contained copy`() = runTest {
+        seed()
+        val other = id.copy(chapterHref = "other")
+        store.begin(other, settings, listOf(key()))
+        assertIs<PreparedAudioEncoding.Success>(generator.prepareSentence(other, "Sentence.", "system", 1f, 1f))
+        assertEquals(PreparedChapterState.Partial(1, 1), store.state(other, settings))
+        store.delete(id)
+        assertNotNull(store.lookup(key()))
+        assertEquals(0, synth.calls)
+    }
+
+    @Test fun `encode failure cannot delete a WAV handed to live playback during encoding`() = runTest {
+        val entered = CompletableDeferred<Unit>()
+        val finish = CompletableDeferred<Unit>()
+        val delayedEncoder = TtsPreparedAudioEncoder { _, _ -> entered.complete(Unit); finish.await(); PreparedAudioEncoding.Failure }
+        val core = TtsAudioGeneratorCore(synth, cache, store, delayedEncoder, StandardTestDispatcher(testScheduler))
+        store.begin(id, settings, listOf(key()))
+        launch { core.prepareSentence(id, "Sentence.", "system", 1f, 1f) }
+        entered.await()
+        val live = core.synthesize("Sentence.", "system", 1f, 1f)
+        finish.complete(Unit); runCurrent()
+        assertEquals(true, assertNotNull(live.file).exists(), "Live playback owns a valid file even when the background encode fails")
+        assertNull(store.lookup(key()))
+    }
+
     private fun seed() {
         store.begin(id, settings, listOf(key()))
         val audio = File(root, "seed.wav").apply { writeBytes(byteArrayOf(1, 2, 3)) }
@@ -99,6 +146,8 @@ class TtsPreparedGeneratorTest {
         var calls = 0
         var fails = false
         var version = "v1"
+        val order = mutableListOf<String>()
+        var onCall: suspend (String) -> Unit = {}
         override fun isReady() = true
         override suspend fun awaitReady(timeoutMs: Long) = true
         override fun availableVoices() = emptyList<TtsVoice>()
@@ -106,6 +155,8 @@ class TtsPreparedGeneratorTest {
         override fun activeModelVersion(voiceId: String?) = version
         override suspend fun synthesize(text: String, voiceId: String?, rate: Float, pitch: Float, outputFile: File): TtsSynthesisResult {
             calls++
+            order += text
+            onCall(text)
             outputFile.writeBytes(wavBytes(88_200))
             return TtsSynthesisResult(if (fails) TtsSynthesisStatus.ERROR else TtsSynthesisStatus.SUCCESS,
                 if (fails) null else outputFile, durationMs = 1_000)
