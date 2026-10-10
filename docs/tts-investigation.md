@@ -768,7 +768,7 @@ Three findings came out of step 3 rather than the source read. They keep the sam
 - **Severity for a user:** unsolicited narration after a pause; Play requires an extra press.
 - **How a test could catch it:** `TtsOutsidePauseTest` drives play-when-ready independently of audibility, including a deferred synthesis gap.
 - **Fixed:** `08f0809b` — use player playing intent instead of past audibility; play-when-ready changes set the same pause latch as engine pause, and external resume clears it. `hasPlayedInSession` remains for loading. Paused READY remains allowed through `acceptsPlayerCallbacks`, while ENDED/auto-transition still require running. Existing ownership, late-callback and synthesis-gap tests pass unedited.
-- **Device/build status:** recorded in `tts-outside-pause-report.txt`; host results are not device evidence.
+- **Device/build status:** full tests 545/545 reader Android, 357/357 reader iOS, 64/64 composeApp; both app builds passed. Samsung natural System and Kokoro chapter boundaries passed. Outside-pause device checks BLOCKED: dispatch and session-monitor pause had no effect, including one dispatch inside a verified Kokoro synthesis gap. No accepted outside pause was established. See `tts-outside-pause-report.txt` and `manual-qa-evidence/2026-10-10/tts-outside-pause/`; host results are not device evidence.
 
 ## 5. Emulator and device checks
 

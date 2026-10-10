@@ -4,7 +4,10 @@ Commits this run (hash + subject, oldest first):
 ed82a7e3 test(tts): expose player playing intent and outside pause resume seam
 ff2f9295 test(tts): outside pause red "outside pause left session running"
 08f0809b fix(tts): treat outside pause as paused without losing buffering ownership
-Steps complete (1-5): 1-4 complete; 5 pending; final verification pending.
+fd4f47d1 docs(tts): record F29 and pre-device outside-pause checkpoint
+37939437 docs(tts): preserve Samsung boundary passes and outside-control blocker
+HEAD docs(tts): finalize outside-pause report (self-reference; hash resolved in final response)
+Steps complete (1-5): 1-4 complete; 5 partial, outside-control device checks blocked; final tests and builds complete.
 What was added to the player seam (names): TtsEnginePlayerListener.onPlayWhenReadyChanged; ExoTtsEnginePlayer maps ExoPlayer.onPlayWhenReadyChanged; FakeTtsEnginePlayer.reportOutsidePause and reportOutsideResume.
 Each test in Step 2: failed before the fix (yes/no) and the failure text:
 outside pause is neither running nor audible: yes; "outside pause left session running"
@@ -24,19 +27,19 @@ Word speaker and preview: confirmed at their shared engine-state decision; full 
 The new definition of isSessionRunning, in one line: !isPauseRequested && (_isPlaying.value || isStartingSentence || playerPlayWhenReady)
 Existing tests edited (name + why), or "none": none; only the explicitly requested fake seam was extended.
 TtsRunningCallbackOwnershipTest, TtsLatePlayerCallbacksTest, TtsSynthesisGapTest pass unedited (yes/no each): yes, yes, yes (1, 9, 6 tests).
-Per module: reader ui Android host pending, reader ui iOS pending, composeApp pending
-App build results (Android assemble, iOS framework): pending
-Device used (model + serial), any command sent to another device (yes/no): pending; no
-Outside pause then one Play press, System voice and Kokoro: continued (yes/no each), operation lines: pending
-Outside pause then speed change: anything played before Play (yes/no); same sentence at the new speed after Play (yes/no): pending
-Outside pause then outside play: continued and advanced (yes/no): pending
-Chapter boundary: kept reading (yes/no), System voice and Kokoro: pending
-Outside pause in a Kokoro gap: landed in a gap (yes/no, timestamps), audio started by itself (yes/no): pending
-State the phone was left in (voice, rate, screen): pending
-Done this run: behavior-neutral seam, ten new tests run before fix (six red, four green) committed before engine fix; focused 26 tests pass; F29 and plan updated.
-Not done or partly done, and why: device check and requested full verification pending at pre-device checkpoint.
+Per module: reader ui Android host 545/545, reader ui iOS 357/357, composeApp 64/64; result XML, zero failures/errors/skips.
+App build results (Android assemble, iOS framework): both BUILD SUCCESSFUL (18 s); requested full test command BUILD SUCCESSFUL (39 s).
+Device used (model + serial), any command sent to another device (yes/no): Samsung SM-S921B + RFCWC0SSVDM; no
+Outside pause then one Play press, System voice and Kokoro: continued (yes/no each), operation lines: neither established, BLOCKED; dispatch pause had no effect for either voice, so no valid outside-pause resume operation lines. System dispatch 11:52:08.995; Kokoro dispatch 11:56:42.738; both remained playing with sheet Pause.
+Outside pause then speed change: anything played before Play (yes/no); same sentence at the new speed after Play (yes/no): not established on device, BLOCKED because outside pause was not delivered; host test confirms silence then same sentence at 1.1.
+Outside pause then outside play: continued and advanced (yes/no): not established on device, BLOCKED because outside pause was not delivered; host test passes.
+Chapter boundary: kept reading (yes/no), System voice and Kokoro: yes, yes; skipped forward to 119/120 then allowed natural completion. System chapter attempted 11:55:26.970 / succeeded 11:55:27.164, duration_ms=196, continued to sentence 3/120. Kokoro chapter attempted 11:58:33.832 / succeeded 11:58:36.458, duration_ms=2627, continued through synthesis gaps to sentence 8/151.
+Outside pause in a Kokoro gap: landed in a gap (yes/no, timestamps), audio started by itself (yes/no): yes for one dispatch command, ENDED 11:58:14.766 < dispatch pause 11:58:22.506 < synthesis done 11:58:23.034; audio started 11:58:23.074, but pause delivery was ineffective, so accepted-pause behavior is BLOCKED, not a regression failure or pass. No valid paused-gap trial.
+State the phone was left in (voice, rate, screen): System voice, rate 1.0 (1×), Library, playback stopped; verified in fresh UI hierarchies.
+Done this run: behavior-neutral seam; ten new tests run before fix (six red, four green) committed before engine fix; protected suites untouched and passing; F29 and plan updated; full tests/builds pass; Samsung update install, both natural chapter boundaries checked; process-only content-minimized logcat and NOTES committed; local/installed APK SHA-256 match d136ddf360a003eb80162f4cc2a39c78884c820484b9b26893a17d915fb8b217; report checkpoint committed before final builds/device work and now updated.
+Not done or partly done, and why: device outside-pause/one-press, speed and outside-play checks blocked: dispatch pause and direct session-monitor pause did not pause Parrot, and notification shade showed no Parrot transport control. One gap command landed but did not establish a pause; did not repeat ineffective dispatch five times. Word/preview covered at shared engine-state decision, not end-to-end controller integration. No other finding investigated.
 Tests skipped, ignored or weakened (file + name + reason), or "none": none
-Places the prompt was ambiguous and what I chose: tested word and preview at the shared running-state decision without extracting or refactoring their Android controller paths; paused READY may update metadata but must not play, matching existing engine pause behavior.
+Places the prompt was ambiguous and what I chose: tested word and preview at the shared running-state decision without extracting or refactoring their Android controller paths; paused READY may update metadata but must not play, matching existing engine pause behavior; used sentence skips to approach chapter end, then natural completion, not a next-chapter button; ineffective outside dispatch is BLOCKED rather than substituting engine pause. Saved report uses HEAD for its own commit, resolved in final response.
 Files changed outside feature/reader/ui and docs: none
-Known problems I am leaving: device behavior and final builds not yet verified at this checkpoint; no unrelated finding investigated.
+Known problems I am leaving: outside-control device delivery blocker remains unattributed and unchanged; no claim of valid outside-paused device trials or full word/preview controller integration; no unrelated finding investigated.
 --- END REPORT ---
