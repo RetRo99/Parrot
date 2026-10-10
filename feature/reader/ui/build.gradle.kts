@@ -68,6 +68,13 @@ kotlin {
             implementation(libs.reorderable)
         }
 
+        // Spike-only: lets the iOS spike prove pack download/verify from Kotlin.
+        // (lib.packs is already multiplatform; a real iOS TTS module would own this dep.)
+        iosMain.dependencies {
+            implementation(projects.lib.packs)
+            implementation(libs.ktor.client.darwin)
+        }
+
         androidMain.dependencies {
             implementation("org.jsoup:jsoup:1.23.2")
             implementation(libs.readium.navigator)

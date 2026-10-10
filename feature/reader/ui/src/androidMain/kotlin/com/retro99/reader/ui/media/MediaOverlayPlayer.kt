@@ -20,6 +20,7 @@ import com.retro99.reader.ui.playback.NotificationPermissionHandler
 import com.retro99.reader.ui.playback.PermissionDenialState
 import com.retro99.reader.ui.playback.SchedulableClip
 import com.retro99.reader.ui.publication.EpubPublication
+import java.lang.ref.WeakReference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -114,6 +115,15 @@ class MediaOverlayPlayer(
 
     // Ordered list of audio hrefs in the current playlist
     private var playlistAudioHrefs: List<Url> = emptyList()
+
+    // The player the current playlist was built on. MediaPlaybackService owns the player
+    // and creates a new one every time it is created, so the playlist cache above can
+    // outlive the player it describes. Weak so a released player is not held onto.
+    private var playlistPlayer: WeakReference<ExoPlayer> = WeakReference(null)
+
+    /** Whether [playlistAudioHrefs] and [audioHrefToTrackIndex] describe the live player. */
+    private val playlistBelongsToCurrentPlayer: Boolean
+        get() = exoPlayer != null && playlistPlayer.get() === exoPlayer
 
     // Duration per audio file (from SMIL clips): maxEndTime - minStartTime
     private var audioDurations: Map<Url, Long> = emptyMap()
@@ -636,9 +646,12 @@ class MediaOverlayPlayer(
         }
 
         // Check if we need to rebuild the playlist
-        val needsNewPlaylist = playlistAudioHrefs != audioFiles ||
-            currentAudioHref != targetAudioHref ||
-            audioHrefToTrackIndex.isEmpty()
+        val needsNewPlaylist = playlistNeedsRebuild(
+            cachedAudioHrefs = playlistAudioHrefs,
+            chapterAudioHrefs = audioFiles,
+            cachedTrackIndexes = audioHrefToTrackIndex,
+            playlistBelongsToCurrentPlayer = playlistBelongsToCurrentPlayer,
+        ) || currentAudioHref != targetAudioHref
 
         if (needsNewPlaylist) {
             preparePlaylist(audioFiles, targetTrackIndex, positionToSeek, allChapterClips)
@@ -841,7 +854,12 @@ class MediaOverlayPlayer(
         mediaSessionManager.updateMetadata(bookTitle, chapterTitle)
 
         // Check if we need to rebuild the playlist
-        val needsNewPlaylist = playlistAudioHrefs != audioFiles || audioHrefToTrackIndex.isEmpty()
+        val needsNewPlaylist = playlistNeedsRebuild(
+            cachedAudioHrefs = playlistAudioHrefs,
+            chapterAudioHrefs = audioFiles,
+            cachedTrackIndexes = audioHrefToTrackIndex,
+            playlistBelongsToCurrentPlayer = playlistBelongsToCurrentPlayer,
+        )
 
         if (needsNewPlaylist) {
             // Need to build a new playlist - calculate position to seek to
@@ -956,6 +974,7 @@ class MediaOverlayPlayer(
 
         // Update tracking
         playlistAudioHrefs = audioHrefs
+        playlistPlayer = WeakReference(player)
         audioHrefToTrackIndex = audioHrefs.mapIndexed { index, href -> href to index }.toMap()
         currentAudioHref = audioHrefs.getOrNull(initialTrackIndex)
 

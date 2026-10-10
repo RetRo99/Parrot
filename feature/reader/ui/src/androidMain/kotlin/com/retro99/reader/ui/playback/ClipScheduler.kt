@@ -29,6 +29,8 @@ data class SchedulableClip(
  * - Lives in MediaPlaybackService (owns the player)
  * - Receives clip info from MediaOverlayPlayer via MediaPlaybackController
  * - Uses ExoPlayer's PlayerMessage API for precise timing
+ * - Delivers on the application thread (setLooper), because the callback touches
+ *   the MediaSession, which is main-thread only
  * - Messages are NOT deleted after delivery (setDeleteAfterDelivery(false))
  *   so they fire again on seek back
  */
@@ -64,6 +66,13 @@ class ClipScheduler(
                 val clipPayload = payload as SchedulableClip
                 onClipStarted(clipPayload)
             }.apply {
+                // Deliver on the application thread, not the playback thread. The callback
+                // reaches MediaSession, whose methods throw IllegalStateException
+                // ("Player callback method is called from a wrong thread") off that thread
+                // since media3 1.11.0 - and ExoPlayer turns a throw inside message delivery
+                // into a fatal playback error, which killed narration before its first
+                // sample. ExoPlayer.createMessage defaults to the playback thread.
+                setLooper(player.applicationLooper)
                 setPosition(trackIndex, clip.startTimeMs)
                 setPayload(clip)
                 setDeleteAfterDelivery(false)

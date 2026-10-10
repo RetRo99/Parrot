@@ -1,0 +1,214 @@
+10-10 20:16:31.416  4238  4314 I ExoPlayerImpl: Init 6267e34 [AndroidXMedia3/1.11.0] [e1s, SM-S921B, samsung, 36]
+10-10 20:16:31.423  4238  4314 I ExoPlayerImpl: Init 90fc45d [AndroidXMedia3/1.11.0] [e1s, SM-S921B, samsung, 36]
+10-10 20:16:32.226 25033 25033 D čič123: onCreate() called
+10-10 20:16:32.255 25033 25033 I ExoPlayerImpl: Init 2e04dc8 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-10 20:16:32.302 25033 25033 D čič123: ExoPlayer created: true
+10-10 20:16:32.313 25033 25033 I MediaSessionImpl: Init 153875e [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-10 20:16:32.381 25033 25033 D čič123: MediaLibrarySession created: true
+10-10 20:16:32.394 25033 25033 D čič123: Configuring buttons for media notification controller
+10-10 20:16:32.398 25033 25033 D čič123: Session added to service
+10-10 20:16:32.399 25033 25033 D čič123: MediaNotificationProvider set
+10-10 20:16:32.399 25033 25033 D čič123: Calling controller.onServiceCreated()
+10-10 20:16:32.416 25033 25033 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 20:16:32.425 25033 25033 D čič123: onCreate() completed
+10-10 20:16:32.439  1559 26753 I MediaFocusControl: requestAudioFocus() from uid/pid 10987/25033 AA=USAGE_MEDIA/CONTENT_TYPE_SPEECH clientId=android.media.AudioManager@6ab06e6androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@ed03427 callingPack=com.retro99.parrot req=1 flags=0x3 sdk=36
+10-10 20:16:32.443  1559 26753 D MediaFocusControl: selectFocusStack, uid = 10987, appDevice = 0, device = 2
+10-10 20:16:32.446  1559 26753 I MediaFocusControl: removeFocusStackEntry client:android.media.AudioManager@6ab06e6androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@ed03427
+10-10 20:16:32.446  1559 26753 I MediaFocusControl: propagateFocusLossFromGain_syncAf gain:1
+10-10 20:16:32.447  1559 26753 I MediaFocusControl: propagateFocusLossFromGain_syncAf empty stack
+10-10 20:16:32.447  1559 26753 D MediaFocusControl: propagateFocusLossFromGainToAll, 1
+10-10 20:16:32.609 25033 25033 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 20:16:32.611 25033 25033 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 20:19:18.955  1559  1677 W ActivityManager: Stopping service due to app idle: u0a987 -2m46s758ms com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 20:19:18.961 25033 25033 D čič123: onDestroy() called
+10-10 20:19:18.961 25033 25033 D čič123: java.lang.Exception: stack trace
+10-10 20:19:18.973 25033 25033 I MediaSessionImpl: Release 153875e [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36] [media3.common, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+10-10 20:19:19.006 25033 25033 I ExoPlayerImpl: Release 2e04dc8 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36] [media3.common, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+10-10 20:19:19.038  1559  3177 I MediaFocusControl: abandonAudioFocus() from uid/pid 10987/25033 clientId=android.media.AudioManager@6ab06e6androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@ed03427 callingPack=com.retro99.parrot
+10-10 20:19:19.039  1559  3177 D MediaFocusControl: abandonAudioFocus, clientId = android.media.AudioManager@6ab06e6androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@ed03427
+10-10 20:19:19.042  1559  3177 D MediaFocusControl: selectFocusStack, uid = 10987, appDevice = 0, device = 2
+10-10 20:19:19.043  1559  3177 I MediaFocusControl: removeFocusStackEntry client:android.media.AudioManager@6ab06e6androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@ed03427
+10-10 20:19:54.066  1559  1659 V WindowManager: Computed rotation=ROTATION_0 (0) for display id=0 based on lastOrientation=SCREEN_ORIENTATION_NOSENSOR (5) and oldRotation=ROTATION_0 (0), caller=com.android.server.wm.WindowManagerService.updateRotationUnchecked:82 com.android.server.wm.DisplayRotation$OrientationListener.onProposedRotationChanged:170 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.finalizeRotation:26 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.onSensorChanged:406 android.hardware.SystemSensorManager$SensorEventQueue.dispatchSensorEvent:1203 android.os.MessageQueue.nativePollOnce:-2 
+10-10 20:23:53.203  1559  1659 V WindowManager: Computed rotation=ROTATION_0 (0) for display id=0 based on lastOrientation=SCREEN_ORIENTATION_NOSENSOR (5) and oldRotation=ROTATION_0 (0), caller=com.android.server.wm.WindowManagerService.updateRotationUnchecked:82 com.android.server.wm.DisplayRotation$OrientationListener.onProposedRotationChanged:170 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.finalizeRotation:26 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.onSensorChanged:406 android.hardware.SystemSensorManager$SensorEventQueue.dispatchSensorEvent:1203 android.os.MessageQueue.nativePollOnce:-2 
+10-10 20:25:13.358 25033 25033 W MessageQueue: Handler (android.os.Handler) {ab63bd7} sending message to a Handler on a dead thread
+10-10 20:25:13.358 25033 25033 W MessageQueue: java.lang.IllegalStateException: Handler (android.os.Handler) {ab63bd7} sending message to a Handler on a dead thread
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.media3.common.util.SystemHandlerWrapper$SystemMessage.sendToTarget(SystemHandlerWrapper.java:165)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.media3.exoplayer.ExoPlayerImplInternal.setPlayWhenReady(ExoPlayerImplInternal.java:438)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.media3.exoplayer.ExoPlayerImpl.updatePlayWhenReady(ExoPlayerImpl.java:3088)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.media3.exoplayer.ExoPlayerImpl.setPlayWhenReady(ExoPlayerImpl.java:884)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.media3.common.BasePlayer.pause(BasePlayer.java:118)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.compose.foundation.AbstractClickableNode.performClick(Clickable.kt:1701)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.compose.foundation.ClickableNode.handleUpEvent(Clickable.kt:950)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.compose.foundation.ClickableNode.onPointerEvent-H0pRuoY(Clickable.kt:884)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.compose.ui.input.pointer.Node.dispatchMainEventPass(HitPathTracker.kt:445)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.compose.ui.input.pointer.Node.dispatchMainEventPass(HitPathTracker.kt:431)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.compose.ui.input.pointer.Node.dispatchMainEventPass(HitPathTracker.kt:431)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.compose.ui.input.pointer.Node.dispatchMainEventPass(HitPathTracker.kt:431)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.compose.ui.input.pointer.Node.dispatchMainEventPass(HitPathTracker.kt:431)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.compose.ui.input.pointer.NodeParent.dispatchMainEventPass(HitPathTracker.kt:285)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.compose.ui.input.pointer.HitPathTracker.dispatchChanges(HitPathTracker.kt:182)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.compose.ui.input.pointer.PointerInputEventProcessor.process-BIzXfog(PointerInputEventProcessor.kt:116)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.compose.ui.platform.AndroidComposeView.sendMotionEvent-8iAsVTc(AndroidComposeView.android.kt:2869)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.compose.ui.platform.AndroidComposeView.handleMotionEvent-8iAsVTc(AndroidComposeView.android.kt:2809)
+10-10 20:25:13.358 25033 25033 W MessageQueue: 	at androidx.compose.ui.platform.AndroidComposeView.dispatchTouchEvent(AndroidComposeView.android.kt:2630)
+10-10 20:28:13.360  9556  9556 I GestureDetector: obtain mCurrentDownEvent. id: -343034895 caller: com.sec.android.easyonehand.e0.onInputEvent:225 android.view.InputEventReceiver.dispatchInputEvent:369 android.os.MessageQueue.nativePollOnce:-2 
+10-10 20:28:40.379  9556  9556 I GestureDetector: obtain mCurrentDownEvent. id: -103043021 caller: com.sec.android.easyonehand.e0.onInputEvent:225 android.view.InputEventReceiver.dispatchInputEvent:369 android.os.MessageQueue.nativePollOnce:-2 
+10-10 20:29:10.195  9556  9556 I GestureDetector: obtain mCurrentDownEvent. id: -849595720 caller: com.sec.android.easyonehand.e0.onInputEvent:225 android.view.InputEventReceiver.dispatchInputEvent:369 android.os.MessageQueue.nativePollOnce:-2 
+10-10 20:31:27.249 25033 25033 D čič123: MediaSessionManager CREATED (new instance)
+10-10 20:31:27.250 25033 25033 D čič123: MediaOverlayPlayer init START
+10-10 20:31:27.251 25033 25033 D čič123: MediaOverlayPlayer init: calling mediaSessionManager.initialize()
+10-10 20:31:27.251 25033 25033 D čič123: MediaSessionManager.initialize() called
+10-10 20:31:27.251 25033 25033 D čič123: MediaOverlayPlayer init: calling mediaSessionManager.setBookInfo()
+10-10 20:31:27.251 25033 25033 D čič123: MediaSessionManager.setBookInfo(bookUuid=3c98712e-4e6f-476b-b7a0-7c6938a68884)
+10-10 20:31:27.251 25033 25033 D čič123: MediaOverlayPlayer init END
+10-10 20:31:27.252 25033 25033 D čič123: initialize() START
+10-10 20:31:27.252 25033 25033 D čič123: initialize(): isBookLoaded=false for bookUuid=3c98712e-4e6f-476b-b7a0-7c6938a68884
+10-10 20:31:27.252 25033 25033 D čič123: initialize(): FRESH initialization
+10-10 20:31:27.616 25033 25033 D čič123: preparePlaylist: audioHrefs=1, initialTrack=0, initialPos=85348
+10-10 20:31:27.620 25033 25033 D čič123: preparePlaylist: exoPlayer=null
+10-10 20:31:27.620 25033 25033 E čič123: preparePlaylist: exoPlayer is NULL, cannot prepare!
+10-10 20:31:27.644 25033 25033 D čič123: startPlaybackFromCurrentPosition: controllerPosition=85348, initialPositionMs=85348
+10-10 20:31:27.644 25033 25033 D čič123: startPlaybackFromCurrentPosition: using controllerPosition=85348
+10-10 20:31:27.685 25033 25033 D čič123: playInternal: START chapterHref=null, fragmentId=null
+10-10 20:31:27.685 25033 25033 D čič123: playInternal: no chapter specified, will resume
+10-10 20:31:27.685 25033 25033 D čič123: playInternal: requesting notification permission
+10-10 20:31:27.685 25033 25033 D čič123: playInternal: notification permission granted
+10-10 20:31:27.685 25033 25033 D čič123: playInternal: preparing service ready deferred
+10-10 20:31:27.685 25033 25033 D čič123: playInternal: starting foreground service
+10-10 20:31:27.689 25033 25033 D čič123: playInternal: foreground service started, awaiting service ready
+10-10 20:31:27.703 25033 25033 D čič123: onCreate() called
+10-10 20:31:27.704 25033 25033 I ExoPlayerImpl: Init c113748 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-10 20:31:27.708 25033 25033 D čič123: ExoPlayer created: true
+10-10 20:31:27.711 25033 25033 I MediaSessionImpl: Init bdca9e1 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-10 20:31:27.727 25033 25033 D čič123: MediaLibrarySession created: true
+10-10 20:31:27.729 25033 25033 D čič123: Configuring buttons for media notification controller
+10-10 20:31:27.731 25033 25033 D čič123: Session added to service
+10-10 20:31:27.731 25033 25033 D čič123: MediaNotificationProvider set
+10-10 20:31:27.731 25033 25033 D čič123: Calling controller.onServiceCreated()
+10-10 20:31:27.732 25033 25033 D čič123: onCreate() completed
+10-10 20:31:27.738 25033 25033 D čič123: playInternal: service ready, player=androidx.media3.exoplayer.ExoPlayerImpl@c113748
+10-10 20:31:27.740 25033 25033 D čič123: playInternal: resuming without chapter change
+10-10 20:31:27.740 25033 25033 D čič123: playInternal: positionToSeek=85348, currentAudioHref=null, targetAudioHref=null
+10-10 20:31:27.740 25033 25033 D čič123: playInternal: seeking to 85348
+10-10 20:31:27.741 25033 25033 D čič123: playInternal: exoPlayer=androidx.media3.exoplayer.ExoPlayerImpl@c113748, calling play()
+10-10 20:31:27.741 25033 25033 D čič123: playInternal: play() called, playWhenReady=true, isPlaying=false, state=1, mediaItemCount=0
+10-10 20:31:27.741 25033 25033 D čič123: playInternal: END
+10-10 20:31:27.857 25033 25033 D čič123: SERVICE setChapterClips: count=308
+10-10 20:31:27.858 25033 25033 D čič123: preparePlaylist: audioHrefs=1, initialTrack=0, initialPos=0
+10-10 20:31:27.859 25033 25033 D čič123: preparePlaylist: exoPlayer=androidx.media3.exoplayer.ExoPlayerImpl@c113748
+10-10 20:31:27.859 25033 25033 D čič123: preparePlaylist: calling setMediaSources with 1 sources
+10-10 20:31:27.868 25033 25033 D čič123: preparePlaylist: calling player.prepare()
+10-10 20:31:27.868 25033 25033 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=308
+10-10 20:31:27.869 25033 25033 D čič123: preparePlaylist: player.prepare() called, playbackState=2, mediaItemCount=1
+10-10 20:31:27.872 25033 25033 D čič123: preparePlaylist: completed
+10-10 20:31:27.876  1559  3316 I MediaFocusControl: requestAudioFocus() from uid/pid 10987/25033 AA=USAGE_MEDIA/CONTENT_TYPE_SPEECH clientId=android.media.AudioManager@6ab06e6androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@3028c66 callingPack=com.retro99.parrot req=1 flags=0x3 sdk=36
+10-10 20:31:27.877  1559  3316 D MediaFocusControl: selectFocusStack, uid = 10987, appDevice = 0, device = 2
+10-10 20:31:27.878  1559  3316 I MediaFocusControl: removeFocusStackEntry client:android.media.AudioManager@6ab06e6androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@3028c66
+10-10 20:31:27.878  1559  3316 I MediaFocusControl: propagateFocusLossFromGain_syncAf gain:1
+10-10 20:31:27.878  1559  3316 I MediaFocusControl: propagateFocusLossFromGain_syncAf empty stack
+10-10 20:31:27.878  1559  3316 D MediaFocusControl: propagateFocusLossFromGainToAll, 1
+10-10 20:31:27.916 25033  7764 E ExoPlayerImplInternal: Playback error
+10-10 20:31:27.916 25033  7764 E ExoPlayerImplInternal:   androidx.media3.exoplayer.ExoPlaybackException: Unexpected runtime error
+10-10 20:31:27.916 25033  7764 E ExoPlayerImplInternal:       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:1005)
+10-10 20:31:27.916 25033  7764 E ExoPlayerImplInternal:   Caused by: java.lang.IllegalStateException: Player callback method is called from a wrong thread. See javadoc of MediaSession for details.
+10-10 20:31:27.916 25033  7764 E ExoPlayerImplInternal:       at androidx.media3.session.MediaSessionImpl.verifyApplicationThread(MediaSessionImpl.java:1556)
+10-10 20:31:27.916 25033  7764 E ExoPlayerImplInternal:       at androidx.media3.session.MediaSessionImpl.getConnectedControllers(MediaSessionImpl.java:401)
+10-10 20:31:27.916 25033  7764 E ExoPlayerImplInternal:       at androidx.media3.session.MediaLibrarySessionImpl.getConnectedControllers(MediaLibrarySessionImpl.java:113)
+10-10 20:31:27.916 25033  7764 E ExoPlayerImplInternal:       at androidx.media3.session.MediaSession.getConnectedControllers(MediaSession.java:1044)
+10-10 20:31:27.916 25033  7764 E ExoPlayerImplInternal:       at androidx.media3.exoplayer.ExoPlayerImplInternal.deliverMessage(ExoPlayerImplInternal.java:2265)
+10-10 20:31:27.916 25033  7764 E ExoPlayerImplInternal:       at androidx.media3.exoplayer.ExoPlayerImplInternal.sendMessageToTarget(ExoPlayerImplInternal.java:2229)
+10-10 20:31:27.916 25033  7764 E ExoPlayerImplInternal:       at androidx.media3.exoplayer.ExoPlayerImplInternal.maybeTriggerPendingMessages(ExoPlayerImplInternal.java:2342)
+10-10 20:31:27.916 25033  7764 E ExoPlayerImplInternal:       at androidx.media3.exoplayer.ExoPlayerImplInternal.updatePlaybackPositions(ExoPlayerImplInternal.java:1388)
+10-10 20:31:27.916 25033  7764 E ExoPlayerImplInternal:       at androidx.media3.exoplayer.ExoPlayerImplInternal.doSomeWork(ExoPlayerImplInternal.java:1469)
+10-10 20:31:27.916 25033  7764 E ExoPlayerImplInternal:       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:765)
+10-10 20:31:27.916 25033  7764 E ExoPlayerImplInternal:       ... 5 more
+10-10 20:31:27.917  1559 12448 I MediaFocusControl: abandonAudioFocus() from uid/pid 10987/25033 clientId=android.media.AudioManager@6ab06e6androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@3028c66 callingPack=com.retro99.parrot
+10-10 20:31:27.917  1559 12448 D MediaFocusControl: abandonAudioFocus, clientId = android.media.AudioManager@6ab06e6androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@3028c66
+10-10 20:31:27.917  1559 12448 D MediaFocusControl: selectFocusStack, uid = 10987, appDevice = 0, device = 2
+10-10 20:31:27.917  1559 12448 I MediaFocusControl: removeFocusStackEntry client:android.media.AudioManager@6ab06e6androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@3028c66
+10-10 20:31:27.941 25033 25033 E čič123: SERVICE onPlayerError: ERROR_CODE_FAILED_RUNTIME_CHECK
+10-10 20:31:27.941 25033 25033 E čič123: androidx.media3.exoplayer.ExoPlaybackException: Unexpected runtime error
+10-10 20:31:27.941 25033 25033 E čič123: 	at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:1005)
+10-10 20:31:27.941 25033 25033 E čič123: Caused by: java.lang.IllegalStateException: Player callback method is called from a wrong thread. See javadoc of MediaSession for details.
+10-10 20:31:27.941 25033 25033 E čič123: 	at androidx.media3.session.MediaSessionImpl.verifyApplicationThread(MediaSessionImpl.java:1556)
+10-10 20:31:27.941 25033 25033 E čič123: 	at androidx.media3.session.MediaSessionImpl.getConnectedControllers(MediaSessionImpl.java:401)
+10-10 20:31:27.941 25033 25033 E čič123: 	at androidx.media3.session.MediaLibrarySessionImpl.getConnectedControllers(MediaLibrarySessionImpl.java:113)
+10-10 20:31:27.941 25033 25033 E čič123: 	at androidx.media3.session.MediaSession.getConnectedControllers(MediaSession.java:1044)
+10-10 20:31:27.941 25033 25033 E čič123: 	at androidx.media3.exoplayer.ExoPlayerImplInternal.deliverMessage(ExoPlayerImplInternal.java:2265)
+10-10 20:31:27.941 25033 25033 E čič123: 	at androidx.media3.exoplayer.ExoPlayerImplInternal.sendMessageToTarget(ExoPlayerImplInternal.java:2229)
+10-10 20:31:27.941 25033 25033 E čič123: 	at androidx.media3.exoplayer.ExoPlayerImplInternal.maybeTriggerPendingMessages(ExoPlayerImplInternal.java:2342)
+10-10 20:31:27.941 25033 25033 E čič123: 	at androidx.media3.exoplayer.ExoPlayerImplInternal.updatePlaybackPositions(ExoPlayerImplInternal.java:1388)
+10-10 20:31:27.941 25033 25033 E čič123: 	at androidx.media3.exoplayer.ExoPlayerImplInternal.doSomeWork(ExoPlayerImplInternal.java:1469)
+10-10 20:31:27.941 25033 25033 E čič123: 	at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:765)
+10-10 20:31:27.941 25033 25033 E čič123: 	... 5 more
+10-10 20:31:27.942 25033 25033 D čič123: SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=308
+10-10 20:31:27.954 25033 25033 D čič123: onDestroy() called
+10-10 20:31:27.954 25033 25033 D čič123: java.lang.Exception: stack trace
+10-10 20:31:27.955 25033 25033 I MediaSessionImpl: Release bdca9e1 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36] [media3.common, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+10-10 20:31:27.956 25033 25033 I ExoPlayerImpl: Release c113748 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36] [media3.common, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+10-10 20:32:06.362 25033 25033 D čič123: startPlaybackFromCurrentPosition: controllerPosition=0, initialPositionMs=85348
+10-10 20:32:06.362 25033 25033 D čič123: startPlaybackFromCurrentPosition: using initialPositionMs=85348
+10-10 20:32:06.366 25033 25033 D čič123: playInternal: START chapterHref=<CHAPTER FILE B>, fragmentId=null
+10-10 20:32:06.367 25033 25033 D čič123: playInternal: chapterWithAudio=<CHAPTER FILE B>
+10-10 20:32:06.367 25033 25033 D čič123: playInternal: requesting notification permission
+10-10 20:32:06.367 25033 25033 D čič123: playInternal: notification permission granted
+10-10 20:32:06.367 25033 25033 D čič123: playInternal: preparing service ready deferred
+10-10 20:32:06.367 25033 25033 D čič123: playInternal: starting foreground service
+10-10 20:32:06.371 25033 25033 D čič123: playInternal: foreground service started, awaiting service ready
+10-10 20:32:06.373 25033 25033 D čič123: onCreate() called
+10-10 20:32:06.373 25033 25033 I ExoPlayerImpl: Init 47f6e63 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-10 20:32:06.378 25033 25033 D čič123: ExoPlayer created: true
+10-10 20:32:06.380 25033 25033 I MediaSessionImpl: Init 52deb19 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-10 20:32:06.398 25033 25033 D čič123: MediaLibrarySession created: true
+10-10 20:32:06.399 25033 25033 D čič123: Configuring buttons for media notification controller
+10-10 20:32:06.403 25033 25033 D čič123: Session added to service
+10-10 20:32:06.403 25033 25033 D čič123: MediaNotificationProvider set
+10-10 20:32:06.403 25033 25033 D čič123: Calling controller.onServiceCreated()
+10-10 20:32:06.405 25033 25033 D čič123: onCreate() completed
+10-10 20:32:06.409 25033 25033 D čič123: playInternal: service ready, player=androidx.media3.exoplayer.ExoPlayerImpl@47f6e63
+10-10 20:32:06.413 25033 25033 D čič123: playInternal: calling prepareChapter(<CHAPTER FILE B>)
+10-10 20:32:06.413 25033 25033 D čič123: prepareChapter: <CHAPTER FILE B>, fragmentId=null
+10-10 20:32:06.413 25033 25033 D čič123: playInternal: prepareChapter returned
+10-10 20:32:06.413 25033 25033 D čič123: playInternal: END
+10-10 20:32:06.428 25033 25033 D čič123: SERVICE setChapterClips: count=308
+10-10 20:32:06.433 25033 25033 D čič123: prepareChapter: prepareChapterAsync returned success=true
+10-10 20:34:34.748  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.753  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.754  1260  9584 I WNC]MessageQueue: [dump:235] Msg[0]: Called from [VendorCameraScenario][finalizeInternal:3973].
+10-10 20:34:34.786  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.788  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.788  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.788  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.788  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.789  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.789  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.789  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.789  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.789  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.789  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.789  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.789  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.789  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.789  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.789  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.789  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.789  1260  9584 I WNC]MessageQueue: [dump:235] Msg[0]: Called from [VendorCameraScenario][destroyInternal:4052].
+10-10 20:34:34.790  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.791  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.792  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.792  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.792  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.792  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.792  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.793  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.793  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.793  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.793  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.793  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.793  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.793  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.793  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.793  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.793  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.794  1260  9584 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:34:34.798  1260  2291 I WNC]MessageQueue: [~MessageQueue:37] 

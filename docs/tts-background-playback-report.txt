@@ -1,0 +1,209 @@
+--- REPORT ---
+Branch: tts/background-playback, created from origin/main (ae1c40f8)
+
+Commits this run (hash + subject, oldest first):
+cb40934b docs(tts): why read-aloud dies with the screen locked
+e37d63e2 test(tts): the screen lies when the player is taken away (failing)
+0340dbef fix(tts): end the session when the player is taken away
+522747ed fix(tts): give the media session its commands, so playback survives
+3590f6b7 test(tts): the chapter handover drops the service player (failing)
+0d5fd910 fix(tts): keep the playback service through a chapter handover
+2208659c test(tts): the stop after a handover still takes the service (failing)
+673670f1 fix(tts): a stop with nothing loaded leaves the media service alone
+b2f4f778 docs(tts): the device pass, the findings and the run report
+(this report's own update is the commit after b2f4f778)
+
+Steps complete (1-5): 1, 2, 3, 4 and 5 all done. Step 4's recorded-narration check
+could not be completed because narration does not play on this phone on either build;
+everything else in step 4 was done and passed.
+
+Step 1: freeze reproduced on this branch (yes/no, tries); what stopped playback, with
+the log line; was the service a foreground service (yes/no):
+Yes, on the first try. Locked 20:18:18, last sentence started 20:19:18.047, then
+"W ActivityManager: Stopping service due to app idle: u0a987 -2m46s758ms
+com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService" at 20:19:18.955
+and MediaPlaybackService.onDestroy (:423) via ActivityThread.handleStopService 6 ms
+later, which released the session and the ExoPlayer. 61 s after the lock. The service
+was NOT a foreground service: startForegroundCount=0 and startForeground is never
+called on the read-aloud path.
+
+Step 1: on the build of 90675a6b: notification shown (yes/no); freeze after lock
+(yes/no); so which of the three faults predate the recent work:
+Notification shown: no (startForegroundCount=0, session actions=176). Freeze after
+lock: yes, "Stopping service due to app idle" 20:39:03.708, 61.7 s after a 20:38:02
+lock, frozen at sentence 172 of 300. Dead Pause: yes, same dead-thread warning.
+All three predate 90675a6b. MediaPlaybackService.kt and ForegroundServiceController.kt
+are byte-identical between 90675a6b and ae1c40f8. None of TTS-F25, F26 or F29 is part
+of this.
+
+Step 1: cause of the missing notification (file and line); cause of the dead Pause
+button (file and line):
+Missing notification: MediaPlaybackService.kt:698 - onConnect seeds its result from the
+deprecated super.onConnect(session, controller), whose default body is Media3's
+"not implemented" connection result (SessionCommands.EMPTY, Player.Commands.EMPTY). So
+the session grants no play/pause (actions=176) and no COMMAND_GET_TIMELINE, which makes
+Media3's notification controller see an empty timeline, decline to show a notification
+and never call startForeground - hence also the background service of step 1.
+Dead Pause: TtsReadAloudEngine.kt:330 pausing a released player, reached because
+nothing clears the session: TtsEnginePlayer had no "the player is gone" signal and
+MediaPlaybackController.onServiceDestroyed (MediaPlaybackController.kt:532) cannot
+reach the engine. Observed stack: ExoTtsEnginePlayer.kt:69 <- TtsReadAloudEngine.kt:330
+<- AndroidTtsController.kt:538.
+
+Step 2: what was added to the player seam; each test, failed before the fix (yes/no)
+and the failure text:
+Added TtsEnginePlayerListener.onPlayerGone(), a default no-op so no other listener
+changed. The fake gained reportPlayerGone(), inert commands afterwards and a
+listenerCount; the fake provider can hand out a replacement player.
+TtsPlayerGoneTest (all three failed before the fix, committed failing in e37d63e2):
+ - a player taken away leaves no running session and nothing audible: yes -
+   "isPlaying still true after the player went away"
+ - one press restarts the same sentence with one operation pair: yes -
+   "expected:<[attempted:resume, succeeded:resume]> but was:<[]>"
+ - a late callback from the player that went away starts nothing: yes -
+   "a late callback made the engine audible again"
+TtsRunningCallbackOwnershipTest passes unedited, so a player that only buffers is
+unaffected.
+
+Step 3: what the read-aloud path now does that it did not (list); play and pause
+offered by the session (yes/no); what happens when notification permission is denied:
+ - seeds its connection result from AcceptedResultBuilder(session, controller), so the
+   session grants the real default commands
+ - therefore gets a media notification from Media3's DefaultMediaNotificationProvider,
+   the same one recorded narration would use, on the same metadata
+ - therefore becomes a real foreground service (startForegroundCount=1,
+   isForeground=true) and survives the screen being off
+ - offers previous sentence and next sentence in the two slots beside play/pause
+   instead of a ten second seek inside one sentence
+ - keeps the service's player through an auto-advancing chapter end, and through the
+   locator stop that follows it, instead of stopping the service and asking for a
+   background start the system will not promote
+ - ends its session, keeping the sentence, when the player is taken away
+Play and pause offered by the session: yes - actions went from 176
+(SKIP_TO_PREVIOUS+SKIP_TO_NEXT+SET_RATING) to 7339979, which includes PAUSE,
+PLAY_PAUSE, SEEK_TO and STOP.
+Notification permission denied: unchanged and already correct - the start path returns
+TtsPlaybackFailureReason.PERMISSION_DENIED (AndroidTtsController.kt:661) before any
+service start, so the attempt reports a failure and read-aloud says so rather than
+starting silently. No code changed for it.
+
+Existing tests edited (name + why), or "none": none.
+
+Per module: reader ui Android host 556/556, reader ui iOS 357/357, home ui 84/84,
+composeApp 64/64
+
+App build results (Android assemble, iOS framework): both BUILD SUCCESSFUL
+(:androidApp:assembleDebug and :composeApp:linkDebugFrameworkIosSimulatorArm64,
+2 m 7 s together).
+
+Device used (model + serial), any command sent to another device (yes/no):
+Samsung SM-S921B, serial RFCWC0SSVDM, every adb call with -s RFCWC0SSVDM. No command
+was sent to any other device; the Xiaomi (192.168.1.248:5555) was attached the whole
+time and never touched.
+
+Three minutes locked: sentence before and after, System voice and Kokoro (still
+reading yes/no each):
+System voice: 9 -> 63 of 347 (locked 21:45:14, unlocked 21:48:24) - still reading, yes.
+Kokoro "Heart": 141 -> 183 of 347 (locked 21:56:45, unlocked 22:00:00) - still reading,
+yes. Service isForeground=true in both, and zero app-idle stops in the whole run.
+
+Notification on lock screen and shade (yes/no); pause, play, next, previous from it
+(result of each):
+Yes on both, screenshots in the evidence folder. Pause: works, session PAUSED(2) and
+the app's own bar also shows Play. Play: works, resumes the same sentence (81 -> 81).
+Next: works, one NEXT_CHAPTER custom command per press reaching navigateToNextChapter;
+four presses moved 98 -> 103. Previous: works, one PREVIOUS_CHAPTER per press; four
+presses moved 98 -> 97, i.e. net backwards against playback running forward. An exact
++/-1 could not be read off the counter because a skip also lifts the pause and starts
+playing, so the sentence advances again before the dump; the per-press command and the
+restart on the adjacent sentence are in the log.
+
+Pause from the notification then ONE press on Play in the app: continued (yes/no):
+Yes. Paused from the notification 21:49:02, bar read Play at sentence 73 of 347, one
+press at 21:49:27 gave Pause at sentence 76 with the session PLAYING(3).
+
+Chapter boundary with the screen off (yes/no):
+Yes. Locked at sentence 499 of 587; the chapter ended 21:40:40.620, the next chapter
+was attempted 21:40:41.152 and succeeded 21:40:41.796 (643 ms) and played on. The
+service was created once and never destroyed. On the pre-fix build the same boundary
+killed playback 58 s into the new chapter.
+
+Stop listening removes the notification and stops the service (yes/no):
+Yes. After Stop listening at 22:00:38 there is no MediaPlaybackService row, no media
+session row for the package, and no Parrot card in the shade.
+
+Player taken away: button showed Play (yes/no); one press restarted (yes/no):
+Yes and yes. "am stopservice ...MediaPlaybackService" while playing sentence 106 of 347
+left the bar showing Play with sentence 106 kept; one press gave sentence 108 playing,
+service foreground again and the notification back. No dead-thread warning anywhere in
+that run.
+
+Recorded narration still shows its notification and plays (yes/no/not available):
+Not established, and not a regression. A read-along book was downloaded for the check.
+Narration prepares its chapter (setChapterClips: count=308, prepareChapterAsync
+success=true) and then nothing happens: state=NONE(0), position stuck at 0:00 / 41:44,
+button Play. Identical on the pre-fix build, so this run did not cause it, and changing
+how recorded narration plays was out of scope. Its session does now carry the full
+command set (actions=7339653 against 128 before). Before this run, narration also had
+no media notification and startForegroundCount:0, exactly like read-aloud - so the
+premise that narration shows a notification does not hold on this phone.
+
+Temporary worktree removed (yes/no): Yes. /tmp/parrot-90675a6b was removed with
+git worktree remove --force and no longer appears in git worktree list.
+
+State the phone was left in (voice, rate, screen, Do Not Disturb):
+System voice, rate 1x, pitch Normal, sleep timer Off, on the Library screen, Do Not
+Disturb zen_mode=1 - the value it was found at, never changed. No playback service, no
+media session, no Parrot notification in the shade.
+
+Done this run:
+Step 1 investigated, reproduced and attributed on the phone, and committed before any
+product code changed. The three faults traced to one root cause and shown to predate
+90675a6b. Four product fixes, each with its failing test committed first. Step 4 driven
+on the Samsung with both a System voice and Kokoro. Documents and evidence written.
+
+Not done or partly done, and why:
+Recorded narration could not be shown to play, because it does not play on this phone
+on either build; its own defect is recorded, not fixed, since the brief excluded
+changing how recorded narration plays. Next/previous from the notification were shown
+to work and to move in the right direction, but not measured as exactly one sentence,
+for the reason given above.
+
+Tests skipped, ignored or weakened (file + name + reason), or "none": none.
+
+Places the prompt was ambiguous and what I chose:
+ - The prompt said recorded narration "does show a notification" and asked what the
+   narration path does that read-aloud does not. On this phone narration shows none
+   either, and both paths share one service, one session callback and one service
+   starter. I treated the comparison as answered - nothing - and fixed the single
+   notification mechanism both use, which is what the prompt asked for.
+ - "Make read-aloud use the same foreground notification mechanism recorded narration
+   uses rather than a second one": read as repairing that one mechanism rather than
+   adding anything for read-aloud alone. No second notification was introduced.
+ - The chapter boundary was not reachable in a fresh reader without reading a whole
+   chapter, so I started read-aloud on a chapter's last page and locked the phone. The
+   first attempt used a one-page back-matter section, which turned out not to
+   auto-advance at all; the result is recorded and the check redone on a real chapter.
+ - "Kill the playback service's process state the gentlest way available": I used
+   adb shell am stopservice on the service, the first example the prompt gave.
+
+Files changed outside feature/reader/ui, androidApp/src/main and docs: none.
+
+Known problems I am leaving:
+ - Recorded narration does not start playing on this phone (pre-existing).
+ - A one-page section does not auto-advance: read-aloud reads it to the end and stops
+   with no next-chapter attempt. ReaderSyncCoordinator.onChapterCompleted waits for a
+   locator whose href differs from the completed one, which such a section seems not to
+   produce. Shared with the recorded-narration path.
+ - Because the service is now kept through a chapter handover, a chapter end that does
+   not auto-advance leaves the notification up showing a finished chapter until the app
+   is idle-stopped or the user presses Stop listening. This is the price of the fix.
+ - At every handover the playlist swap takes the player through IDLE, so Media3 calls
+   startForegroundService on a service that is already foreground and the system logs
+   "not allowed due to mAllowStartForeground false". Playback is unaffected and the
+   service stays foreground, but the log line is alarming and worth tidying.
+ - Cosmetic, recorded as asked: the read-aloud bar says "Device voice . Heart" for a
+   Kokoro voice while the Listening sheet says "Kokoro . Heart"; the same for a
+   Supertonic voice, "Device voice . F1" against "F1 . Natural".
+ - Two read-along books were left downloaded on the phone by the narration comparison.
+--- END REPORT ---

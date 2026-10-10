@@ -557,33 +557,40 @@ class MediaPlaybackService : MediaLibraryService() {
     }
 
     private fun createMediaButtonPreferences(): ImmutableList<CommandButton> {
-        val navigationTarget = if (playbackContentType == PlaybackContentType.TTS) {
-            "sentence"
-        } else {
-            "chapter"
+        val specs = mediaButtonSpecs(isTts = playbackContentType == PlaybackContentType.TTS)
+        return ImmutableList.copyOf(specs.map(::commandButtonFor))
+    }
+
+    private fun commandButtonFor(spec: MediaButtonSpec): CommandButton {
+        val icon = when (spec.action) {
+            MediaButtonAction.SEEK_BACK_10 -> CommandButton.ICON_SKIP_BACK_10
+            MediaButtonAction.SEEK_FORWARD_10 -> CommandButton.ICON_SKIP_FORWARD_10
+            MediaButtonAction.PREVIOUS -> CommandButton.ICON_PREVIOUS
+            MediaButtonAction.NEXT -> CommandButton.ICON_NEXT
         }
-        return ImmutableList.of(
-            CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_10)
-                .setDisplayName("Seek forward 10 seconds")
-                .setPlayerCommand(Player.COMMAND_SEEK_FORWARD)
-                .setSlots(CommandButton.SLOT_FORWARD)
-                .build(),
-            CommandButton.Builder(CommandButton.ICON_SKIP_BACK_10)
-                .setDisplayName("Seek back 10 seconds")
-                .setPlayerCommand(Player.COMMAND_SEEK_BACK)
-                .setSlots(CommandButton.SLOT_BACK)
-                .build(),
-            CommandButton.Builder(CommandButton.ICON_PREVIOUS)
-                .setDisplayName("Previous $navigationTarget")
-                .setSessionCommand(SessionCommand(COMMAND_PREVIOUS_CHAPTER, Bundle.EMPTY))
-                .setSlots(CommandButton.SLOT_OVERFLOW)
-                .build(),
-            CommandButton.Builder(CommandButton.ICON_NEXT)
-                .setDisplayName("Next $navigationTarget")
-                .setSessionCommand(SessionCommand(COMMAND_NEXT_CHAPTER, Bundle.EMPTY))
-                .setSlots(CommandButton.SLOT_OVERFLOW)
-                .build(),
-        )
+        val slot = when (spec.slot) {
+            MediaButtonSlot.BACK -> CommandButton.SLOT_BACK
+            MediaButtonSlot.FORWARD -> CommandButton.SLOT_FORWARD
+            MediaButtonSlot.OVERFLOW -> CommandButton.SLOT_OVERFLOW
+        }
+        return CommandButton.Builder(icon)
+            .setDisplayName(spec.displayName)
+            .setSlots(slot)
+            .apply {
+                when (spec.action) {
+                    MediaButtonAction.SEEK_BACK_10 ->
+                        setPlayerCommand(Player.COMMAND_SEEK_BACK)
+                    MediaButtonAction.SEEK_FORWARD_10 ->
+                        setPlayerCommand(Player.COMMAND_SEEK_FORWARD)
+                    // Session commands, so the button is offered whatever the player's
+                    // own commands are, and lands in onCustomCommand below.
+                    MediaButtonAction.PREVIOUS ->
+                        setSessionCommand(SessionCommand(COMMAND_PREVIOUS_CHAPTER, Bundle.EMPTY))
+                    MediaButtonAction.NEXT ->
+                        setSessionCommand(SessionCommand(COMMAND_NEXT_CHAPTER, Bundle.EMPTY))
+                }
+            }
+            .build()
     }
 
     private fun createSessionActivityIntent(): PendingIntent {
@@ -695,7 +702,20 @@ class MediaPlaybackService : MediaLibraryService() {
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
         ): MediaSession.ConnectionResult {
-            val defaultCommands = super.onConnect(session, controller)
+            // NOT `super.onConnect(session, controller)`: the default body of this
+            // deprecated overload is Media3's "not implemented" result, which carries
+            // SessionCommands.EMPTY and Player.Commands.EMPTY. Seeding from it left the
+            // session with no play, pause or seek at all (actions=176 on the platform
+            // session) and, because COMMAND_GET_TIMELINE was missing too, left Media3's
+            // own notification controller looking at an empty timeline. It then declined
+            // to post a notification and so never called startForeground, which is why
+            // playback had no media notification and the system stopped the service about
+            // a minute after the screen went off (TTS-F30, TTS-F31). The two-argument
+            // AcceptedResultBuilder is the one that fills in the real defaults, trusted
+            // and untrusted alike.
+            val defaultCommands = MediaSession.ConnectionResult
+                .AcceptedResultBuilder(session, controller)
+                .build()
 
             // Track Android Auto controllers for URI permission granting
             val librarySession = session as? MediaLibrarySession
