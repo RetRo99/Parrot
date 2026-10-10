@@ -721,7 +721,11 @@ class TtsReadAloudEngine(
             }
         } else {
             val shouldCompleteChapter = completeChapterOnEnd
-            stopInternal()
+            // The next chapter is about to start, so the service has to live through the
+            // handover: a service stopped here and started again a second later is being
+            // started from the background, which the system refuses to promote to the
+            // foreground, and then stops for being idle (TTS-F30).
+            stopInternal(keepSharedPlayer = shouldCompleteChapter)
             if (shouldCompleteChapter) {
                 _chapterCompleted.tryEmit(Unit)
             }
@@ -751,7 +755,13 @@ class TtsReadAloudEngine(
         }
     }
 
-    private fun stopInternal() {
+    /**
+     * Ends the session. [keepSharedPlayer] leaves the media service's player attached and
+     * holding the audio it has, which keeps the media session's timeline non-empty and so
+     * keeps both the notification and the foreground service alive; only the chapter
+     * handover asks for that, because the next chapter starts within a second.
+     */
+    private fun stopInternal(keepSharedPlayer: Boolean = false) {
         generation++
         pendingStartToken = null
         heard.reset()
@@ -769,7 +779,7 @@ class TtsReadAloudEngine(
         if (currentPlayer != null && ownsPlayer) {
             currentPlayer.stop()
             currentPlayer.clearItems()
-        } else if (currentPlayer != null) {
+        } else if (currentPlayer != null && !keepSharedPlayer) {
             releaseCurrentPlayer(stopSharedPlayer = true)
         }
     }
