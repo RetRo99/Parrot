@@ -95,17 +95,24 @@ select ok(
 set local role authenticated;
 set local request.jwt.claim.sub = '17000000-0000-0000-0000-000000000003';
 set local request.jwt.claim.role = 'authenticated';
+-- Since 20261011000000 this account gets past the gate: the refusal it gets is
+-- now about the file, not about the allowlist. Asserted with a zero-byte file so
+-- the reservation is refused and leaves no sync change behind for this account,
+-- which the retention-purge assertion at the end of this file counts. A real
+-- reservation and finalize by an account with no allowlist row is asserted in
+-- supabase/tests/open_uploads_test.sql.
 select is(
     public.reserve_book_upload(
         '27000000-0000-0000-0000-000000000003', 'ebook', '', 'c.epub',
-        10, 'sha-256-v1', repeat('a', 64), (select value from attestation)
+        0, 'sha-256-v1', repeat('a', 64), (select value from attestation)
     )->>'reason',
-    'uploads_not_enabled', 'an account off the allowlist cannot reserve uploads'
+    'invalid_upload_metadata',
+    'an account with no allowlist row is no longer stopped by the gate (20261011000000)'
 );
 select is(
     public.get_cloud_feature_access(),
-    '{"uploads": false, "recap": false}'::jsonb,
-    'feature access reports nothing for an account off the allowlist'
+    '{"uploads": true, "recap": false}'::jsonb,
+    'feature access reports uploads open and recap still allowlisted (20261011000000)'
 );
 select is(
     (public.get_storage_usage()->>'quota_bytes')::bigint,
@@ -205,7 +212,9 @@ select is(
     'available', 'an upper-case hash reserved and finalized as sent succeeds'
 );
 
--- Losing the upload allowlist stops writes and finalize of a live reservation.
+-- Removing the upload allowlist row no longer stops anything: since
+-- 20261011000000 uploads do not depend on it. Both halves of the old
+-- revocation scenario are kept, asserting the new rule.
 create temporary table revoked_upload as
 select public.reserve_book_upload(
     '27000000-0000-0000-0000-000000000001', 'ebook', 'revoked', 'revoked.epub',
@@ -215,18 +224,21 @@ reset role;
 delete from public.cloud_feature_allowlist
 where cloud_user_id = '17000000-0000-0000-0000-000000000001' and feature = 'uploads';
 set local role authenticated;
-select throws_ok(
+select lives_ok(
     $$insert into storage.objects (bucket_id, name, metadata)
       select 'book-files', u.storage_path, '{"size":10}'::jsonb
       from public.cloud_book_uploads u
       where u.upload_id = (select (result->>'upload_id')::uuid from revoked_upload)$$,
-    '42501', null, 'Storage refuses writes once the account is off the allowlist'
+    'Storage still accepts writes with no uploads allowlist row (20261011000000)'
 );
+-- Finalize is no longer gated on the allowlist either. Asserted through the gate
+-- the function consults rather than by calling it: any finalize call, successful
+-- or refused, settles the reservation, and the pending-reservation cap below
+-- needs this one still live. finalize succeeding for an account with no
+-- allowlist row is asserted in supabase/tests/open_uploads_test.sql.
 select is(
-    public.finalize_book_upload(
-        (select (result->>'upload_id')::uuid from revoked_upload), 10, repeat('d', 64)
-    )->>'reason',
-    'uploads_not_enabled', 'finalize refuses a reservation once uploads are revoked'
+    public.cloud_feature_enabled('uploads'),
+    true, 'uploads stay enabled with the allowlist row gone (20261011000000)'
 );
 reset role;
 insert into public.cloud_feature_allowlist (cloud_user_id, feature)

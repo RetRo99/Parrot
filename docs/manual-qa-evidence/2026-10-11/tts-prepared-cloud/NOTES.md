@@ -173,3 +173,103 @@ migration that has been applied was edited, and no existing test file was touche
 - V5 `has_function_privilege('authenticated', ...reserve_book_upload_before_prepared_audio...)`
   = **f**; the inner function is reachable by nobody directly.
 - V6 `tts_prepared_audio` rows on the project: 0. Nothing uploaded yet.
+
+### B7 open uploads to every signed-in account (decision 1)
+
+How it was decided before: `20261003000000_parrot_cloud_security_hardening.sql:24`
+`cloud_feature_enabled(feature)` is a `security definer` sql function returning
+`exists (select 1 from cloud_feature_allowlist where cloud_user_id = auth.uid() and
+feature = <feature>)`; line 43 `get_cloud_feature_access()` just reports that for
+`'uploads'` and `'recap'`. Execute on both is revoked from `public, anon, service_role`
+and granted to `authenticated`. `reserve_book_upload`, `finalize_book_upload` and three
+Storage RLS policies all gate on `cloud_feature_enabled('uploads')`.
+
+- B7a test written first: `supabase/tests/open_uploads_test.sql`, `plan(17)`. Run
+  **before** the migration: `Result: FAIL`, 9 of 17 failed — tests 1-6 and 13-15.
+  Server answers at that point: `cloud_feature_enabled('uploads')` = false,
+  `get_cloud_feature_access()` = `{"recap": false, "uploads": false}`, reserve status
+  `rejected`, and the quota and size cases answered `uploads_not_enabled` before ever
+  reaching their own check. The 8 that already passed are the ones asserting what must
+  **not** change: the three anon refusals, the no-subject case, and recap still being
+  allow-list only.
+- B7b migration: `supabase/migrations/20261011000000_parrot_cloud_open_uploads.sql`.
+  `cloud_feature_enabled` keeps its shape, grants and `security definer`; its body
+  becomes a `case`: false when `auth.uid() is null`, true when the feature is
+  `'uploads'`, otherwise the same allow-list `exists` as before. So recap and any
+  feature added later still mean "is there a row". `get_cloud_feature_access` is
+  re-created unchanged so both halves sit in one migration. Existing `'uploads'`
+  allow-list rows are deliberately left in place: historical record, and the rollback
+  needs them.
+- B7c applied with `supabase db push --linked`: `20261011000000` applied, no error.
+- B7d suite after: **22 files, 476 assertions, `Result: PASS`**.
+  `open_uploads_test.sql` 17/17. Two corrections were needed to the new test along the
+  way, both wrong guesses about server answers rather than behaviour faults: the
+  cross-account refusal is `cloud_book_not_owned`, not `book_not_found`, and
+  `cloud_content_blocklist.created_by` is not null.
+- B7e **quota, size limits and block-list confirmed still in force for an account with
+  no allow-list row**, by assertion against the server: a 32 MiB chapter against a
+  20 MiB allowance answers `quota_exceeded`; a 67108865-byte chapter answers
+  `file_too_large`; a block-listed content hash answers `content_blocked`; another
+  account's book answers `cloud_book_not_owned`. Anon answers `42501` to all three of
+  `cloud_feature_enabled`, `get_cloud_feature_access` and `reserve_book_upload`.
+- B7f **recap untouched**: an account with no row still gets `recap` false, an account
+  with a row still gets true, and an account with only a recap row now reports
+  `{"uploads": true, "recap": true}`.
+
+#### Existing assertions changed, with the old and the new rule
+
+Four in `supabase/tests/security_hardening_test.sql`, and only these. The count stays
+`plan(56)`. Two had to be restated rather than inverted, because asserting the new rule
+the obvious way changed state that later assertions in the same file count — recorded
+here because that is the kind of thing a reader will otherwise undo:
+
+1. `'an account off the allowlist cannot reserve uploads'` ->
+   `'an account with no allowlist row is no longer stopped by the gate (20261011000000)'`.
+   Old rule: reserve answers `uploads_not_enabled`. New rule: it gets past the gate.
+   Asserted with a zero-byte file so the answer is `invalid_upload_metadata`. A
+   *successful* reserve here was tried first and broke test 56 at the end of the file
+   (`'the newest change per entity survives'`): account C's reservation writes a
+   `sync_changes` row for account C, which that assertion counts. The real
+   reserve-and-finalize for an account with no allow-list row is asserted in
+   `open_uploads_test.sql` instead.
+2. `'feature access reports nothing for an account off the allowlist'` ->
+   `'feature access reports uploads open and recap still allowlisted (20261011000000)'`.
+   Old rule: `{"uploads": false, "recap": false}`. New: `{"uploads": true,
+   "recap": false}`. A plain inversion, no side effects.
+3. `'Storage refuses writes once the account is off the allowlist'` ->
+   `'Storage still accepts writes with no uploads allowlist row (20261011000000)'`.
+   Old rule: `throws_ok ... 42501`. New: `lives_ok`. The Storage RLS policy gates on the
+   same function, so the write is now permitted.
+4. `'finalize refuses a reservation once uploads are revoked'` ->
+   `'uploads stay enabled with the allowlist row gone (20261011000000)'`. Old rule:
+   finalize answers `uploads_not_enabled`. New rule asserted through the gate the
+   function consults, not by calling finalize: **any** finalize call, successful or
+   refused, settles the reservation, and the pending-reservation cap 60 lines below
+   needs that reservation still live. Calling finalize here was tried twice — once
+   successfully, once with a deliberate `size_mismatch` — and each time broke tests
+   30-32 (`'a 201st live reservation is refused'`, `'the cap rejection carries a retry
+   hint'`, `'repeating a live reservation is not blocked by the cap'`), which depend on
+   29 + 170 reservations plus this one reaching exactly 200. finalize succeeding without
+   an allow-list row is asserted in `open_uploads_test.sql` instead.
+
+The comment above that block was also reworded, since "losing the upload allowlist stops
+writes" is no longer what it demonstrates.
+
+### B-left is the project still working for book backups
+
+Yes, and by observation rather than by construction this time: every one of the 20
+pre-existing test files passes against the project after all three migrations, including
+`book_files_test.sql`, `finalize_book_upload_test.sql`, `non_available_book_delete_test.sql`,
+`orphan_gc_test.sql`, `storage_policy_test.sql`, `stale_upload_cancel_test.sql`,
+`account_deletion_test.sql` and `rls_isolation_test.sql` — the whole reserve, upload,
+finalize, restore, delete, takedown and quota path for ordinary book files. 476
+assertions, `Result: PASS`.
+
+### B8 supabase/PREPARED_AUDIO_ROLLOUT.md
+
+Rewritten: what is now applied to the development project, the suite result, the fact
+that this migration needed no correction, the recipe for running the suite against a
+linked project at all (and why not to fix it with `alter role ... inherit`), a section
+for `20261011000000` with its own rollback, and a six-point list of what a production
+rollout still needs — including that opening uploads is a product decision with a storage
+cost, not just a migration.

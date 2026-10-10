@@ -7,40 +7,129 @@ reserve limit, a "the book must have a usable backup" precondition, three
 cascades so audio never outlives its book, and a books/prepared-audio breakdown
 on `get_storage_usage`. Run every step yourself; nothing here is automated.
 
-> **This migration has never been run.** The agent run that wrote it had no
-> container runtime available, so the local Supabase stack could not be started
-> and `scripts/supabase/test.sh` could not execute. Step 1 below is therefore
-> not optional: run it locally and read the pgTAP output before you apply this
-> anywhere else.
+## Status
 
-## Status on the linked development project, as of 2026-10-10
+**Applied to the linked development project on 2026-10-11, and the SQL has now
+been run.** What happened, so no one rediscovers it:
 
-Still **not applied**, and the run of 2026-10-10 could not apply it. What that
-run established, so the next one need not rediscover it:
+- `supabase db push --linked` applied three migrations in timestamp order:
+  `20261009000000_parrot_cloud_saved_words.sql` (the saved-words feature's, which
+  the owner released for this purpose), this one, and then
+  `20261011000000_parrot_cloud_open_uploads.sql` (below).
+- The whole pgTAP suite passes against the project: **22 files, 476 assertions,
+  `Result: PASS`**, including this migration's 38. Every pre-existing file passes
+  unedited apart from the four allowlist assertions that the open-uploads change
+  required (listed in its section below).
+- All four post-apply checks in step 4 answered as expected: four constraints
+  present and `convalidated = t`, both the renamed function and the wrapper in
+  place, both cascade triggers attached, and the inner function not executable by
+  `authenticated`.
+- **This migration needed no correction.** The three failures on its first real
+  run were all in `supabase/tests/prepared_audio_test.sql`, which had never been
+  executed: it read the private `cloud_user_storage` while still in role
+  `authenticated`, it expected `quota_exceeded` for a 200 MB chapter when the
+  64 MiB cap is checked first and answers `file_too_large`, and it deleted from
+  `storage.objects` without `set local storage.allow_delete_query = 'true'`.
 
-- **Linking needs no password.** `supabase link --project-ref <ref>` succeeds
-  from a fresh worktree with only the stored CLI login: the CLI provisions a
-  temporary login role per connection, so neither a login nor a database
-  password is prompted for. `supabase migration list --linked` then works.
-- **Two migrations are pending, not one.**
-  `20261009000000_parrot_cloud_saved_words.sql` is unapplied as well as this
-  one. It belongs to the saved-words/offline-dictionary feature, not to this
-  work. `supabase db push` and `supabase migration up` both apply the entire
-  pending chain in timestamp order, so neither can apply this migration without
-  also deploying that one. **Decide the saved-words migration first**; there is
-  no CLI route that skips it, and applying this one alone would leave the
-  remote's migration history out of order.
-- **The pgTAP suite cannot run on this machine.** `supabase test db --linked`
-  fails with `DockerRunError`: `--linked` only redirects which database
-  pg_prove is pointed at, and pg_prove itself still runs in a container. No
-  docker, podman, colima, `psql` or `pg_prove` is installed. So step 1 below,
-  and the step 4 verification queries, both need either a container runtime or
-  a `psql` on the machine that runs them.
+### Running the suite against a linked project
 
-So the order for the owner is: resolve 20261009000000, install a container
-runtime or `psql`, then step 1.
+`supabase test db --linked` does not work against a hosted project out of the
+box, and the failure is misleading: all 21 files report
+`function plan(integer) does not exist` and zero tests run. pgTAP is installed
+(in schema `extensions`), but the CLI connects as a temporary role
+`cli_login_postgres` which has no `usage` on that schema — and a function in a
+schema without `usage` reports as "does not exist", not "permission denied".
+That role is a member of `postgres` but has `rolinherit = false`, so it holds
+nothing until it `set role`s. The suite also contains 95 `reset role;`
+statements which, on the local stack, land on a superuser `postgres`; on a
+hosted project they land back on the unprivileged login role.
 
-## 1. Run it locally first
+To run the suite against a linked project without editing the test files or
+changing anything on the server, copy them to a scratch directory outside the
+repository, prepend `set role postgres;` to each and rewrite each
+`reset role;` to `set role postgres;`:
+
+```bash
+mkdir -p /tmp/parrot-suite
+for f in supabase/tests/*.sql; do
+  { echo "set role postgres;"; sed 's/^reset role;/set role postgres;/' "$f"; } \
+    > /tmp/parrot-suite/$(basename "$f")
+done
+supabase test db --linked /tmp/parrot-suite
+```
+
+Do **not** fix this with `alter role cli_login_postgres inherit`: that mutates
+the project. On the local stack (`scripts/supabase/test.sh`) none of this is
+needed.
+
+## Also applied: 20261011000000, uploads open to everyone
+
+The owner's decision of 2026-10-11: anyone with a Parrot Cloud account may
+upload. `cloud_feature_enabled('uploads')` now answers true for any caller with
+an `auth.uid()`, instead of looking for a `cloud_feature_allowlist` row.
+`'recap'` is untouched and still allowlist-only. Nothing else about uploading
+moves: the 200 MiB allowance, the per-file size limits including this
+migration's 64 MiB per chapter, the content block-list, the pending-reservation
+cap, the rights attestation and every RLS policy are all checked elsewhere and
+unchanged. `anon` still cannot execute either function.
+
+Existing `'uploads'` allowlist rows are left in place on purpose: they are now
+historical, and the rollback needs them.
+
+Its tests are `supabase/tests/open_uploads_test.sql` (17 assertions), written
+before the migration and seen to fail on 9 of them. Four assertions in
+`supabase/tests/security_hardening_test.sql` stated the old rule and were
+changed; they are listed in
+`docs/manual-qa-evidence/2026-10-11/tts-prepared-cloud/NOTES.md`.
+
+Rollback for it is the previous definition, which is additive to restore:
+
+```sql
+create or replace function public.cloud_feature_enabled(feature text)
+returns boolean language sql stable security definer set search_path = public
+as $$
+    select exists (
+        select 1 from public.cloud_feature_allowlist a
+        where a.cloud_user_id = auth.uid()
+          and a.feature = cloud_feature_enabled.feature
+    );
+$$;
+revoke execute on function public.cloud_feature_enabled(text)
+from public, anon, service_role;
+grant execute on function public.cloud_feature_enabled(text) to authenticated;
+```
+
+Accounts that uploaded while it was open keep their files; they simply cannot
+upload more until they are allowlisted again.
+
+## What a production rollout still needs
+
+Nothing here has touched production. In order:
+
+1. **Decide the saved-words migration separately.** `db push` applies the whole
+   pending chain, so `20261009000000_parrot_cloud_saved_words.sql` will go out
+   with these. On the development project the owner allowed that. For production
+   it is a separate feature's decision.
+2. **Run the suite against production's schema before pushing**, by the scratch
+   copy recipe above, and read step 2's pre-apply queries there — they must all
+   return 0. On a database with real uploads they may not.
+3. **Open uploads is a product decision with a cost.** On the development
+   project it is mock data. In production it removes the only thing limiting who
+   can consume storage: every signed-in account gets a 200 MiB allowance it can
+   fill. Before pushing `20261011000000`, confirm the abuse controls in
+   `docs/parrot-cloud-abuse-runbook.md` are live and watched, and that the
+   storage cost of the whole account base at 200 MiB each is acceptable.
+4. **Ship a client that understands the new media type first, or confirm older
+   clients are safe.** The never-empty relative path is what keeps prepared
+   audio invisible to apps released before this feature; see the note at the end
+   of this document.
+5. **The end-to-end device checks** in
+   `docs/manual-qa-evidence/2026-10-11/tts-prepared-cloud/NOTES.md`, repeated
+   against production once applied.
+6. Rollback for both migrations is in this document; neither drops a column, so
+   no data is lost either way.
+
+## 1. Run it locally first (still the right first step for production)
 
 ```bash
 supabase start
@@ -264,9 +353,10 @@ where media_type = 'tts_prepared_audio' and cloud_user_id = '<account-id>';
   `application/octet-stream`, which is what the client produces for this media
   type, and its 2 GiB file size limit stays — the 64 MiB cap is enforced in
   `reserve_book_upload`, above it.
-- **Uploads stay allowlist-only.** Prepared audio goes through
-  `cloud_feature_enabled('uploads')` like any other file; no account gains
-  anything from this migration alone.
+- **Uploads are no longer allowlist-only.** Prepared audio goes through
+  `cloud_feature_enabled('uploads')` like any other file, and since
+  `20261011000000` that answers true for every signed-in account. This migration
+  alone grants nothing; the two together open backup to everyone.
 - **The never-empty relative path is load-bearing.** It is the only thing
   keeping prepared audio invisible to apps released before this feature. Do not
   relax `cloud_book_files_prepared_audio_path_check`.
