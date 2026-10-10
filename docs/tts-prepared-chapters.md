@@ -498,11 +498,11 @@ and byte sizes, complete flag, total bytes. No sentence text or titles.
 The 1 GB limit evicts oldest complete chapters, excluding the active chapter
 and chapters used within ten minutes. Partial chapters survive for resume.
 
-## Button states and text (required, not implemented)
+## Button states and text (built in step 6)
 
-Not prepared; preparing this chapter; preparing another chapter; prepared;
-prepared for other settings; partly prepared; failed; voice not usable.
-No new screen strings or resource keys exist in this run yet.
+Every state the row can show, its wording and its actions are listed under
+"Step 6: the screen" above, together with every new string key. Nothing in this
+section is outstanding.
 
 ## Previous run: not done (historical)
 
@@ -512,46 +512,44 @@ No cloud, server, database migration, library,
 cache-key change, sentence-cache compression, automatic or whole-book
 preparation, iPhone TTS, TTS-F15 or TTS-F25 changes.
 
-## Current handoff after Step 3
+## What exists after step 6, and what is left
 
-Steps 1–3 are built and committed green in order. Steps 4–8 are not built:
-no app-wide chapter job/state flow, foreground service, notification/Voices
-gates, preparation analytics, controller/screen wiring, row or strings,
-Settings total/Delete all row, UI render tests, or full prepared-chapter device
-journey. This is not an end-user-ready feature. Continue at Step 4 with tests
-first for the pure job, then the foreground service and fail-closed analytics
-sanitizer. Do not skip ahead to reader/UI while Step 4 is uncommitted/non-green.
+Built and committed green, in order: compressed sentence audio behind
+`TtsPreparedAudioEncoder` with the native AAC encoder as the production binding
+(step 1), the prepared store (step 2), prepared-first playback with a live-first
+synthesis gate (step 3), the app-wide preparation job with its foreground service
+and analytics (step 4), the reader wiring and the pure row decision (step 5), and
+the row in the Listening sheet plus the Settings total (step 6). The feature is
+reachable by a user on Android: Listening sheet → Prepare this chapter.
 
-Existing seams ready for that run: `TtsPreparedAudioStore.store.begin(id,
-settings, orderedKeys)`, per-chapter `lookup(id,key)` without playback touch,
-`TtsAudioGenerator.prepareSentence(...)`, store `markComplete`, `enforceLimit`
-and deletion. Generate keys with the existing cache key/model version and
-effective rate. Freeze those settings and loaded sentence order for the job.
-The manifest holds ids and keys, not sentence text; the running job must hold
-texts in memory and receive them again to resume after app kill. Current encoder binding is AAC (`.m4a`). Every new `@Single` needs a real-graph resolution test.
-Cloud packaging guidance above reflects the implemented store, but Step 7's
-final UI/strings/state/limits documentation remains unfinished until the feature
-exists. No previously built bug-fix test was changed or weakened.
+### Known limits
 
-Final verification and restoration: the six-module counts above remain green;
-Android assemble and iOS framework succeeded on Step 3 source `9478844e`.
-That APK was installed with `install -r` on the Samsung. Normal System playback
-still starts and shows Pause with one attempted and one succeeded operation
-(889 ms, PID 23332). This is a regression smoke, not a Step 8 prepared-chapter
-check. Fresh sheet showed System voice at 1×; Stop listening and reader Back
-returned to Library. `run-as` confirmed both probe folder and `files/tts-prepared`
-absent. Only the authored temporary UI dump was removed; no app data was cleared.
-Tiny instrumentation APK remains installed under the no-uninstall rule.
-
-This run ends for execution-time budget after complete, committed green Steps
-1–3, rather than starting an unfinished Step 4. The complete end-of-step report
-is `docs/tts-prepared-chapters-report.txt`. No full preparation UI/device journey
-is claimed; acoustic comparison remains explicitly unassessed.
+- Android only. iPhone keeps the read-aloud stub; every new `TtsController` member
+  has a default that does nothing, and no iOS source was edited for them.
+- One chapter at a time, by hand. A second press while one runs is refused, never
+  queued, and the row says another chapter is preparing.
+- The running job holds the chapter's sentence texts in memory. The manifest holds
+  keys only, never text, so a resume after an app kill needs the reader to supply
+  the chapter's sentences again — which is what pressing Continue does.
+- AAC adds 87 to 127 ms of its own silence per sentence, so joins in a prepared
+  chapter are slightly longer than live ones. Accepted by the owner; not trimmed.
+- Whether those joins sound worse has never been assessed by an agent: none of the
+  runs could listen. The step 8 evidence folder carries three consecutive prepared
+  sentences from a public-domain book so the owner can judge.
+- Free space is estimated at 64 kB per sentence plus 32 MiB of headroom before a
+  preparation starts; it is not re-checked while running, so a device that fills up
+  mid-chapter fails the sentence it is on.
+- The 1 GiB limit evicts oldest complete chapters first and never the active one or
+  one used in the last ten minutes; if every candidate is protected the limit stays
+  temporarily exceeded rather than breaking playback or resume.
+- No cloud upload, download or packaging code exists; see the next section.
+- The notification is a progress notification with a Cancel action only; it does not
+  open the book, and it names neither book nor chapter.
 
 ## For the cloud backup run
 
-Host-testable folders now exist; the app does not yet expose preparation UI/jobs.
-Package one hashed chapter folder, its version-1 `manifest.json`, and exactly the
+A user can now prepare a chapter from the Listening sheet, so real folders exist on
+devices. Package one hashed chapter folder, its version-2 `manifest.json`, and exactly the
 distinct `.m4a` files for entries with nonnull duration. Preserve ordered entry
 positions (duplicate keys share one audio file), voice/model/rate/pitch, identifiers
 and complete/partial status. Missing entries have null duration and zero bytes.
@@ -563,16 +561,15 @@ isolation policy is not implemented. The manifest contains required ids/href but
 no text/title fields; do not add book metadata to telemetry. Model version and
 sentence keys remain unchanged. Payload format is AAC-LC mono in `.m4a` at manifest
 format version 2; each file carries 87 to 127 ms of encoder padding and the
-manifest duration is the container's measured duration. No upload/download/cloud code exists in this feature.
+manifest duration is the container's measured duration. A chapter is all one format:
+there is no mixed WAV/AAC folder, and a version-1 folder from an older build is
+deleted on sight rather than migrated, so nothing to upload is ever WAV.
 
-## Previous run: resume instructions (superseded by continuation checkpoint)
-
-Keep the existing bug-fix tests unchanged. Finish the native adapter behind
-`TtsPreparedAudioEncoder`, then run the six-sentence checkpoint (three real
-Kokoro and three real system-voice WAVs, encoded and played through the existing
-read-aloud engine). Record source/encoded byte sizes, each reported duration
-delta in milliseconds, and an actual audible WAV/AAC join comparison. Try
-padding trimming if needed; select WAV if AAC cannot meet the 50 ms/join gate.
-Only then add the prepared store, with tests first and this document current.
-The nested comparison worktree contains no authored changes and is retained,
-not deleted. It is not the feature branch's working directory.
+What a later run needs beyond the files: the total on the device is
+`PreparedAudioStorage.totalBytes()` (reader domain) and deletion of everything is
+`deleteAll()` on the same interface — a backup run can use that seam instead of
+reaching into the store. Preparation state for one chapter is
+`TtsChapterPreparationJob.state`; do not package a chapter while that reports
+`Running` for it. Per-chapter folder resolution is `TtsPreparedStore.chapterDirectory`
+from book id, server id and chapter href, all three of which the manifest repeats.
+No upload, download or Parrot Cloud code exists in this feature.
