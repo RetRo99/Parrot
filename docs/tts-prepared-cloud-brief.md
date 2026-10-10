@@ -53,9 +53,17 @@ blocks it. Do not invent a parallel upload system without the owner's agreement.
 - Small commits. Never `git add -A`; add files by explicit path. Never discard work.
 - Server changes are additive: a new migration file with a later timestamp. Never edit an
   existing migration. Every server change comes with pgTAP tests in `supabase/tests/`.
-- Nothing is deployed by an agent. The owner applies migrations by hand. Never run
-  anything against the hosted project, never use production credentials, and do not
-  put any key or account email in the repository.
+- The server: the owner has decided that the linked Supabase project may be used for
+  this work. It is a development project holding only mock data, and this machine has no
+  Docker, so the local stack cannot run. An agent may run the test suite against the
+  linked project and may apply THIS work's migrations to it with the Supabase CLI. Rules:
+  check `supabase migration list` first and stop if any migration other than this
+  work's is pending; never reset the database; never run `scripts/supabase/reset.sh`;
+  never edit a migration that has been applied, fix forward with a new one; never delete
+  or change rows outside a test's own transaction (every test file is wrapped in
+  `begin` and `rollback`, keep it that way); never use the ops scripts under
+  `scripts/supabase/ops`. Do not put any key, password, token or account email in the
+  repository or in a report. No other Supabase project is touched.
 - Existing behaviour for books (upload, restore, delete, takedown, quota) must not
   change. Its tests must pass unedited; if one has to change, stop and explain why.
 - No new libraries. The worktree has no `local.properties`: pass
@@ -112,10 +120,11 @@ One new migration and its pgTAP tests, written first:
   it handles. If that needs prepared audio to be left out of the existing payload and
   served by a new call, do that.
 
-Run the suite with `scripts/supabase/test.sh` (local Supabase; needs Docker). If the
-local stack cannot be started, write the migration and tests anyway, say plainly in the
-document and the report that the SQL has NOT been run, and continue with the client. The
-owner will not apply SQL that has not been run.
+Run the suite against the linked project with
+`supabase test db --linked supabase/tests`: once before applying the migration, as a
+baseline for the existing tests, and again after. `scripts/supabase/test.sh` targets the
+local stack and cannot run on this machine. SQL that has not been run is marked as such
+in the document and the report.
 
 Write `supabase/PREPARED_AUDIO_ROLLOUT.md` in the style of `SECURITY_ROLLOUT.md`: the
 exact steps the owner runs to apply and verify the migration, and how to roll back.
@@ -204,12 +213,16 @@ places that show usage.
   storage full) needs the migration applied by the owner. Write the exact checklist for
   it in the document. Do not attempt it.
 
-Device rules: only the Samsung, serial `RFCWC0SSVDM`; `-s RFCWC0SSVDM` on every adb call;
-`adb install -r` only; never uninstall, never clear app data, do not sign out or in, do
-not change network settings or the ringer; no other phone. A tap in the middle of the
-page reveals the reader's control row; wait 0.9 seconds; a long press on Listen
-(`input swipe X Y X Y 800`) opens the Listening sheet. Leave the phone on a System voice
-at rate 1.0, on the library screen, with prepared audio deleted.
+Device rules, revised by the owner on 2026-10-10: the Samsung, serial `RFCWC0SSVDM`, is
+a test phone with a test account and test data. On it an agent may do what the checks
+need: reinstall, clear app data, sign in and out of the app with an account the owner has
+already signed in or supplied, switch Wi-Fi and mobile data, delete voice packs, and
+accept the Supertonic voice model terms. Pass `-s RFCWC0SSVDM` on every adb call. No
+other phone, even if others are attached. A tap in the middle of the page reveals the
+reader's control row; wait 0.9 seconds; a long press on Listen
+(`input swipe X Y X Y 800`) opens the Listening sheet. Leave the phone signed in as it
+was found, with Wi-Fi and mobile data on, on a System voice at rate 1.0, on the library
+screen.
 
 ## Not in this work
 
@@ -239,7 +252,7 @@ by position, so a column placed in the middle is read from the wrong slot on eve
 existing install.
 
 ```bash
-scripts/supabase/test.sh
+supabase test db --linked supabase/tests
 ```
 
 Some of those Gradle test tasks may not exist under exactly those names; list the
