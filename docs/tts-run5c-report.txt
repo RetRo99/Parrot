@@ -8,6 +8,7 @@ c10784fb fix(tts): ignore player callbacks without their owning session
 790eb981 fix(tts): keep narration when its chapter arrives on screen
 8c3701ba test(tts): cold start red "expected:<[attempted, succeeded]> but was:<[attempted, failed]>"
 69695a39 fix(tts): give model loading its own sixty-second start deadline
+702360a9 docs(tts): record run 5c fixes and pre-device checkpoint
 Steps complete (1-6): 1-5 implementation complete; full verification and step 6 pending. This report is committed before device work and final builds.
 Step 1: evidence committed (yes/no), files in it (count), anything left uncommitted and why: yes, 16; original evidence unchanged; no unrelated work left.
 F25: the earlier test rewritten (name) and its failure text; each new test, failed before the fix (yes/no) and the failure text; other callbacks checked and whether each was changed:
@@ -44,12 +45,12 @@ supertonic cold load gets the same separate deadline: yes, "expected:<[attempted
 resume with a cold neural model uses the load deadline: yes, "expected:<40000> but was:<0>".
 Any test edited after its fix (name + why), or "none": none
 Tests from earlier runs edited other than the one named in Step 2 (name + why), or "none": none
-Per module: reader ui Android host 534/534, reader ui iOS pending, settings ui pending, home ui pending, composeApp pending, analytics pending
-App build results (Android assemble, iOS framework): pending, pending
-Device used (model + serial), any command sent to another device (yes/no): pending; no device command yet
-Cold Kokoro start: press to model loaded, press to first audio, operation lines: pending
-Chapter boundary with a System voice and with Kokoro: kept reading (yes/no each), operation lines: pending
-Swipe to a different chapter while reading: stopped (yes/no): pending
+Per module: reader ui Android host 534/534, reader ui iOS 357/357, settings ui 24/24, home ui 84/84, composeApp 64/64, analytics 77/77
+App build results (Android assemble, iOS framework): both BUILD SUCCESSFUL; requested verification 41 s, builds 1 min 27 s; counts read from build/test-results XML.
+Device used (model + serial), any command sent to another device (yes/no): Samsung SM-S921B, RFCWC0SSVDM; no
+Cold Kokoro start: press to model loaded, press to first audio, operation lines: PARTIAL, model warmed on book open 37.291 s before Play; first player audio signal 0.784 s after press; one controls attempted 11:00:36.174 / succeeded 11:00:36.865, duration_ms=693. Not a measurement of cold model loading after Play; no independent acoustic measurement.
+Chapter boundary with a System voice and with Kokoro: kept reading (yes/no each), operation lines: System no, initial near-end start succeeded 11:03:02.857 but IDLE 11:03:25.428 at automatic page crossing, no chapter pair; Kokoro yes, chapter attempted 11:06:32.435 / succeeded 11:06:32.630, duration_ms=197, continued to sentence 14 then 15 of 120 without a stop until deliberate swipe.
+Swipe to a different chapter while reading: stopped (yes/no): yes, manual backward swipes 11:07:28.809, IDLE 11:07:30.062, service destroyed .095, now-playing cleared .097
 Stop at a sentence end, five times: restarted on its own (count): pending
 Double-tap inside a prepared chapter: jumped (yes/no), any synthesize line (yes/no): pending
 State the phone was left in (voice, rate, screen, prepared audio deleted yes/no): pending; device not touched yet

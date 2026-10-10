@@ -1,6 +1,6 @@
 # TTS testing plan
 
-Source: `docs/tts-investigation.md` (27 findings, TTS-F01 to TTS-F27, plus QA-BUG-0049,
+Source: `docs/tts-investigation.md` (28 findings, TTS-F01 to TTS-F28, plus QA-BUG-0049,
 0095, 0100). Android only; TTS on iPhone is a stub. Branch `tts/investigation`.
 
 ## How each run works
