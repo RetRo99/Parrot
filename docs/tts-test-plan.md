@@ -27,7 +27,7 @@ A finding that cannot be shown by an automated test gets a manual case in sectio
 | 4 | Voice pack download and delete | F04, F05, F20 | Opus | done |
 | 5a | Read-aloud stopping and the highlight it leaves | F23, F24, F14 | Opus | done |
 | 5b | Two readers, the pending voice, logout | QA-0049, QA-0100, F10, F11, F19 | Opus | done |
-| 5c | The stop when the page and the narrated chapter differ; the start deadline | F25, F15, decision 5 | Opus | not started |
+| 5c | The stop when the page and the narrated chapter differ; the start deadline | F25, F28, F15, decision 5 | GPT-6.1 Sol | code done; final verification/device pending |
 | 6 | Manual device pass and new cases in `manual-qa-test-plan.md` | all | Sonnet, with the owner's phone | |
 
 Run 1 is first because it is a crash on every Kokoro synthesis and it blocks every other
@@ -267,7 +267,7 @@ attempted and it never reached a start — three taps on Play in a book whose re
 Whether that predates run 5b was not established; run 5b's changes do not touch the path
 between the press and `requestPlayback`. Added to run 5c.
 
-### Run 5c: the stop when the page and the narrated chapter differ; the start deadline — not started
+### Run 5c: the stop when the page and the narrated chapter differ; the start deadline — code done
 
 - **First:** a play press that emits no `attempted` at all, seen on the Samsung on
   2026-10-10. Needs a build from before run 5b to attribute, then a cause. Decision 2 says a
@@ -281,7 +281,24 @@ between the press and `requestPlayback`. Added to run 5c.
   again in run 2c (21:19:51, `docs/manual-qa-evidence/2026-10-09/tts-run2c/NOTES.md`
   §"Recorded, not investigated"). Not filed as a finding yet.
 - Decision 5, the 30 second start deadline: arm it after the engine is loaded, so loading
-  the model does not count against it (F15).
+   the model does not count against it (F15).
+
+Run 5c, 2026-10-10: evidence from the prepared-chapters phone check preserved unchanged
+in `31f8d91c` (16 explicit paths). F25: nine red tests `94a7e080` → fix `c10784fb`;
+only the earlier locator-abandonment assertion explicitly authorized by the owner was
+changed. The normal running-ended case passed before any fix. F28: extracted the
+unchanged locator decision, four red tests `67249314` → fix `790eb981`; ordinary user
+navigation, idle reload and the earlier skip-ahead suite already passed. F15: extracted
+the unchanged arm-before-start sequence, five virtual-time failures `8c3701ba` → fix
+`69695a39`; system-start timing, stop cancellation and pending-screen state already
+passed. Neural load uses `warmUp` (downloaded-model-only, both engines), bounded at 60 s
+independently of the load coroutine, then the existing 30 s synthesis/player deadline.
+Tracked resume and settings restarts share the same sequence. No prepared-chapters
+code or tests were changed, no earlier test other than the named exception was edited,
+and no new test was edited after its fix. Reader host tests pass 534/534 at this stage.
+Full multi-module verification and the short Samsung check remain pending; see
+`tts-run5c-report.txt`. The older play-press attribution question above is retained, not
+reopened: this run's explicit scope is the three timing fixes and the requested checks.
 
 ### Run 6: manual device pass
 
@@ -340,8 +357,10 @@ Checks the investigation could not do, then a regression pass of sections 9, 10,
    asks the same per-server stop for every remote server and never for the local library,
    and the stop reaches the read-aloud engine as well as the media session. The on-device
    check needs the owner's account and is in the run 6 list.
-5. F15: should loading the model count against the 30 second start deadline?
-   Recommended: no, arm the deadline after the engine is loaded.
+5. F15: **Decided by the owner, 2026-10-10, implemented in `69695a39`:** loading the
+   model does not count against the 30 second start deadline. It has its own 60 second
+   limit; a hanging load emits exactly one `Failed(START_TIMEOUT)`. Arm the 30 seconds
+   only after the selected neural model has loaded. System voices arm immediately.
 6. Supertonic terms must be accepted on the test phone by the owner before any
    Supertonic device check.
 

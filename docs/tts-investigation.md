@@ -443,6 +443,7 @@ effect on a user, not on the code.
 - **Confidence:** low for ordinary devices, medium for slow ones.
 - **Severity for a user:** silent failure (a start that looks broken).
 - **How a test could catch it:** `AndroidTtsControllerTest` with a fake engine that never becomes active, asserting `Failed(START_TIMEOUT)` after the virtual 30 s; manual: measure the cold first start from `logcat -s SherpaOnnxTts` timestamps.
+- **Fixed (run 5c):** `69695a39` — `TtsPlaybackAttempts.prepareStart` loads the selected downloaded neural model under its own 60 s deadline, then arms the existing 30 s synthesis/player deadline; fresh starts, tracked resumes and settings-change restarts share it. Five tests committed failing in `8c3701ba`; system timing, cancellation and pending-state cases were already green.
 
 ### TTS-F16 — `chapterCompleted` reports whatever chapter is current, not the one that finished
 
@@ -709,6 +710,7 @@ Three findings came out of step 3 rather than the source read. They keep the sam
 - **Severity for a user:** wrong audio (a chapter read from its start unasked).
 - **How a test could catch it:** the test above, once the fake only reports `ENDED` while it has items; the product guard is `if (currentIndex < 0) return` in `onSentenceCompleted`.
 - **Status:** not fixed — found by run 2b's TTS-F16 test, outside that run's scope. Candidate for run 5.
+- **Fixed (run 5c):** `c10784fb` — completion requires a running session; stopped-player ready, transition, error and playing callbacks cannot revive it, and paused auto-transition cannot advance. Nine failures committed in `94a7e080`, including the explicitly authorized correction to the earlier locator-abandonment assertion; ordinary running completion was already green.
 
 ### TTS-F26 — A slow voice's gap between sentences reads as "not playing", and narration can die in it
 
@@ -735,6 +737,18 @@ Three findings came out of step 3 rather than the source read. They keep the sam
 - **How a test could catch it:** the sanitizer test above, one case per action value the product can emit.
 - **Fixed:** `e4597018` (run 2c) — `settings_change` added to `SAFE_TTS_ACTIONS`, which now lists every `TtsPlaybackAction.analyticsValue`.
 - **Device check 2026-10-09 (run 2c):** passed — every settings-change event of the run carries the action, e.g. `{tts_action=settings_change, tts_outcome=attempted}` at 21:19:36.864 and `{tts_action=settings_change, tts_outcome=succeeded, duration_ms=14484}` at 21:19:51.348 (`docs/manual-qa-evidence/2026-10-09/tts-run2c/`).
+
+### TTS-F28 — Arrival in the narrated chapter stops read-aloud as if the user left it
+
+- **Where:** `AndroidTtsController.kt`, `currentLocator` collector: every href change clears the controller's sentences, stops the engine and reloads the displayed chapter.
+- **Trigger:** Narration crosses a chapter boundary, or its highlight brings the displayed page into the chapter whose sentences are already being narrated.
+- **Expected:** Arrival in the narrated chapter leaves playback and its sentence list alone. Navigation to a different chapter still stops and reloads, as does a chapter change with no narration.
+- **Actual:** The locator collector stops the narration it just caught up with; on the phone it stopped 390 ms after a successful settings-change restart.
+- **Evidence:** REPRODUCED — run 2c, 21:19:51.345 playback start, 21:19:51.735 IDLE/service destruction, `docs/manual-qa-evidence/2026-10-09/tts-run2c/NOTES.md` §"Recorded, not investigated". Four host failures committed in `67249314`.
+- **Confidence:** high.
+- **Severity for a user:** narration stops silently during a chapter.
+- **How a test could catch it:** `TtsChapterChangeTest` tests the extracted decision with previous, arriving and narrated hrefs, including delayed arrival after hand-off and skip-ahead.
+- **Fixed:** `790eb981` — `shouldReloadTtsChapter` exempts arrival in the engine's loaded, current chapter. Ordinary navigation and idle changes passed before the fix; the earlier skip-ahead tests pass unedited.
 
 ---
 
