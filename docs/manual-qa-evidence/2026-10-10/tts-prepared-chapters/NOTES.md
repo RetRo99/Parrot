@@ -2,6 +2,14 @@
 
 ## Continuation: dead Play fix
 
+## Step 1: six-sentence format gate
+
+- Native adapter tree `eca84193`, Samsung SM-S921B RFCWC0SSVDM; probe synthesized three real Gutenberg sentences per kind (Heart, default system voice), and played all 3 indices in both WAV and M4A via unchanged read-aloud engine with real local ExoPlayer. No title/text in retained log.
+- Probe PID 17556: Kokoro WAV/M4A bytes + duration delta: 76970/11190 +104 ms; 99606/14050 +102 ms; 127086/17690 +127 ms. System: 105764/14909 +102 ms; 103340/14570 +109 ms; 141262/19364 +87 ms.
+- Padding trim trial: lossless remux with encoder-delay 1024 samples and calculated padding; MediaMuxer discarded both metadata keys, duration differences unchanged on all six. Fallback selected: WAV. No risky spoken-packet removal or engine change.
+- Audible joins NOT RUN (no audio-monitoring capability). Numeric duration gate fails independently. WAV fallback preserves exact input bytes and duration; no extra encoder padding.
+- Probe code/build script committed in this folder; tiny test-only instrumentation APK installed via `install -r`, left installed because uninstall prohibited. Probe folder/audio removed before finish; exact early empty folder removed with `rmdir`. No unrelated data or settings changed.
+
 - Samsung SM-S921B, Android 16, serial RFCWC0SSVDM; Parrot 0.4.5 (21), notification permission already granted. Parrot was foreground; no unrelated app interaction.
 - Before fix: System voice 1×, empty opening Page 1 of 1, Play gave zero playback operations in 3 s (PID 30907).
 - Fix code `071d8867`, installed with `install -r`: same book via Resume, fresh Listen bounds after middle tap and 0.9 s wait; long press opened sheet. Play moved into the first text chapter, showed Pause and Sentence 2 of 397; playback then paused.

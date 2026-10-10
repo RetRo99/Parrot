@@ -3,6 +3,11 @@ package com.retro99.parrot.preparedprobe;
 import android.app.Instrumentation;
 import android.os.Bundle;
 import android.util.Log;
+import android.media.MediaCodec;
+import android.media.MediaExtractor;
+import android.media.MediaFormat;
+import android.media.MediaMuxer;
+import java.nio.ByteBuffer;
 import java.io.File;
 import java.lang.reflect.*;
 import java.util.*;
@@ -19,7 +24,9 @@ public final class PreparedAudioProbe extends Instrumentation {
     @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); start(); }
     @Override public void onStart() {
         Bundle result = new Bundle();
+        int code = 0;
         try {
+            waitForIdleSync(); // Application.onCreate must finish wiring Koin before this worker.
             loader = getTargetContext().getClassLoader();
             Object global = cls("org.koin.core.context.GlobalContext").getField("INSTANCE").get(null);
             koin = call(global, "get");
@@ -28,15 +35,19 @@ public final class PreparedAudioProbe extends Instrumentation {
             if (!root.mkdir()) throw new IllegalStateException("Cannot create probe folder");
             ownsRoot = true;
             Object synth = get("com.retro99.reader.ui.tts.TtsSynthesizer");
-            if (!Boolean.TRUE.equals(suspend(synth, "awaitReady", 3000L)))
+            Object systemSynth = get("com.retro99.reader.ui.tts.AndroidSystemTtsSynthesizer");
+            Log.i(TAG, "STAGE system_ready");
+            if (!Boolean.TRUE.equals(suspend(systemSynth, "awaitReady", 3000L)))
                 throw new IllegalStateException("System synthesizer not ready");
-            Object defaultVoice = call(synth, "defaultVoice");
+            Object defaultVoice = call(systemSynth, "defaultVoice");
+            Log.i(TAG, "STAGE system_voice");
             String system = (String) call(defaultVoice, "getId");
             if (system.startsWith("kokoro:") || system.startsWith("supertonic:"))
                 throw new IllegalStateException("No default system voice");
             if (!Boolean.TRUE.equals(suspend(synth, "warmUp", "kokoro:af_heart")))
                 throw new IllegalStateException("Downloaded Kokoro Heart unavailable");
-            Object encoder = get("com.retro99.reader.ui.tts.TtsPreparedAudioEncoder");
+            Log.i(TAG, "STAGE kokoro_ready");
+            Object encoder = cls("com.retro99.reader.ui.tts.AndroidTtsPreparedAacEncoder").getConstructor().newInstance();
             String[] texts = {"Down, down, down.", "Would the fall never come to an end?",
                 "I wonder how many miles I've fallen by this time?"};
             for (int kind = 0; kind < 2; kind++) {
@@ -61,27 +72,81 @@ public final class PreparedAudioProbe extends Instrumentation {
                         + " wav_bytes=" + wavs[i].length() + " m4a_bytes=" + encoded[i].length()
                         + " wav_ms=" + wavDurations[i] + " m4a_ms=" + encodedDurations[i]
                         + " delta_ms=" + (encodedDurations[i] - wavDurations[i]));
+                    tryPaddingMetadata(encoded[i], wavDurations[i], index);
                 }
                 play(synth, voice, texts, wavs, wavDurations, "wav", kind);
                 play(synth, voice, texts, encoded, encodedDurations, "m4a", kind);
             }
             result.putString("result", "six measured; engine played WAV/M4A; acoustic judgment requires a human");
-            finish(0, result);
         } catch (Throwable error) {
+            code = 1;
             // Do not retain exception messages from app dependencies (may include paths/content).
             Log.e(TAG, "BLOCKED " + error.getClass().getSimpleName());
+            Throwable cause = error;
+            while (cause != null) {
+                Log.e(TAG, "CAUSE " + cause.getClass().getSimpleName());
+                for (StackTraceElement frame : cause.getStackTrace())
+                    Log.e(TAG, "FRAME " + frame.getClassName() + "." + frame.getMethodName());
+                cause = cause.getCause();
+            }
             result.putString("result", "blocked: " + error.getClass().getSimpleName());
-            finish(1, result);
         } finally {
             // Only this probe's numbered files; no cache/prepared-store deletion.
             if (ownsRoot) {
                 for (int i = 0; i < 6; i++) {
                     new File(root, i + ".wav").delete();
                     new File(root, i + ".m4a").delete();
+                    new File(root, i + ".trim.m4a").delete();
                 }
                 root.delete();
             }
         }
+        finish(code, result);
+    }
+
+    /** Lossless remux requesting decoder priming/padding trim; never removes spoken AAC packets. */
+    private void tryPaddingMetadata(File source, long wavMs, int index) throws Exception {
+        File trimmed = new File(root, index + ".trim.m4a");
+        MediaExtractor extractor = new MediaExtractor();
+        MediaMuxer muxer = null;
+        boolean started = false;
+        try {
+            extractor.setDataSource(source.getAbsolutePath());
+            MediaFormat format = extractor.getTrackFormat(0);
+            int rate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE);
+            long durationUs = format.getLong(MediaFormat.KEY_DURATION);
+            int delay = 1024;
+            int padding = (int) Math.max(0L, durationUs * rate / 1000000 - wavMs * rate / 1000 - delay);
+            format.setInteger(MediaFormat.KEY_ENCODER_DELAY, delay);
+            format.setInteger(MediaFormat.KEY_ENCODER_PADDING, padding);
+            muxer = new MediaMuxer(trimmed.getAbsolutePath(), MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
+            int track = muxer.addTrack(format);
+            muxer.start(); started = true;
+            extractor.selectTrack(0);
+            ByteBuffer buffer = ByteBuffer.allocate(65536);
+            MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
+            while (true) {
+                buffer.clear();
+                int count = extractor.readSampleData(buffer, 0);
+                if (count < 0) break;
+                info.set(0, count, extractor.getSampleTime(), extractor.getSampleFlags());
+                muxer.writeSampleData(track, buffer, info);
+                extractor.advance();
+            }
+            muxer.stop(); started = false;
+        } finally {
+            extractor.release();
+            if (muxer != null) { if (started) muxer.stop(); muxer.release(); }
+        }
+        MediaExtractor check = new MediaExtractor();
+        try {
+            check.setDataSource(trimmed.getAbsolutePath());
+            MediaFormat format = check.getTrackFormat(0);
+            long actual = format.getLong(MediaFormat.KEY_DURATION) / 1000;
+            Log.i(TAG, "TRIM index=" + index + " duration_ms=" + actual + " delta_ms=" + (actual - wavMs)
+                + " delay_metadata=" + format.containsKey(MediaFormat.KEY_ENCODER_DELAY)
+                + " padding_metadata=" + format.containsKey(MediaFormat.KEY_ENCODER_PADDING));
+        } finally { check.release(); }
     }
 
     private void play(Object synth, String voice, String[] texts, File[] files, long[] durations,

@@ -7,13 +7,26 @@ import android.media.MediaFormat
 import android.media.MediaMuxer
 import java.io.File
 import java.nio.ByteBuffer
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
 
-/** AAC-LC mono at the source sample rate; publication/cleanup belongs to the atomic core. */
+/** Phone-gated WAV fallback: AAC exceeded 50 ms even after a padding-metadata trial. */
 @Single(binds = [AndroidTtsPreparedAudioEncoder::class, TtsPreparedAudioEncoder::class])
 class AndroidTtsPreparedAudioEncoder : TtsPreparedAudioEncoder {
+    private val core = TtsPreparedAudioEncoderCore { wav, pcm, staging ->
+        Files.copy(wav.toPath(), staging.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        pcm.durationMs
+    }
+
+    override suspend fun encode(wav: File, output: File): PreparedAudioEncoding =
+        withContext(Dispatchers.IO) { core.encode(wav, output) }
+}
+
+/** Candidate retained for future phone checks; not the production interface binding. */
+class AndroidTtsPreparedAacEncoder : TtsPreparedAudioEncoder {
     private val core = TtsPreparedAudioEncoderCore { wav, pcm, staging ->
         TtsPreparedAacPump().encode(wav, pcm, AndroidPreparedAacCodec(staging, pcm.sampleRate))
     }

@@ -4,6 +4,62 @@
 
 ### Continuation checkpoint
 
+**Current format decision: WAV fallback.** The native AAC candidate is built
+and tested on Samsung but fails the duration gate. The production interface
+binding `AndroidTtsPreparedAudioEncoder` now atomically copies the WAV, with
+its exact PCM duration; `AndroidTtsPreparedAacEncoder` retains the native codec
+candidate for a future reevaluation. All later storage/playback logic remains
+behind `TtsPreparedAudioEncoder`. Output files for the selected format use `.wav`.
+The format regression failed before fallback (expected Success, received Failure
+on the host's unavailable native codec); then passed unedited. Step 1 green
+checkpoint: reader Android 444/444, iOS 324/324, settings 22/22, home 84/84,
+composeApp 60/60, analytics 75/75, zero failures/errors/skips. The measured
+duration failure selects the brief's WAV fallback; subjective assessment remains
+unavailable, explicitly not claimed. Step 1 is complete under that fallback.
+
+### Step 1: Samsung measurements and format gate
+
+Two six-sentence probes synthesized three short Gutenberg sentences with Heart
+and a system voice, then played each WAV and AAC group through the unchanged
+`TtsReadAloudEngine`, using its existing injectable source and real local
+ExoPlayer. Both groups reached indices 0, 1, 2, without playback errors. The
+second probe also tried a lossless remux setting encoder-delay (1,024 samples)
+and calculated end-padding metadata. MediaMuxer did not preserve those keys;
+MediaExtractor reported the same excessive durations afterwards. No spoken
+packets were deleted to disguise the duration error. Following the brief, WAV
+is selected rather than spending further time on native padding.
+
+Second probe (PID 17556, Samsung SM-S921B, RFCWC0SSVDM):
+
+| Sentence | Kind | WAV bytes | M4A bytes | WAV ms | M4A ms | Delta ms | After trim trial delta ms |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0 | Kokoro | 76,970 | 11,190 | 1,602 | 1,706 | +104 | +104 |
+| 1 | Kokoro | 99,606 | 14,050 | 2,074 | 2,176 | +102 | +102 |
+| 2 | Kokoro | 127,086 | 17,690 | 2,646 | 2,773 | +127 | +127 |
+| 3 | System | 105,764 | 14,909 | 2,202 | 2,304 | +102 | +102 |
+| 4 | System | 103,340 | 14,570 | 2,152 | 2,261 | +109 | +109 |
+| 5 | System | 141,262 | 19,364 | 2,942 | 3,029 | +87 | +87 |
+
+First probe (PID 16730) WAV/M4A bytes and delta: 76,968/11,190 +104 ms;
+99,588/14,050 +103 ms; 126,978/17,430 +86 ms; system values identical to
+the second probe. Neural synthesis varies slightly between runs. Both
+probes complete with instrumentation code 0. Evidence logs contain only
+measurement numbers and engine indices, no text or book/chapter titles.
+
+**Audible joins: not assessed.** The agent has no audio-monitoring tool, and
+does not infer perceived quality from successful playback. The objective
+duration gate alone rejects AAC, so this missing subjective check does not
+block the mandated WAV fallback. Selected WAV is byte-identical to the input,
+so it adds no encoder padding or join change. All probe audio is removed after
+each run. The tiny instrumentation-only APK remains installed because the
+device rules prohibit uninstall; it has no launcher and no stored app data.
+
+Probe setup obstacles were bounded: Application startup needed `waitForIdleSync`,
+and router readiness can return for neural packs before system readiness, so
+the probe awaits the system synthesizer explicitly. An early empty probe
+folder was removed with exact `rmdir`; cleanup now runs before instrumentation
+finish. No app/library data, settings, terms, account or network was changed.
+
 Step 1 native-loop red checkpoint: `TtsPreparedAacPumpTest` adds three
 tests for bounded PCM feeding, sample timestamps/EOS and measured muxed
 duration, stall timeout/cleanup, and cancellation propagation/cleanup.
@@ -98,7 +154,7 @@ up to date). Counts read from `build/test-results` XML, not console summaries:
 reader Android 423/423; reader iOS 319/319; settings 22/22; home 84/84;
 composeApp 59/59; analytics 75/75. No bug-fix-run test has been edited.
 
-## What was built
+## Previous run: what was built (historical)
 
 Step 1 (partial): added the small Android-source-set `TtsPreparedAudioEncoder`
 interface, a success/failure result type, PCM WAV reader and encode core.
@@ -136,7 +192,7 @@ tests. They test publication/cleanup and parsing, not the native codec.
 No prepared store, manifest, UI state, screen text, resource, foreground service
 or analytics event has been added. No encoding measurements have been made.
 
-## Storage and manifest (required, not implemented)
+## Storage and manifest (required, not implemented yet)
 
 Intended root: `filesDir/tts-prepared`, outside the 128 MB sentence cache.
 One chapter folder under each book, with `manifest.json` and audio files named
@@ -153,7 +209,7 @@ Not prepared; preparing this chapter; preparing another chapter; prepared;
 prepared for other settings; partly prepared; failed; voice not usable.
 No new screen strings or resource keys exist in this run yet.
 
-## Not done
+## Previous run: not done (historical)
 
 Step 1 is partial; Steps 2–8 remain unbuilt. The platform codec and its six
 sentence checkpoint are the next work, before prepared storage or playback.
@@ -168,7 +224,7 @@ chapter must be self-contained as one folder with a versioned manifest and
 ordered audio files, so it can be packaged without reader state. Cloud backup
 is not part of this run.
 
-## Resume here
+## Previous run: resume instructions (superseded by continuation checkpoint)
 
 Keep the existing bug-fix tests unchanged. Finish the native adapter behind
 `TtsPreparedAudioEncoder`, then run the six-sentence checkpoint (three real
