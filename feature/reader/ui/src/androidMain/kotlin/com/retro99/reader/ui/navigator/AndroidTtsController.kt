@@ -195,7 +195,12 @@ class AndroidTtsController(
             bookController.currentLocator.collect { locator ->
                 val previousLocator = lastLocator
                 lastLocator = locator
-                if (previousLocator != null && previousLocator.href != locator.href) {
+                if (shouldReloadTtsChapter(
+                        previousHref = previousLocator?.href,
+                        newHref = locator.href,
+                        narratedHref = engineChapterHref.takeIf { engine.currentSentence.value != null },
+                    )
+                ) {
                     sentences = emptyList()
                     sentencesChapterHref = null
                     engine.stop()
