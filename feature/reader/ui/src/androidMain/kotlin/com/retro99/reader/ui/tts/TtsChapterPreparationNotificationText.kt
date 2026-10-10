@@ -16,6 +16,9 @@ internal data class TtsChapterPreparationNotificationText(
 internal fun chapterPreparationNotificationText(
     running: TtsChapterPreparationState.Running?,
 ): TtsChapterPreparationNotificationText {
+    if (running?.isCancelling == true) {
+        return TtsChapterPreparationNotificationText(TtsChapterPreparationNotificationLine.CANCELLING, emptyList())
+    }
     val counts = listOf<Any>(running?.done ?: 0, running?.total ?: 0)
     return when (val left = preparedTimeLeftLabel(running?.remainingMs)) {
         null -> TtsChapterPreparationNotificationText(TtsChapterPreparationNotificationLine.COUNT, counts)

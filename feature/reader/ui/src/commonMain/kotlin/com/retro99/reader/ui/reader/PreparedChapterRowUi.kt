@@ -10,6 +10,7 @@ import resources.translations.reader_tts_delete
 import resources.translations.reader_tts_prepared_chapter_audio_length
 import resources.translations.reader_tts_prepared_chapter_audio_length_hours
 import resources.translations.reader_tts_prepared_chapter_audio_length_short
+import resources.translations.reader_tts_prepared_chapter_cancelling
 import resources.translations.reader_tts_prepared_chapter_continue
 import resources.translations.reader_tts_prepared_chapter_estimate
 import resources.translations.reader_tts_prepared_chapter_estimate_hours
@@ -112,9 +113,10 @@ internal fun preparedChapterRowUi(
     )
 
     is PreparedChapterRowState.Cancelling -> PreparedChapterRowUi(
-        status = StringRes.reader_tts_prepared_chapter_progress,
-        statusArgs = listOf(state.done, state.total),
+        status = StringRes.reader_tts_prepared_chapter_cancelling,
+        progress = if (state.total > 0) state.done.toFloat() / state.total else 0f,
         actions = listOf(PreparedChapterAction.CANCEL),
+        disabled = setOf(PreparedChapterAction.CANCEL),
     )
 
     PreparedChapterRowState.PreparingAnotherChapter -> PreparedChapterRowUi(

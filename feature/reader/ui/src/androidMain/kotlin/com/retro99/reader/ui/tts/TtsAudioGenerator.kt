@@ -5,6 +5,8 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -198,6 +200,10 @@ internal class TtsAudioGeneratorCore(
                             pitch = pitch,
                             outputFile = outputFile,
                         ).also { synthesisMs = (nanoTime() - startedAt) / NANOS_PER_MS }
+                    }.also {
+                        // A voice that finished although its preparation was cancelled: the
+                        // private WAV has no owner any more, so it goes like any failure's.
+                        if (preparation) currentCoroutineContext().ensureActive()
                     }
                 } catch (error: Throwable) {
                     outputFile.delete()

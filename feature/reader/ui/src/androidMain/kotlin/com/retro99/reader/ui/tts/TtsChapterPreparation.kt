@@ -3,9 +3,11 @@ package com.retro99.reader.ui.tts
 import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** One chapter's worth of work, frozen at the moment the button was pressed. */
@@ -62,14 +64,21 @@ internal class TtsChapterPreparationCore(
     private val mutableState = MutableStateFlow<TtsChapterPreparationState>(TtsChapterPreparationState.Idle)
     val state: StateFlow<TtsChapterPreparationState> = mutableState.asStateFlow()
 
+    /** Guards the claim, the launch and the cancel, so a cancel can never miss a starting job. */
+    private val lock = Any()
+
     @Volatile
     private var cancelRequested = false
+    private var running: Job? = null
 
     /**
      * Claims the job and starts the work, or says why it did not. The claim is made before
      * this returns, so a second press cannot start a second chapter.
      */
-    fun start(input: TtsChapterPreparationInput): TtsChapterPreparationRequest {
+    fun start(input: TtsChapterPreparationInput): TtsChapterPreparationRequest =
+        synchronized(lock) { claim(input) }
+
+    private fun claim(input: TtsChapterPreparationInput): TtsChapterPreparationRequest {
         if (input.texts.isEmpty()) return TtsChapterPreparationRequest.UNAVAILABLE
         while (true) {
             val current = mutableState.value
@@ -89,16 +98,40 @@ internal class TtsChapterPreparationCore(
             )
             if (!claimed) continue
             cancelRequested = false
-            scope.launch { run(input) }
+            running = scope.launch { run(input) }
             return TtsChapterPreparationRequest.STARTED
         }
     }
 
     fun key(text: String, settings: PreparedVoiceSettings): String = sentences.key(text, settings)
 
-    /** Stops after the sentence in flight: native synthesis already running is never cut off. */
-    fun cancel() {
+    /**
+     * Says so at once and abandons the sentence in flight. The state turns to cancelling
+     * before this returns; cancelling the job's coroutine is what stops a neural generation
+     * in progress (its callback sees the cancelled job) and takes a waiting sentence out of
+     * the synthesis queue. A voice that cannot be interrupted finishes its sentence first,
+     * and the state stays cancelling until it has. Harmless when nothing runs, or twice.
+     */
+    fun cancel() = synchronized(lock) {
+        if (mutableState.value !is TtsChapterPreparationState.Running) return@synchronized
         cancelRequested = true
+        mutableState.update { current ->
+            (current as? TtsChapterPreparationState.Running)?.copy(isCancelling = true) ?: current
+        }
+        running?.cancel()
+    }
+
+    /** Progress never takes back a cancel that has been pressed in the meantime. */
+    private fun progress(chapterHref: String, done: Int, total: Int, remainingMs: Long?) {
+        mutableState.update { current ->
+            TtsChapterPreparationState.Running(
+                chapterHref = chapterHref,
+                done = done,
+                total = total,
+                remainingMs = remainingMs,
+                isCancelling = (current as? TtsChapterPreparationState.Running)?.isCancelling == true,
+            )
+        }
     }
 
     private suspend fun run(input: TtsChapterPreparationInput) {
@@ -125,10 +158,16 @@ internal class TtsChapterPreparationCore(
                 if (!chapters.isPrepared(input.id, keys[index])) {
                     // One retry: a slow voice occasionally fails a single sentence.
                     var work = sentences.prepareMeasured(input.id, text, input.settings)
-                    if (work.encoding is PreparedAudioEncoding.Failure) {
+                    if (work.encoding is PreparedAudioEncoding.Failure && !cancelRequested) {
                         work = sentences.prepareMeasured(input.id, text, input.settings)
                     }
                     val encoded = work.encoding
+                    if (encoded is PreparedAudioEncoding.Failure && cancelRequested) {
+                        // An interrupted sentence may report a failure; it is the cancel.
+                        outcome = OUTCOME_CANCELLED
+                        mutableState.value = TtsChapterPreparationState.Cancelled(input.id.chapterHref)
+                        return
+                    }
                     if (encoded is PreparedAudioEncoding.Failure) {
                         mutableState.value = TtsChapterPreparationState.Failed(
                             input.id.chapterHref,
@@ -147,12 +186,7 @@ internal class TtsChapterPreparationCore(
                     estimateMs = preparationRemainingMs(runSamples, remainingCharacters),
                     nowMs = now(),
                 )
-                mutableState.value = TtsChapterPreparationState.Running(
-                    chapterHref = input.id.chapterHref,
-                    done = done,
-                    total = input.texts.size,
-                    remainingMs = timeLeft?.remainingMs,
-                )
+                progress(input.id.chapterHref, done, input.texts.size, timeLeft?.remainingMs)
             }
             chapters.markComplete(input.id)
             chapters.enforceLimit(input.id)

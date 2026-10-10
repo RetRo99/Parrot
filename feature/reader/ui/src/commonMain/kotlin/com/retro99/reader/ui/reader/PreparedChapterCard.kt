@@ -137,6 +137,7 @@ internal fun PreparedChapterCard(
                             color = colors.ink,
                             isEink = isEink,
                             onClick = actions.onCancel,
+                            enabled = action !in ui.disabled,
                         )
                         PreparedChapterAction.OPEN_VOICES ->
                             PillButton(label, isEink, actions.onOpenVoices)

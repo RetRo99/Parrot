@@ -58,10 +58,12 @@ internal fun derivePreparedChapterRow(
 ): PreparedChapterRowState? {
     if (!isReadAloudAvailable || isNarrationSelected || chapterHref == null) return null
     if (preparation is TtsChapterPreparationState.Running) {
-        return if (preparation.chapterHref == chapterHref) {
-            PreparedChapterRowState.Preparing(preparation.done, preparation.total, preparation.remainingMs)
-        } else {
+        return if (preparation.chapterHref != chapterHref) {
             PreparedChapterRowState.PreparingAnotherChapter
+        } else if (preparation.isCancelling) {
+            PreparedChapterRowState.Cancelling(preparation.done, preparation.total)
+        } else {
+            PreparedChapterRowState.Preparing(preparation.done, preparation.total, preparation.remainingMs)
         }
     }
     if (voice != PreparedChapterVoice.USABLE) {

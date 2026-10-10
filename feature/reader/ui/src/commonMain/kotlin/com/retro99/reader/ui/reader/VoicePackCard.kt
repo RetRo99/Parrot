@@ -548,6 +548,7 @@ internal fun OutlineButton(
     color: Color,
     isEink: Boolean,
     onClick: () -> Unit,
+    enabled: Boolean = true,
 ) {
     val colors = Ember.colors
     Box(
@@ -555,11 +556,17 @@ internal fun OutlineButton(
             .heightIn(min = 48.dp)
             .clip(CircleShape)
             .border(if (isEink) 2.dp else 1.dp, if (isEink) colors.ink else colors.chipBorder, CircleShape)
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Text(
+            text,
+            color = if (enabled) color else colors.ink2,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+        )
     }
 }
 
