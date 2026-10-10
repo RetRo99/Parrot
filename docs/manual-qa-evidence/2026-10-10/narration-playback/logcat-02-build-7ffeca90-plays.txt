@@ -1,0 +1,905 @@
+10-10 22:43:04.752  4042  4042 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:monkey -p com.retro99.parrot -c android.intent.category.LAUNCHER 1'
+10-10 22:43:05.831 23412 23412 W Monkey  : args: [-p, com.retro99.parrot, -c, android.intent.category.LAUNCHER, 1]
+10-10 22:43:05.857 23412 23412 W Monkey  :  arg: "com.retro99.parrot"
+10-10 22:43:05.857 23412 23412 W Monkey  : data="com.retro99.parrot"
+10-10 22:43:05.909  1559  4968 I Pageboost: onAppLaunch : com.retro99.parrot
+10-10 22:43:05.926  1559  4968 V WindowManager: Collecting in transition 950: ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity, caller=com.android.server.wm.TransitionController.collect:7 com.android.server.wm.ActivityStarter.startActivityUnchecked:98 com.android.server.wm.ActivityStarter.executeRequest:3744 com.android.server.wm.ActivityStarter.execute:1751 com.android.server.wm.ActivityTaskManagerService.startActivityAsUser:95 
+10-10 22:43:05.926  1559  4968 V WindowManager: DesktopModeLaunchParamsModifier: phase= 0 task=null activity=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t-1} display-area-from-current-params=null display-area-from-default-fallback=DefaultTaskDisplayArea_d0@37452198 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@37452198 task null, skipping
+10-10 22:43:05.926  1559  4968 V WindowManager: TaskLaunchParamsModifier:phase=0 task=null activity=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t-1} display-area-from-current-params=null display-area-from-default-fallback=DefaultTaskDisplayArea_d0@37452198 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@37452198
+10-10 22:43:05.926  1559  4968 D [secipm]: mSecIpmManager AppTouchDown com.retro99.parrot dex files
+10-10 22:43:05.927  1559  4968 V WindowManager: DesktopModeLaunchParamsModifier: phase= 3 task=null activity=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t-1} display-area-from-current-params=null display-area-from-default-fallback=DefaultTaskDisplayArea_d0@37452198 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@37452198 task null, skipping
+10-10 22:43:05.927  1559  4968 V WindowManager: TaskLaunchParamsModifier:phase=3 task=null activity=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t-1} display-area-from-current-params=null display-area-from-default-fallback=DefaultTaskDisplayArea_d0@37452198 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@37452198 non-freeform-task-display-area display-area=DefaultTaskDisplayArea_d0@37452198 default-portrait freeform-size-mismatch=Rect(81, 617 - 999, 1787)
+10-10 22:43:05.933  1559  4968 V WindowManager: DesktopModeLaunchParamsModifier: phase= 3 task=Task{902af0e #67530 type=standard A=10987:com.retro99.parrot} activity=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t-1} display-from-task=0 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@37452198 non-desktop, skipping
+10-10 22:43:05.933  1559  4968 V WindowManager: TaskLaunchParamsModifier:phase=3 task=Task{902af0e #67530 type=standard A=10987:com.retro99.parrot} activity=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t-1} display-from-task=0 display-id=0 task-display-area-windowing-mode=1 suggested-display-area=DefaultTaskDisplayArea_d0@37452198 inherit-from-task=fullscreen non-freeform-task-display-area display-area=DefaultTaskDisplayArea_d0@37452198 default-portrait freeform-size-mismatch=Rect(81, 617 - 999, 1787)
+10-10 22:43:05.934  1559  4968 V WindowManager: Collecting in transition 950: Task{902af0e #67530 type=standard A=10987:com.retro99.parrot}, caller=com.android.server.wm.Transition.collectExistenceChange:40 com.android.server.wm.ActivityStarter.setNewTask:43 com.android.server.wm.ActivityStarter.startActivityInner:2225 com.android.server.wm.ActivityStarter.startActivityUnchecked:111 com.android.server.wm.ActivityStarter.executeRequest:3744 
+10-10 22:43:05.936  1559  4968 V WindowManager: Add starting ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530}: startingData=SplashScreenStartingData{2beae1a removeAfterTransaction= 0}
+10-10 22:43:05.937  1559  4968 V WindowManager: Added starting ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530}: startingWindow=null startingView=com.android.server.wm.StartingSurfaceController$StartingSurface@6583d4b
+10-10 22:43:05.940  1559  4968 V WindowManager: Collecting in transition 950: ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530}, caller=com.android.server.wm.Transition.collectExistenceChange:40 com.android.server.wm.ActivityStarter.handleStartResult:754 com.android.server.wm.ActivityStarter.startActivityUnchecked:124 com.android.server.wm.ActivityStarter.executeRequest:3744 com.android.server.wm.ActivityStarter.execute:1751 
+10-10 22:43:05.940  1559  4968 V WindowManager:    ChangeInfo{aa10ac3 container=Task{902af0e #67530 type=standard A=10987:com.retro99.parrot} flags=0x0}
+10-10 22:43:05.940  1559  4968 V WindowManager:    ChangeInfo{dab2f40 container=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530} flags=0x0}
+10-10 22:43:05.941  1559  4968 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=com.retro99.parrot/.android.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (com.android.shell) (BAL_ALLOW_PERMISSION) result code=0
+10-10 22:43:05.948  1559  2227 D WindowManager: prepareSync <SYNC_STATE_WAITING_FOR_DRAW>, mPrepareSyncSeqId=0, win=Window{897a658 u0 Splash Screen com.retro99.parrot}
+10-10 22:43:05.948  1559  2227 V WindowManager: addWindow: ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530} startingWindow=Window{897a658 u0 Splash Screen com.retro99.parrot}
+10-10 22:43:05.949  3676  3841 I HoneySpace.TopTaskUseCase: topTasks 67530 ComponentInfo{com.retro99.parrot/com.retro99.parrot.android.MainActivity}[displayId=0]
+10-10 22:43:05.950  1559  3316 V WindowManager: Collecting in transition 950: ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530}, caller=com.android.server.wm.TransitionController.collect:7 com.android.server.wm.ActivityRecord.setVisibility:132 com.android.server.wm.TaskFragment.resumeTopActivity:2400 com.android.server.wm.Task.resumeTopActivityInnerLocked:125 com.android.server.wm.Task.resumeTopActivityUncheckedLocked:23 
+10-10 22:43:05.950  1559  3316 V WindowManager: Collecting in transition 950: ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530}, caller=com.android.server.wm.TransitionController.collect:7 com.android.server.wm.ActivityRecord.setVisibility:132 com.android.server.wm.TaskFragment.resumeTopActivity:2400 com.android.server.wm.Task.resumeTopActivityInnerLocked:154 com.android.server.wm.Task.resumeTopActivityUncheckedLocked:23 
+10-10 22:43:05.962  1559 26753 I WindowManager: Relayout Window{897a658 u0 Splash Screen com.retro99.parrot}: viewVisibility=0 req=1080x2340 ty=3 d0
+10-10 22:43:05.963  1559 26753 D WindowManager: makeSurface duration=0 name=Splash Screen com.retro99.parrot$_3194
+10-10 22:43:05.964  1559 26753 D WindowManager: rotationForOrientation, orientationSource=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530}
+10-10 22:43:05.974  1559  3903 D WindowManager: finishDrawingWindow: Window{897a658 u0 Splash Screen com.retro99.parrot} mDrawState=DRAW_PENDING seqId=0
+10-10 22:43:05.974  1559  3903 V WindowManager: Finishing drawing window Window{897a658 u0 Splash Screen com.retro99.parrot}: mDrawState=DRAW_PENDING
+10-10 22:43:05.974  1559  3903 V WindowManager: Draw state now committed in Window{897a658 u0 Splash Screen com.retro99.parrot}
+10-10 22:43:05.974  1559  1678 I ActivityManager: Start proc 23436:com.retro99.parrot/u0a987 for next-top-activity {com.retro99.parrot/com.retro99.parrot.android.MainActivity}
+10-10 22:43:05.974  1559  1678 D DynamicHiddenApp_BGProtectManager: [SecIpm] it's a ML_TYPE_EMPTYPROCESS protected process com.retro99.parrot
+10-10 22:43:05.979  1559  1662 V WindowManager: performShowLocked: mDrawState=HAS_DRAWN in Window{897a658 u0 Splash Screen com.retro99.parrot}
+10-10 22:43:05.979  1559  1662 D WindowManagerServiceExt: updateTaskbarTargetIfNeeded: cn=ComponentInfo{com.retro99.parrot/com.retro99.parrot.android.MainActivity} occludesParent=true isInSplitScreenMode=false
+10-10 22:43:05.979  1559  1662 D ChangeTransitionController:    ChangeInfo{aa10ac3 container=Task{902af0e #67530 type=standard A=10987:com.retro99.parrot} flags=0x0}
+10-10 22:43:05.979  1559  1662 D ChangeTransitionController:    ChangeInfo{dab2f40 container=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530} flags=0x0}
+10-10 22:43:05.979  1559  1662 V WindowManager: Start calculating TransitionInfo based on participants: {WallpaperWindowToken{77dcef showWhenLocked=true}_<lock>, WallpaperWindowToken{855de10 showWhenLocked=false}_<system>, Task{902af0e #67530 type=standard A=10987:com.retro99.parrot}, ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530}, ActivityRecord{211998686 u0 bitpit.launcher/.ui.HomeActivity t67445}}
+10-10 22:43:05.979  1559  1662 V WindowManager:   Final targets: [ChangeInfo{aa10ac3 container=Task{902af0e #67530 type=standard A=10987:com.retro99.parrot} flags=0x10}, ChangeInfo{49f4da0 container=Task{efe2c8c #67444 type=home} flags=0x10}, ChangeInfo{ee885d2 container=WallpaperWindowToken{855de10 showWhenLocked=false}_<system> flags=0x0}]
+10-10 22:43:05.980  1559  1662 I SurfaceControlRegistry: show, t=StartTransaction_SyncId<950> sc=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530}#18196, caller=android.view.SurfaceControl$Transaction.show:3679 com.android.server.wm.Transition.onTransactionReady:2078 com.android.server.wm.BLASTSyncEngine$SyncGroup.finishNow:261 com.android.server.wm.BLASTSyncEngine.onSurfacePlacement:263 com.android.server.wm.RootWindowContainer.performSurfacePlacement:1105 com.android.server.wm.WindowSurfacePlacer.performSurfacePlacement:163 
+10-10 22:43:05.983  1559  1662 V WindowManager:         {WCT{RemoteToken{e14c71b Task{902af0e #67530 type=standard A=10987:com.retro99.parrot}}} m=OPEN f=NONE leash=Surface(name=Task=67530#18195)/@0xb3afd59 sb=Rect(0, 0 - 1080, 2340) eb=Rect(0, 0 - 1080, 2340) epz=Point(1080, 2340) d=0 taskParent=-1 winMode=1 userId=0 inset=Rect(0, 103 - 0, 39) dim=true},
+10-10 22:43:05.988  1559  1658 V WindowManager:         {WCT{RemoteToken{e14c71b Task{902af0e #67530 type=standard A=10987:com.retro99.parrot}}} m=OPEN f=NONE leash=Surface(name=Task=67530#18195)/@0xb3afd59 sb=Rect(0, 0 - 1080, 2340) eb=Rect(0, 0 - 1080, 2340) epz=Point(1080, 2340) d=0 taskParent=-1 winMode=1 userId=0 inset=Rect(0, 103 - 0, 39) dim=true},
+10-10 22:43:05.988  1559  1662 D InsetsSourceProvider: updateControlForTarget: control=InsetsSourceControl: {3bf40001 mType=navigationBars initiallyVisible mSurfacePosition=Point(0, 2214) mInsetsHint=Insets{left=0, top=0, right=0, bottom=39}}, target=Window{897a658 u0 Splash Screen com.retro99.parrot}, from=com.android.server.wm.InsetsStateController.onControlTargetChanged:82 com.android.server.wm.InsetsPolicy.updateBarControlTarget:216 com.android.server.wm.DisplayPolicy.updateSystemBarAttributes:439 com.android.server.wm.DisplayPolicy.finishPostLayoutPolicyLw:17 com.android.server.wm.RootWindowContainer.applySurfaceChangesTransaction$1:188 
+10-10 22:43:05.989  1559  1662 D InsetsSourceProvider: updateControlForTarget: control=InsetsSourceControl: {9e7f0000 mType=statusBars initiallyVisible mSurfacePosition=Point(0, 0) mInsetsHint=Insets{left=0, top=103, right=0, bottom=0}}, target=Window{897a658 u0 Splash Screen com.retro99.parrot}, from=com.android.server.wm.InsetsStateController.onControlTargetChanged:82 com.android.server.wm.InsetsPolicy.updateBarControlTarget:203 com.android.server.wm.DisplayPolicy.updateSystemBarAttributes:439 com.android.server.wm.DisplayPolicy.finishPostLayoutPolicyLw:17 com.android.server.wm.RootWindowContainer.applySurfaceChangesTransaction$1:188 
+10-10 22:43:05.989  1559  1662 D WindowManager: updateSystemBarAttributes: displayId=0, focusedCanBeNavColorWin=false, win=Window{897a658 u0 Splash Screen com.retro99.parrot}, navColorWin=Window{897a658 u0 Splash Screen com.retro99.parrot}, caller=com.android.server.wm.DisplayPolicy.finishPostLayoutPolicyLw:17 com.android.server.wm.RootWindowContainer.applySurfaceChangesTransaction$1:188 com.android.server.wm.RootWindowContainer.performSurfacePlacement:59 
+10-10 22:43:05.990 23436 23436 I Zygote  : Process 23436 created for com.retro99.parrot
+10-10 22:43:05.994  3194  3194 D NavigationBar: onSystemBarAttributesChanged() -  displayId:0, appearance:24, packageName: com.retro99.parrot (APPEARANCE_LIGHT_STATUS_BARS APPEARANCE_LIGHT_NAVIGATION_BARS ), navbarColorManagedByIme:false
+10-10 22:43:06.001  3194  3293 I InsetsSourceConsumer: applyRequestedVisibilityToControl: visible=true, type=navigationBars, host=Splash Screen com.retro99.parrot
+10-10 22:43:06.001  3194  3293 I InsetsSourceConsumer: applyRequestedVisibilityToControl: visible=true, type=statusBars, host=Splash Screen com.retro99.parrot
+10-10 22:43:06.152  1559  2968 D MdnieScenarioControlService:  packageName : com.retro99.parrot    className : com.retro99.parrot.android.MainActivity
+10-10 22:43:06.316 23436 23436 V GraphicsEnvironment: com.retro99.parrot is not listed in per-application setting
+10-10 22:43:06.345 23436 23436 I FirebaseCrashlytics: Initializing Firebase Crashlytics 19.4.4 for com.retro99.parrot
+10-10 22:43:06.371  1559  8014 V WindowManager:    ChangeInfo{aa10ac3 container=Task{902af0e #67530 type=standard A=10987:com.retro99.parrot} flags=0x10}
+10-10 22:43:06.371  1559  8014 V WindowManager:    ChangeInfo{dab2f40 container=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530} flags=0x0}
+10-10 22:43:06.372  1559  8014 D PersonaActivityHelper: token.toString()  Token{6204f3c ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530}}
+10-10 22:43:06.373  1559  8014 D ChangeTransitionController:    ChangeInfo{aa10ac3 container=Task{902af0e #67530 type=standard A=10987:com.retro99.parrot} flags=0x10}
+10-10 22:43:06.373  1559  8014 D ChangeTransitionController:    ChangeInfo{dab2f40 container=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530} flags=0x0}
+10-10 22:43:06.410  9349 22637 I PhenotypeResourceReader: unable to find any Phenotype resource metadata for com.retro99.parrot
+10-10 22:43:06.421 23436 23481 I FA      :   adb shell setprop debug.firebase.analytics.app com.retro99.parrot
+10-10 22:43:06.535  1559  3107 D NetdEventListenerService: DNS Requested by 103, 10987(com.retro99.parrot), SUCCESS, 48ms
+10-10 22:43:06.900  1559  3903 D InputDispatcher: Focused application(0): ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530}
+10-10 22:43:06.900  1559  3903 D ActivityTaskManager: scheduleTopResumedActivityChanged, onTop=true, r=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530}, caller=com.android.server.wm.ActivityTaskSupervisor.scheduleTopResumedActivityStateIfNeeded:18 com.android.server.wm.ActivityTaskSupervisor.updateTopResumedActivityIfNeeded:94 com.android.server.wm.TaskFragment.setResumedActivity:29 com.android.server.wm.ActivityRecord.setState:100 com.android.server.wm.ActivityTaskSupervisor.realStartActivityLocked:533 com.android.server.wm.RootWindowContainer.attachApplication:100 
+10-10 22:43:06.902  1559  3903 D GraphicsStatsService: requestRenderEngineFor(com.retro99.parrot)
+10-10 22:43:06.902 23436 23436 D ActivityThread: com.retro99.parrot will use render engine as VK
+10-10 22:43:06.904 23436 23557 D vulkan  : searching for layers in '/data/app/~~FcqyhBONZ60taxaD-ZuTAA==/com.retro99.parrot-d9cyt9DMItxSfL1bYcNW_Q==/lib/arm64'
+10-10 22:43:06.905 23436 23557 D vulkan  : searching for layers in '/data/app/~~FcqyhBONZ60taxaD-ZuTAA==/com.retro99.parrot-d9cyt9DMItxSfL1bYcNW_Q==/base.apk!/lib/arm64-v8a'
+10-10 22:43:06.912 29716 18764 I SDHMS:k : handleResumeComponent : put = com.retro99.parrot, userid = 0 instanceid =102780732
+10-10 22:43:06.912  3676  3676 I HoneySpace.EdgePanel.EdgePanelContainerViewModel: cocktailHostRepository.edgePanelOperation NoteResumeComponent(componentName=ComponentInfo{com.retro99.parrot/com.retro99.parrot.android.MainActivity})
+10-10 22:43:06.912  3676  3676 I HoneySpace.EdgePanel.ActivityUtils: HomePackage : bitpit.launcher, resumePackageName : com.retro99.parrot, className : com.retro99.parrot.android.MainActivity
+10-10 22:43:06.921  1559  3316 D ConnectivityService: requestNetwork for uid/pid:10987/23436 activeRequest: null callbackRequest: 39448 [NetworkRequest [ REQUEST id=39449, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL|LOST|NC
+10-10 22:43:06.922  1559  2953 D ConnectivityService:    accepting network in place of null for NetworkRequest [ REQUEST id=39449, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:06.922  1559  2942 D OemPaidWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39449, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:06.922  1559  2942 D MultiInternetWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39449, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:06.922  1559  2942 D WifiNetworkFactory: got request NetworkRequest [ REQUEST id=39449, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:06.922  1559  2942 D UntrustedWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39449, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:06.947  1559 30209 D ConnectivityService: requestNetwork for uid/pid:10987/23436 activeRequest: null callbackRequest: 39450 [NetworkRequest [ REQUEST id=39451, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL|LOST
+10-10 22:43:06.947  1559  2953 D ConnectivityService:    accepting network in place of null for NetworkRequest [ REQUEST id=39451, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:06.948  1559  2942 D OemPaidWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39451, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:06.948  1559  2942 D MultiInternetWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39451, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:06.948  1559  2942 D WifiNetworkFactory: got request NetworkRequest [ REQUEST id=39451, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:06.948  1559  2942 D UntrustedWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39451, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:06.965 23436 23436 I IDS_TAG : Clearing training data of com.retro99.parrot.android.ParrotApplication@7d38648
+10-10 22:43:06.966 23436 23436 I IDS_TAG : Getting Shared Preference for com.retro99.parrot.android.ParrotApplication@7d38648 uid = 10987
+10-10 22:43:06.966 23436 23436 I IDS_TAG : App com.retro99.parrot.android.ParrotApplication@7d38648 has not finished training
+10-10 22:43:06.972 23436 23436 D WM-WorkerWrapper: Starting work for com.retro99.parrot.android.SyncRecoveryWorker
+10-10 22:43:06.973 23436 23436 I IDS_TAG : Getting Shared Preference for com.retro99.parrot.android.ParrotApplication@7d38648 uid = 10987
+10-10 22:43:06.973 23436 23436 I IDS_TAG : IDS count updated to 1 for com.retro99.parrot.android.ParrotApplication@7d38648
+10-10 22:43:06.974  1559  3903 D CoreBackPreview: Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@e14c1e4, mPriority=-1, mIsAnimationCallback=false, mOverrideBehavior=0}
+10-10 22:43:07.335  1559  3107 D NetdEventListenerService: DNS Requested by 103, 10987(com.retro99.parrot), SUCCESS, 11ms
+10-10 22:43:07.365  1559  4968 I WindowManager: Relayout Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}: viewVisibility=0 req=1080x2340 ty=1 d0
+10-10 22:43:07.366  1559  4968 D WindowManager: makeSurface duration=0 name=com.retro99.parrot/com.retro99.parrot.android.MainActivity$_23436
+10-10 22:43:07.367  1559  4968 D WindowManager: Changing focus from null to Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity} displayId=0 Callers=com.android.server.wm.WindowManagerService.relayoutWindow:1350 com.android.server.wm.Session.relayout:30 android.view.IWindowSession$Stub.onTransact:840 com.android.server.wm.Session.onTransact:1 
+10-10 22:43:07.368  1559  4968 D InsetsSourceProvider: updateControlForTarget: control=InsetsSourceControl: {3bf40001 mType=navigationBars initiallyVisible mSurfacePosition=Point(0, 2214) mInsetsHint=Insets{left=0, top=0, right=0, bottom=39}}, target=Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}, from=com.android.server.wm.InsetsStateController.onControlTargetChanged:82 com.android.server.wm.InsetsPolicy.updateBarControlTarget:216 com.android.server.wm.DisplayPolicy.updateSystemBarAttributes:439 com.android.server.wm.WindowManagerService.updateFocusedWindowLocked:358 com.android.server.wm.WindowManagerService.relayoutWindow:1350 
+10-10 22:43:07.368  1559  4968 D InsetsSourceProvider: updateControlForTarget: control=InsetsSourceControl: {9e7f0000 mType=statusBars initiallyVisible mSurfacePosition=Point(0, 0) mInsetsHint=Insets{left=0, top=103, right=0, bottom=0}}, target=Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}, from=com.android.server.wm.InsetsStateController.onControlTargetChanged:82 com.android.server.wm.InsetsPolicy.updateBarControlTarget:203 com.android.server.wm.DisplayPolicy.updateSystemBarAttributes:439 com.android.server.wm.WindowManagerService.updateFocusedWindowLocked:358 com.android.server.wm.WindowManagerService.relayoutWindow:1350 
+10-10 22:43:07.369  1559  4968 D WindowManager: updateSystemBarAttributes: displayId=0, focusedCanBeNavColorWin=false, win=Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}, navColorWin=Window{897a658 u0 Splash Screen com.retro99.parrot}, caller=com.android.server.wm.WindowManagerService.updateFocusedWindowLocked:358 com.android.server.wm.WindowManagerService.relayoutWindow:1350 com.android.server.wm.Session.relayout:30 
+10-10 22:43:07.369  1559  4968 V SystemKeyManager: updateFocusedWindow() is called, com.retro99.parrot/com.retro99.parrot.android.MainActivity
+10-10 22:43:07.373  1559  1662 I SurfaceControl: apply, lowDebugName=Focus request: 36be29e com.retro99.parrot/com.retro99.parrot.android.MainActivity, caller=android.view.SurfaceControl$Transaction.apply:3569 android.view.SurfaceControl$Transaction.apply:3519 com.android.server.wm.WindowAnimator.animate:468 com.android.server.wm.WindowAnimator$$ExternalSyntheticLambda1.doFrame:14 android.view.Choreographer$CallbackRecord.run:1959 android.view.Choreographer$CallbackRecord.run:1970 
+10-10 22:43:07.376  3194  3194 D NavigationBar: onSystemBarAttributesChanged() -  displayId:0, appearance:16, packageName: com.retro99.parrot (APPEARANCE_LIGHT_NAVIGATION_BARS ), navbarColorManagedByIme:false
+10-10 22:43:07.395  1559  3903 D InputDispatcher: Once focus requested (0): 36be29e com.retro99.parrot/com.retro99.parrot.android.MainActivity
+10-10 22:43:07.395  1559  3903 D InputDispatcher: Focus request (0): 36be29e com.retro99.parrot/com.retro99.parrot.android.MainActivity but waiting because NO_WINDOW
+10-10 22:43:07.414  1559  8014 D WindowManager: finishDrawingWindow: Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity} mDrawState=DRAW_PENDING seqId=0
+10-10 22:43:07.415  1559  1662 V WindowManager: Finish starting ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530}: first real window is shown, no animation
+10-10 22:43:07.415  1559  1662 V WindowManager: Schedule remove starting ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530} startingWindow=Window{897a658 u0 Splash Screen com.retro99.parrot} animate=true Callers=com.android.server.wm.ActivityRecord.removeStartingWindow:178 com.android.server.wm.WindowState.performShowLocked:146 com.android.server.wm.WindowStateAnimator.commitFinishDrawingLocked:73 com.android.server.wm.DisplayContent$$ExternalSyntheticLambda1.accept:350 com.android.server.wm.WindowContainer$ForAllWindowsConsumerWrapper.apply:5 
+10-10 22:43:07.415  1559  1662 D TaskOrganizerController: applyStartingWindowAnimation, window=Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}, caller=com.android.server.wm.TaskOrganizerController.getStartingWindowRemovalInfo:135 com.android.server.wm.StartingSurfaceController$StartingSurface.remove:39 com.android.server.wm.ActivityRecord.removeStartingWindowAnimation:167 
+10-10 22:43:07.415  1559  1662 I WindowManager: Reparenting to leash, surface=Surface(name=36be29e com.retro99.parrot/com.retro99.parrot.android.MainActivity#18203)/@0xb88ea49, leashParent=Surface(name=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530}#18196)/@0xe242f4e
+10-10 22:43:07.416  1559  1662 D WindowManager: makeSurface duration=0 leash=Surface(name=Surface(name=36be29e com.retro99.parrot/com.retro99.parrot.android.MainActivity#18203)/@0xb88ea49 - animation-leash of starting_reveal#18207)/@0x26186f
+10-10 22:43:07.416  1559  1662 V WindowManager: performShowLocked: mDrawState=HAS_DRAWN in Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}
+10-10 22:43:07.417  1559  1658 I PkgPredictorService-SecIpmManagerServiceImpl: reportToNAP uid:10987 com.retro99.parrot/com.retro99.parrot.android.MainActivity thisTime:1508
+10-10 22:43:07.418  1559  1658 I ActivityTaskManager: Displayed com.retro99.parrot/.android.MainActivity for user 0: +1s508ms
+10-10 22:43:07.418  1559  1658 I Pageboost: Launch time gathered : pid 23436 com.retro99.parrot 1508
+10-10 22:43:07.461  1559  2227 D InputDispatcher: Focus entered window (0): 36be29e com.retro99.parrot/com.retro99.parrot.android.MainActivity
+10-10 22:43:07.471 23436 23436 I InsetsSourceConsumer: applyRequestedVisibilityToControl: visible=true, type=navigationBars, host=com.retro99.parrot/com.retro99.parrot.android.MainActivity
+10-10 22:43:07.471 23436 23436 I InsetsSourceConsumer: applyRequestedVisibilityToControl: visible=true, type=statusBars, host=com.retro99.parrot/com.retro99.parrot.android.MainActivity
+10-10 22:43:07.474  1559  2311 I ImeTracker: com.retro99.parrot:2250a471: onRequestHide at ORIGIN_SERVER reason HIDE_UNSPECIFIED_WINDOW fromUser false
+10-10 22:43:07.482  1559  8014 D InsetsSourceProvider: updateControlForTarget: control=InsetsSourceControl: {3 mType=ime mSurfacePosition=Point(0, 103) mInsetsHint=Insets{left=0, top=0, right=0, bottom=991}}, target=Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}, from=com.android.server.wm.ImeInsetsSourceProvider.updateControlForTarget:23 com.android.server.wm.InsetsStateController.onControlTargetChanged:82 com.android.server.wm.DisplayContent.updateImeControlTarget:48 com.android.server.wm.DisplayContent.updateImeInputAndControlTarget:273 com.android.server.wm.WindowManagerService$LocalService.updateImeTargetWindow:81 
+10-10 22:43:07.488  1559  2226 I WindowManager: Relayout Window{897a658 u0 Splash Screen com.retro99.parrot}: viewVisibility=8 req=1080x2340 ty=3 d0
+10-10 22:43:07.488  1559  2226 D WindowManager: updateSystemBarAttributes: displayId=0, focusedCanBeNavColorWin=false, win=Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}, navColorWin=Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}, caller=com.android.server.wm.DisplayPolicy.finishPostLayoutPolicyLw:17 com.android.server.wm.RootWindowContainer.applySurfaceChangesTransaction$1:188 com.android.server.wm.RootWindowContainer.performSurfacePlacement:59 
+10-10 22:43:07.489  3194  3194 D NavigationBar: onSystemBarAttributesChanged() -  displayId:0, appearance:0, packageName: com.retro99.parrot, navbarColorManagedByIme:false
+10-10 22:43:07.491  1559  2226 D WindowManager: Starting window removed Window{897a658 u0 Splash Screen com.retro99.parrot}
+10-10 22:43:07.491  1559  2226 I WindowManager: Cancelling animation restarting=false, leash=Surface(name=Surface(name=36be29e com.retro99.parrot/com.retro99.parrot.android.MainActivity#18203)/@0xb88ea49 - animation-leash of starting_reveal#18207)/@0x26186f
+10-10 22:43:07.491  1559  2226 I WindowManager: Reparenting to original parent: Surface(name=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530}#18196)/@0xe242f4e, destroy=false, surface=Surface(name=36be29e com.retro99.parrot/com.retro99.parrot.android.MainActivity#18203)/@0xb88ea49
+10-10 22:43:07.492  1559  2226 V WindowManager: Remove Window{897a658 u0 Splash Screen com.retro99.parrot}: mSurfaceControl=Surface(name=Splash Screen com.retro99.parrot$_3194#18198)/@0x47329ac mAnimatingExit=false mRemoveOnExit=false mHasSurface=true surfaceShowing=true animating=false app-animation=false callers=com.android.server.wm.Session.remove:15 android.view.IWindowSession$Stub.onTransact:813 com.android.server.wm.Session.onTransact:1 android.os.Binder.execTransactInternal:1514 android.os.Binder.execTransact:1454 <bottom of call stack> 
+10-10 22:43:07.493  1559  2226 D WindowManager: updateSystemBarAttributes: displayId=0, focusedCanBeNavColorWin=false, win=Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}, navColorWin=Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}, caller=com.android.server.wm.DisplayPolicy.finishPostLayoutPolicyLw:17 com.android.server.wm.RootWindowContainer.applySurfaceChangesTransaction$1:188 com.android.server.wm.RootWindowContainer.performSurfacePlacement:59 
+10-10 22:43:07.526  1559  3907 D FreecessController: BG freezed, skip OLAF unfreeze for (com.retro99.parrot.fixtures, 10988)
+10-10 22:43:07.555 23436 23436 I ImeTracker: com.retro99.parrot:2250a471: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+10-10 22:43:07.556 30931 30931 I HBD     : b [AiWriter] setContact : com.retro99.parrot
+10-10 22:43:07.556 30931 30931 I HBD     : a [AiWriter] setContact : com.retro99.parrot
+10-10 22:43:07.566 30931 30931 I HBD     : m Package : com.retro99.parrot has no meta data. 
+10-10 22:43:07.627 30931 17907 I HBD     : d [SKE_SPECIFIC] specific model[com.retro99.parrot] loaded, 55384883 ns
+10-10 22:43:07.665  1559  2968 D MdnieScenarioControlService:  packageName : com.retro99.parrot    className : com.retro99.parrot.android.MainActivity
+10-10 22:43:07.836 23436 23498 I WM-WorkerWrapper: Worker result RETRY for Work [ id=4ef66997-7786-429a-ba97-34abe6f5565f, tags={ com.retro99.parrot.android.SyncRecoveryWorker } ]
+10-10 22:43:11.002  1559  3181 I Pageboost: memUsage collected : 122413 21837 14260 for com.retro99.parrot 23436
+10-10 22:43:12.304 23436 23650 D ProfileInstaller: Installing profile for com.retro99.parrot
+10-10 22:43:17.853  1559  1599 D ConnectivityService: requestNetwork for uid/pid:10987/23436 activeRequest: null callbackRequest: 39452 [NetworkRequest [ REQUEST id=39453, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL|LOST|NC
+10-10 22:43:17.857  1559  2953 D ConnectivityService:    accepting network in place of null for NetworkRequest [ REQUEST id=39453, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:17.865  1559  2942 D OemPaidWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39453, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:17.865  1559  2942 D MultiInternetWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39453, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:17.866  1559  2942 D WifiNetworkFactory: got request NetworkRequest [ REQUEST id=39453, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:17.866  1559  2942 D UntrustedWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39453, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:17.866 23436 23436 D WM-WorkerWrapper: Starting work for com.retro99.parrot.android.SyncRecoveryWorker
+10-10 22:43:17.911 23436 23498 I WM-WorkerWrapper: Worker result RETRY for Work [ id=4ef66997-7786-429a-ba97-34abe6f5565f, tags={ com.retro99.parrot.android.SyncRecoveryWorker } ]
+10-10 22:43:24.930  4042  4042 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:pidof com.retro99.parrot'
+10-10 22:43:37.936  1559  6409 D ConnectivityService: requestNetwork for uid/pid:10987/23436 activeRequest: null callbackRequest: 39454 [NetworkRequest [ REQUEST id=39455, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL|LOST|NC
+10-10 22:43:37.938  1559  2953 D ConnectivityService:    accepting network in place of null for NetworkRequest [ REQUEST id=39455, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:37.940 23436 23436 D WM-WorkerWrapper: Starting work for com.retro99.parrot.android.SyncRecoveryWorker
+10-10 22:43:37.942  1559  2942 D OemPaidWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39455, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:37.942  1559  2942 D MultiInternetWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39455, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:37.943  1559  2942 D WifiNetworkFactory: got request NetworkRequest [ REQUEST id=39455, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:37.943  1559  2942 D UntrustedWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39455, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:43:37.968 23436 23499 I WM-WorkerWrapper: Worker result RETRY for Work [ id=4ef66997-7786-429a-ba97-34abe6f5565f, tags={ com.retro99.parrot.android.SyncRecoveryWorker } ]
+10-10 22:43:41.032  1559 30526 D CoreBackPreview: Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@ab9e4fb, mPriority=0, mIsAnimationCallback=true, mOverrideBehavior=0}
+10-10 22:43:41.165  1559  3107 D NetdEventListenerService: DNS Requested by 103, 10987(com.retro99.parrot), SUCCESS, 8ms
+10-10 22:43:51.898 23976 23976 I AccessibilityNodeInfoDumper: Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@8cb6; boundsInParent: Rect(0, 0 - 0, 0); boundsInScreen: Rect(340, 2101 - 466, 2227); boundsInWindow: Rect(340, 2101 - 466, 2227); packageName: com.retro99.parrot; className: android.view.View; text: null; error: null; maxTextLength: -1; stateDescription: null; contentDescription: null; tooltipText: null; containerTitle: null; viewIdResName: null; uniqueId: null; checkable: false; checked: false; focusable: false; focused: false; selected: false; clickable: false; longClickable: false; contextClickable: false; enabled: true; password: false; scrollable: false; granularScrollingSupported: false; importantForAccessibility: false; visible: false; actions: [AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null]; isTextSelectable: false
+10-10 22:43:51.902 23976 23976 I AccessibilityNodeInfoDumper: Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@8dcd; boundsInParent: Rect(0, 0 - 0, 0); boundsInScreen: Rect(615, 2101 - 741, 2217); boundsInWindow: Rect(615, 2101 - 741, 2217); packageName: com.retro99.parrot; className: android.view.View; text: null; error: null; maxTextLength: -1; stateDescription: null; contentDescription: null; tooltipText: null; containerTitle: null; viewIdResName: null; uniqueId: null; checkable: false; checked: false; focusable: false; focused: false; selected: false; clickable: false; longClickable: false; contextClickable: false; enabled: true; password: false; scrollable: false; granularScrollingSupported: false; importantForAccessibility: false; visible: false; actions: [AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null]; isTextSelectable: false
+10-10 22:43:51.906 23976 23976 I AccessibilityNodeInfoDumper: Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@8ee4; boundsInParent: Rect(0, 0 - 0, 0); boundsInScreen: Rect(890, 2101 - 1016, 2227); boundsInWindow: Rect(890, 2101 - 1016, 2227); packageName: com.retro99.parrot; className: android.view.View; text: null; error: null; maxTextLength: -1; stateDescription: null; contentDescription: null; tooltipText: null; containerTitle: null; viewIdResName: null; uniqueId: null; checkable: false; checked: false; focusable: false; focused: false; selected: false; clickable: false; longClickable: false; contextClickable: false; enabled: true; password: false; scrollable: false; granularScrollingSupported: false; importantForAccessibility: false; visible: false; actions: [AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null]; isTextSelectable: false
+10-10 22:44:03.026 30931 30931 I HBD     : b [AiWriter] setContact : com.retro99.parrot
+10-10 22:44:03.375 14251 14251 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:44:03.376 14251 14251 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:44:03.378 14251 14251 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:44:03.388 23436 23436 D čič123: MediaSessionManager CREATED (new instance)
+10-10 22:44:03.389 23436 23436 D ForegroundServiceController: ForegroundServiceController CREATED (new instance)
+10-10 22:44:03.390 23436 23436 D čič123: MediaOverlayPlayer init START
+10-10 22:44:03.390 23436 23436 D čič123: MediaOverlayPlayer init: calling mediaSessionManager.initialize()
+10-10 22:44:03.390 23436 23436 D čič123: MediaSessionManager.initialize() called
+10-10 22:44:03.390 23436 23436 D čič123: MediaOverlayPlayer init: calling mediaSessionManager.setBookInfo()
+10-10 22:44:03.390 23436 23436 D čič123: MediaSessionManager.setBookInfo(bookUuid=3c98712e-4e6f-476b-b7a0-7c6938a68884)
+10-10 22:44:03.391 23436 23436 D čič123: MediaOverlayPlayer init END
+10-10 22:44:03.392 23436 23436 D čič123: initialize() START
+10-10 22:44:03.392 23436 23436 D čič123: initialize(): isBookLoaded=false for bookUuid=3c98712e-4e6f-476b-b7a0-7c6938a68884
+10-10 22:44:03.392 23436 23436 D čič123: initialize(): FRESH initialization
+10-10 22:44:03.420 14187 14187 D ForegroundServiceLauncher: Check if service HighAccuracyLocationService is running. Service running = false
+10-10 22:44:03.611  1559  3306 D ConnectivityService: requestNetwork for uid/pid:10987/23436 activeRequest: null callbackRequest: 39456 [NetworkRequest [ REQUEST id=39457, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL|LOST|NC|LP
+10-10 22:44:03.612  1559  2953 D ConnectivityService:    accepting network in place of null for NetworkRequest [ REQUEST id=39457, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:44:03.612  1559  2942 D OemPaidWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39457, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:44:03.612  1559  2942 D MultiInternetWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39457, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:44:03.612  1559  2942 D WifiNetworkFactory: got request NetworkRequest [ REQUEST id=39457, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:44:03.612  1559  2942 D UntrustedWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39457, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:44:03.628  1559  3306 I AppsFilter: interaction: PackageSetting{6200ff2 com.retro99.parrot/10987} -> PackageSetting{b9677e com.dessalines.thumbkey/10347} BLOCKED
+10-10 22:44:03.628  1559  3306 I AppsFilter: interaction: PackageSetting{6200ff2 com.retro99.parrot/10987} -> PackageSetting{5eda4df com.touchtype.swiftkey/10482} BLOCKED
+10-10 22:44:03.628  1559  3306 I AppsFilter: interaction: PackageSetting{6200ff2 com.retro99.parrot/10987} -> PackageSetting{1e5552c com.snapchat.android/10624} BLOCKED
+10-10 22:44:03.649  1559  3768 I AppsFilter: interaction: PackageSetting{6200ff2 com.retro99.parrot/10987} -> PackageSetting{b9677e com.dessalines.thumbkey/10347} BLOCKED
+10-10 22:44:03.649  1559  3768 I AppsFilter: interaction: PackageSetting{6200ff2 com.retro99.parrot/10987} -> PackageSetting{5eda4df com.touchtype.swiftkey/10482} BLOCKED
+10-10 22:44:03.649  1559  3768 I AppsFilter: interaction: PackageSetting{6200ff2 com.retro99.parrot/10987} -> PackageSetting{1e5552c com.snapchat.android/10624} BLOCKED
+10-10 22:44:03.659  1559  3768 I AppsFilter: interaction: PackageSetting{6200ff2 com.retro99.parrot/10987} -> PackageSetting{b9677e com.dessalines.thumbkey/10347} BLOCKED
+10-10 22:44:03.659  1559  3768 I AppsFilter: interaction: PackageSetting{6200ff2 com.retro99.parrot/10987} -> PackageSetting{5eda4df com.touchtype.swiftkey/10482} BLOCKED
+10-10 22:44:03.659  1559  3768 I AppsFilter: interaction: PackageSetting{6200ff2 com.retro99.parrot/10987} -> PackageSetting{1e5552c com.snapchat.android/10624} BLOCKED
+10-10 22:44:04.114  1559  3306 I WindowManager: Relayout Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}: viewVisibility=0 req=1080x2340 ty=1 d0
+10-10 22:44:04.164 23436 23436 D čič123: preparePlaylist: audioHrefs=1, initialTrack=0, initialPos=0
+10-10 22:44:04.169 23436 23436 D čič123: preparePlaylist: exoPlayer=null
+10-10 22:44:04.169 23436 23436 E čič123: preparePlaylist: exoPlayer is NULL, cannot prepare!
+10-10 22:44:04.332 23436 23436 D čič123: preparePlaylist: audioHrefs=1, initialTrack=0, initialPos=0
+10-10 22:44:04.332 23436 23436 D čič123: preparePlaylist: exoPlayer=null
+10-10 22:44:04.332 23436 23436 E čič123: preparePlaylist: exoPlayer is NULL, cannot prepare!
+10-10 22:44:16.599 24249 24249 I AccessibilityNodeInfoDumper: Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@b202; boundsInParent: Rect(0, 0 - 1080, 2013); boundsInScreen: Rect(0, 145 - 1080, 2158); boundsInWindow: Rect(0, 145 - 1080, 2158); packageName: com.retro99.parrot; className: androidx.compose.ui.viewinterop.ViewFactoryHolder; text: null; error: null; maxTextLength: -1; stateDescription: null; contentDescription: null; tooltipText: null; containerTitle: null; viewIdResName: null; uniqueId: null; checkable: false; checked: false; focusable: false; focused: false; selected: false; clickable: false; longClickable: false; contextClickable: false; enabled: true; password: false; scrollable: false; granularScrollingSupported: false; importantForAccessibility: true; visible: false; actions: [AccessibilityAction: ACTION_SELECT - null, AccessibilityAction: ACTION_CLEAR_SELECTION - null, AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null, AccessibilityAction: ACTION_SHOW_ON_SCREEN - null]; isTextSelectable: false
+10-10 22:44:17.981  1559  2226 D ConnectivityService: requestNetwork for uid/pid:10987/23436 activeRequest: null callbackRequest: 39459 [NetworkRequest [ REQUEST id=39460, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL|LOST|NC
+10-10 22:44:17.985  1559  2953 D ConnectivityService:    accepting network in place of null for NetworkRequest [ REQUEST id=39460, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:44:17.992  1559  2942 D OemPaidWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39460, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:44:17.993  1559  2942 D MultiInternetWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39460, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:44:17.993  1559  2942 D WifiNetworkFactory: got request NetworkRequest [ REQUEST id=39460, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:44:17.994  1559  2942 D UntrustedWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39460, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:44:17.999 23436 23436 D WM-WorkerWrapper: Starting work for com.retro99.parrot.android.SyncRecoveryWorker
+10-10 22:44:18.077 23436 23487 I WM-WorkerWrapper: Worker result RETRY for Work [ id=4ef66997-7786-429a-ba97-34abe6f5565f, tags={ com.retro99.parrot.android.SyncRecoveryWorker } ]
+10-10 22:44:18.905 23436 24291 E FilePhenotypeFlags: Config package com.google.android.gms.clearcut_client#com.retro99.parrot cannot use FILE backing without declarative registration. See go/phenotype-android-integration#phenotype for more information. This will lead to stale flags.
+10-10 22:44:18.910 23436 24291 E FilePhenotypeFlags: Config package com.google.android.gms.clearcut_client#com.retro99.parrot cannot use FILE backing without declarative registration. See go/phenotype-android-integration#phenotype for more information. This will lead to stale flags.
+10-10 22:44:18.994 23436 24291 E FilePhenotypeFlags: Config package com.google.android.gms.clearcut_client#com.retro99.parrot cannot use FILE backing without declarative registration. See go/phenotype-android-integration#phenotype for more information. This will lead to stale flags.
+10-10 22:44:18.994 23436 24291 E FilePhenotypeFlags: Config package com.google.android.gms.clearcut_client#com.retro99.parrot cannot use FILE backing without declarative registration. See go/phenotype-android-integration#phenotype for more information. This will lead to stale flags.
+10-10 22:44:26.471 30931 30931 I HBD     : b [AiWriter] setContact : com.retro99.parrot
+10-10 22:44:29.800 24380 24380 I AccessibilityNodeInfoDumper: Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@b202; boundsInParent: Rect(0, 0 - 1080, 2013); boundsInScreen: Rect(0, 145 - 1080, 2158); boundsInWindow: Rect(0, 145 - 1080, 2158); packageName: com.retro99.parrot; className: androidx.compose.ui.viewinterop.ViewFactoryHolder; text: null; error: null; maxTextLength: -1; stateDescription: null; contentDescription: null; tooltipText: null; containerTitle: null; viewIdResName: null; uniqueId: null; checkable: false; checked: false; focusable: false; focused: false; selected: false; clickable: false; longClickable: false; contextClickable: false; enabled: true; password: false; scrollable: false; granularScrollingSupported: false; importantForAccessibility: true; visible: false; actions: [AccessibilityAction: ACTION_SELECT - null, AccessibilityAction: ACTION_CLEAR_SELECTION - null, AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null, AccessibilityAction: ACTION_SHOW_ON_SCREEN - null]; isTextSelectable: false
+10-10 22:45:26.722  4042  4042 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:pidof com.retro99.parrot'
+10-10 22:45:38.095  1559  2226 D ConnectivityService: requestNetwork for uid/pid:10987/23436 activeRequest: null callbackRequest: 39461 [NetworkRequest [ REQUEST id=39462, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL|LOST|NC
+10-10 22:45:38.099  1559  2953 D ConnectivityService:    accepting network in place of null for NetworkRequest [ REQUEST id=39462, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:45:38.105  1559  2942 D OemPaidWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39462, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:45:38.105  1559  2942 D MultiInternetWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39462, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:45:38.106  1559  2942 D WifiNetworkFactory: got request NetworkRequest [ REQUEST id=39462, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:45:38.106  1559  2942 D UntrustedWifiNetworkFactory: got request NetworkRequest [ REQUEST id=39462, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ]
+10-10 22:45:38.112 23436 23436 D WM-WorkerWrapper: Starting work for com.retro99.parrot.android.SyncRecoveryWorker
+10-10 22:45:38.155 23436 23484 I WM-WorkerWrapper: Worker result RETRY for Work [ id=4ef66997-7786-429a-ba97-34abe6f5565f, tags={ com.retro99.parrot.android.SyncRecoveryWorker } ]
+10-10 22:45:44.781 23436 23436 D čič123: startPlaybackFromCurrentPosition: controllerPosition=0, initialPositionMs=null
+10-10 22:45:44.781 23436 23436 D čič123: startPlaybackFromCurrentPosition: using controllerPosition=0
+10-10 22:45:44.788 23436 23436 D čič123: playInternal: START chapterHref=<BOOK A CHAPTER 5>.html, fragmentId=null
+10-10 22:45:44.789 23436 23436 D čič123: playInternal: chapterWithAudio=<BOOK A CHAPTER 5>.html
+10-10 22:45:44.789 23436 23436 D čič123: playInternal: requesting notification permission
+10-10 22:45:44.790 23436 23436 D čič123: playInternal: notification permission granted
+10-10 22:45:44.790 23436 23436 D čič123: playInternal: preparing service ready deferred
+10-10 22:45:44.790 23436 23436 D MediaPlaybackController: prepareServiceReady: creating new deferred
+10-10 22:45:44.790 23436 23436 D čič123: playInternal: starting foreground service
+10-10 22:45:44.790 23436 23436 D ForegroundServiceController: ForegroundServiceController.startService() called
+10-10 22:45:44.790 23436 23436 D ForegroundServiceController: java.lang.Exception: stack trace
+10-10 22:45:44.790 23436 23436 D ForegroundServiceController: 	at com.retro99.reader.ui.playback.ForegroundServiceController.startService(ForegroundServiceController.kt:39)
+10-10 22:45:44.790 23436 23436 D ForegroundServiceController: 	at com.retro99.reader.ui.media.MediaOverlayPlayer.playInternal(MediaOverlayPlayer.kt:363)
+10-10 22:45:44.790 23436 23436 D ForegroundServiceController: 	at com.retro99.reader.ui.media.MediaOverlayPlayer.access$playInternal(MediaOverlayPlayer.kt:62)
+10-10 22:45:44.790 23436 23436 D ForegroundServiceController: 	at com.retro99.reader.ui.media.MediaOverlayPlayer$play$1.invokeSuspend(MediaOverlayPlayer.kt:303)
+10-10 22:45:44.790 23436 23436 D ForegroundServiceController: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+10-10 22:45:44.790 23436 23436 D ForegroundServiceController: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+10-10 22:45:44.790 23436 23436 D ForegroundServiceController: 	at android.os.Handler.handleCallback(Handler.java:1070)
+10-10 22:45:44.790 23436 23436 D ForegroundServiceController: 	at android.os.Handler.dispatchMessage(Handler.java:125)
+10-10 22:45:44.790 23436 23436 D ForegroundServiceController: 	at android.os.Looper.dispatchMessage(Looper.java:358)
+10-10 22:45:44.790 23436 23436 D ForegroundServiceController: 	at android.os.Looper.loopOnce(Looper.java:288)
+10-10 22:45:44.790 23436 23436 D ForegroundServiceController: 	at android.os.Looper.loop(Looper.java:392)
+10-10 22:45:44.790 23436 23436 D ForegroundServiceController: 	at android.app.ActivityThread.main(ActivityThread.java:10346)
+10-10 22:45:44.790 23436 23436 D ForegroundServiceController: 	at java.lang.reflect.Method.invoke(Native Method)
+10-10 22:45:44.790 23436 23436 D ForegroundServiceController: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:638)
+10-10 22:45:44.790 23436 23436 D ForegroundServiceController: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:972)
+10-10 22:45:44.792 23436 23436 D ForegroundServiceController: ForegroundServiceController.startService() SUCCESS
+10-10 22:45:44.792 23436 23436 D čič123: playInternal: foreground service started, awaiting service ready
+10-10 22:45:44.792 23436 23436 D MediaPlaybackController: awaitServiceReady: waiting for deferred (timeout=5000ms)
+10-10 22:45:44.799 23436 23436 D čič123: onCreate() called
+10-10 22:45:44.812 23436 23436 I ExoPlayerImpl: Init 865b0a [AndroidXMedia3/1.10.0] [e1s, SM-S921B, samsung, 36]
+10-10 22:45:44.840 23436 23436 D čič123: ExoPlayer created: true
+10-10 22:45:44.849 23436 23436 I MediaSessionImpl: Init 346e2f3 [AndroidXMedia3/1.10.0] [e1s, SM-S921B, samsung, 36]
+10-10 22:45:44.858 23436 23436 I MediaSessionCompat: Couldn't find a unique registered media button receiver in the given context.
+10-10 22:45:44.861  1559  6265 D MediaSessionService: Media button session is changed to com.retro99.parrot/androidx.media3.session.id./221 (userId=0)
+10-10 22:45:44.863  1559  6265 D MediaSessionService: Created session for com.retro99.parrot with tag androidx.media3.session.id.
+10-10 22:45:44.870  3409  3409 I MediaPlayerList: addMediaPlayer() : com.retro99.parrot
+10-10 22:45:44.871  3409  3409 I MediaPlayerList: Adding wrapped media player: com.retro99.parrot at key: 1
+10-10 22:45:44.871  3409  3409 I MediaPlayerList: onMediaKeyEventSessionChanged: token=com.retro99.parrot
+10-10 22:45:44.877  3409  3409 I PlayerSettingsManager: activePlayerChanged : com.retro99.parrot
+10-10 22:45:44.877  1559  3012 D MediaSessionService: setFgsIfSessionIsLinkedToNotification: record=com.retro99.parrot/androidx.media3.session.id./221 (userId=0)
+10-10 22:45:44.877  1559  6685 D MediaSessionService: onSessionActiveStateChanged: record=com.retro99.parrot/androidx.media3.session.id./221 (userId=0) active=true
+10-10 22:45:44.878  3409  3409 I PlayerSettingsManager: activePlayerChanged : com.retro99.parrot
+10-10 22:45:44.879  1559  1559 I SemApeController: updateStreamingState: com.retro99.parrot uid=10987
+10-10 22:45:44.885 23436 23436 D čič123: MediaLibrarySession created: true
+10-10 22:45:44.886  3409  3409 I MediaPlayerList: setActivePlayer: setting player to com.retro99.parrot, state: PlaybackState {state=NONE(0), position=0, buffered position=0, speed=0.0, updated=512212800, actions=7339653, custom actions=[Action:mName='Seek back 10 seconds, mIcon=2131165352, mExtras=Bundle[mParcelledData.dataSize=140], Action:mName='Seek forward 10 seconds, mIcon=2131165357, mExtras=Bundle[mParcelledData.dataSize=140]], active item id=0, error=null}
+10-10 22:45:44.892  3409  3409 I MediaPlayerList: addMediaPlayer() : com.retro99.parrot
+10-10 22:45:44.894  3409  3409 I MediaPlayerList: Adding wrapped media player: com.retro99.parrot at key: 1
+10-10 22:45:44.894  3409  3409 I MediaPlayerList: onMediaKeyEventSessionChanged: token=com.retro99.parrot
+10-10 22:45:44.897  3409  3409 I MediaPlayerList: setActivePlayer: setting player to com.retro99.parrot, state: PlaybackState {state=NONE(0), position=0, buffered position=0, speed=0.0, updated=512212800, actions=7339653, custom actions=[Action:mName='Seek back 10 seconds, mIcon=2131165352, mExtras=Bundle[mParcelledData.dataSize=140], Action:mName='Seek forward 10 seconds, mIcon=2131165357, mExtras=Bundle[mParcelledData.dataSize=140]], active item id=0, error=null}
+10-10 22:45:44.897 23436 23436 D čič123: Configuring buttons for media notification controller
+10-10 22:45:44.900  3409  3409 I MediaPlayerList: addMediaPlayer() : com.retro99.parrot
+10-10 22:45:44.900 23436 23436 D čič123: Session added to service
+10-10 22:45:44.901 23436 23436 D čič123: MediaNotificationProvider set
+10-10 22:45:44.901 23436 23436 D čič123: Calling controller.onServiceCreated()
+10-10 22:45:44.901  3409  3409 I MediaPlayerList: Adding wrapped media player: com.retro99.parrot at key: 1
+10-10 22:45:44.901  3409  3409 I MediaPlayerList: onMediaKeyEventSessionChanged: token=com.retro99.parrot
+10-10 22:45:44.901 23436 23436 D MediaPlaybackController: onServiceCreated() called
+10-10 22:45:44.901 23436 23436 D MediaPlaybackController: onServiceCreated: _serviceReadyDeferred=CompletableDeferredImpl{Active}@8b32561
+10-10 22:45:44.903 23436 23436 D MediaPlaybackController: onServiceCreated: completing deferred
+10-10 22:45:44.903 23436 23436 D čič123: onCreate() completed
+10-10 22:45:44.905  3409  3409 I MediaPlayerList: setActivePlayer: setting player to com.retro99.parrot, state: PlaybackState {state=NONE(0), position=0, buffered position=0, speed=0.0, updated=512212820, actions=7339653, custom actions=[Action:mName='Seek back 10 seconds, mIcon=2131165352, mExtras=Bundle[mParcelledData.dataSize=140], Action:mName='Seek forward 10 seconds, mIcon=2131165357, mExtras=Bundle[mParcelledData.dataSize=140], Action:mName='Previous chapter, mIcon=2131165335, mExtras=Bundle[mParcelledData.dataSize=140], Action:mName='Next chapter, mIcon=2131165319, mExtras=Bundle[mParcelledData.dataSize=140]], active item id=0, error=null}
+10-10 22:45:44.907 23436 23436 D MediaPlaybackController: awaitServiceReady: result=true, player=true
+10-10 22:45:44.907 23436 23436 D čič123: playInternal: service ready, player=androidx.media3.exoplayer.ExoPlayerImpl@865b0a
+10-10 22:45:44.910 23436 23436 D čič123: playInternal: calling prepareChapter(<BOOK A CHAPTER 5>.html)
+10-10 22:45:44.910 23436 23436 D čič123: prepareChapter: <BOOK A CHAPTER 5>.html, fragmentId=null
+10-10 22:45:44.910 23436 23436 D čič123: playInternal: prepareChapter returned
+10-10 22:45:44.910 23436 23436 D čič123: playInternal: END
+10-10 22:45:44.922 23436 23436 D čič123: SERVICE setChapterClips: count=308
+10-10 22:45:44.926 23436 23436 D čič123: preparePlaylist: audioHrefs=1, initialTrack=0, initialPos=0
+10-10 22:45:44.926 23436 23436 D čič123: preparePlaylist: exoPlayer=androidx.media3.exoplayer.ExoPlayerImpl@865b0a
+10-10 22:45:44.926 23436 23436 D čič123: preparePlaylist: calling setMediaSources with 1 sources
+10-10 22:45:44.930  3409  3409 I MediaPlayerList: addMediaPlayer() : com.retro99.parrot
+10-10 22:45:44.930  3409  3409 I MediaPlayerList: Already have a controller for the player: com.retro99.parrot, updating instead
+10-10 22:45:44.934 23436 23436 D čič123: preparePlaylist: calling player.prepare()
+10-10 22:45:44.935 23436 23436 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=308
+10-10 22:45:44.935  3409  3409 I PlayerSettingsManager: activePlayerChanged : com.retro99.parrot
+10-10 22:45:44.935  3409  3409 I PlayerSettingsManager: activePlayerChanged : com.retro99.parrot
+10-10 22:45:44.936 23436 23436 D čič123: preparePlaylist: player.prepare() called, playbackState=2, mediaItemCount=1
+10-10 22:45:44.937  3409  3409 I MediaPlayerList: addMediaPlayer() : com.retro99.parrot
+10-10 22:45:44.937  3409  3409 I MediaPlayerList: Already have a controller for the player: com.retro99.parrot, updating instead
+10-10 22:45:44.939  3409  3409 I MediaPlayerList: addMediaPlayer() : com.retro99.parrot
+10-10 22:45:44.939  3409  3409 I MediaPlayerList: Already have a controller for the player: com.retro99.parrot, updating instead
+10-10 22:45:44.941 23436 23436 D čič123: preparePlaylist: completed
+10-10 22:45:44.941 23436 23436 D čič123: SERVICE updateLocator: fragment=id138-sentence0
+10-10 22:45:44.943 23436 23436 D čič123: prepareChapter: prepareChapterAsync returned success=true
+10-10 22:45:44.951  1559  1559 I MediaSessionDataPlatform: getMediaType for uid: 10987 Audio
+10-10 22:45:44.951  1559  1559 D MediaSessionDataPlatform: put record (new)
+10-10 22:45:44.955  1559  4968 I ActivityManager: Background started FGS: Allowed [callingPackage: com.retro99.parrot; callingUid: 10987; uidState: TOP ; uidBFSL: [BFSL]; intent: Intent { xflg=0x4 cmp=com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService }; code:PROC_STATE_TOP; tempAllowListReason:<null>; allowWiu:12; targetSdkVersion:36; callerTargetSdkVersion:36; startForegroundCount:0; bindFromPackage:null: isBindService:false]
+10-10 22:45:44.959  3194 29725 D SecFgsManagerController: onForegroundStateChanged: [dialog:false]:[isForeground:true]:[packageName:com.retro99.parrot]:[token:android.os.BinderProxy@555700c]:[userId:0]
+10-10 22:45:44.964  3194 29725 D SecFgsManagerController: updateUiControl[com.retro99.parrot]: -1
+10-10 22:45:44.964  3194 29725 D SecFgsManagerController: onForegroundStateChanged: [dialog:false]:[isForeground:true]:[packageName:com.retro99.parrot]:[token:android.os.BinderProxy@555700c]:[userId:0]
+10-10 22:45:44.975  1559  1559 D NotificationReminder: addNotificationRecord record com.retro99.parrot
+10-10 22:45:44.987  3676  4195 I HoneySpace.NotificationListener: onNotificationPosted com.retro99.parrot: 0|com.retro99.parrot|1001|null|10987: 0
+10-10 22:45:44.987  3676  4195 I HoneySpace.NotificationListener: invalid notification: com.retro99.parrot UserHandle{0}: canShowBadge is false
+10-10 22:45:45.004  1559  3832 I MediaFocusControl: requestAudioFocus() from uid/pid 10987/23436 AA=USAGE_MEDIA/CONTENT_TYPE_SPEECH clientId=android.media.AudioManager@62109a5androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@79f917a callingPack=com.retro99.parrot req=1 flags=0x3 sdk=36
+10-10 22:45:45.005  1559  3832 D MediaFocusControl: selectFocusStack, uid = 10987, appDevice = 0, device = 2
+10-10 22:45:45.005  1559  3832 I MediaFocusControl: removeFocusStackEntry client:android.media.AudioManager@62109a5androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@79f917a
+10-10 22:45:45.005  1559  3832 I MediaFocusControl: propagateFocusLossFromGain_syncAf gain:1
+10-10 22:45:45.005  1559  3832 I MediaFocusControl: propagateFocusLossFromGain_syncAf empty stack
+10-10 22:45:45.005  1559  3832 D MediaFocusControl: propagateFocusLossFromGainToAll, 1
+10-10 22:45:45.011  3676  4195 I HoneySpace.NotificationListener: onNotificationPosted com.retro99.parrot: 0|com.retro99.parrot|1001|null|10987: 0
+10-10 22:45:45.011  3676  4195 I HoneySpace.NotificationListener: invalid notification: com.retro99.parrot UserHandle{0}: canShowBadge is false
+10-10 22:45:45.013  3194  3194 D InterruptionStateProvider:  no Heads up : edgelighting enabled app. 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:45.014  3194  3194 D InterruptionStateProvider:  no Heads up : edgelighting enabled app. 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:45.029  3194 29725 D SecFgsManagerController: onForegroundStateChanged: [dialog:false]:[isForeground:true]:[packageName:com.retro99.parrot]:[token:android.os.BinderProxy@555700c]:[userId:0]
+10-10 22:45:45.043  3676  4195 I HoneySpace.NotificationListener: onNotificationPosted com.retro99.parrot: 0|com.retro99.parrot|1001|null|10987: 0
+10-10 22:45:45.043  3676  4195 I HoneySpace.NotificationListener: invalid notification: com.retro99.parrot UserHandle{0}: canShowBadge is false
+10-10 22:45:45.043  3194  3194 D Bubbles : onEntryUpdated : shouldBubbleUp=false ,key=0|com.retro99.parrot|1001|null|10987
+10-10 22:45:45.043  3194  3194 D InterruptionStateProvider:  no Heads up : edgelighting enabled app. 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:45.045  3194  3194 D InterruptionStateProvider:  no Heads up : edgelighting enabled app. 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:45.247  3194  3194 D Bubbles : onEntryUpdated : shouldBubbleUp=false ,key=0|com.retro99.parrot|1001|null|10987
+10-10 22:45:45.247  3194  3194 D InterruptionStateProvider:  no Heads up : edgelighting enabled app. 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:45.408  1559  1559 I MediaSessionDataPlatform: getMediaType for uid: 10987 Audio
+10-10 22:45:45.408  1559  1559 D MediaSessionDataPlatform: put record (changed) changedState:4
+10-10 22:45:45.414  3194  4136 D SecFgsManagerController: onForegroundStateChanged: [dialog:false]:[isForeground:true]:[packageName:com.retro99.parrot]:[token:android.os.BinderProxy@555700c]:[userId:0]
+10-10 22:45:45.424  3194 29725 D SecFgsManagerController: onForegroundStateChanged: [dialog:false]:[isForeground:true]:[packageName:com.retro99.parrot]:[token:android.os.BinderProxy@555700c]:[userId:0]
+10-10 22:45:45.432  3676  4195 I HoneySpace.NotificationListener: onNotificationPosted com.retro99.parrot: 0|com.retro99.parrot|1001|null|10987: 0
+10-10 22:45:45.432  3676  4195 I HoneySpace.NotificationListener: invalid notification: com.retro99.parrot UserHandle{0}: canShowBadge is false
+10-10 22:45:45.433  3194  3194 D InterruptionStateProvider:  no Heads up : edgelighting enabled app. 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:45.455  3676  4195 I HoneySpace.NotificationListener: onNotificationPosted com.retro99.parrot: 0|com.retro99.parrot|1001|null|10987: 0
+10-10 22:45:45.455  3676  4195 I HoneySpace.NotificationListener: invalid notification: com.retro99.parrot UserHandle{0}: canShowBadge is false
+10-10 22:45:45.463  3194  3194 D Bubbles : onEntryUpdated : shouldBubbleUp=false ,key=0|com.retro99.parrot|1001|null|10987
+10-10 22:45:45.464  3194  3194 D InterruptionStateProvider:  no Heads up : edgelighting enabled app. 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:45.466  3194  3194 D InterruptionStateProvider:  no Heads up : edgelighting enabled app. 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:45.666  3194  3194 D Bubbles : onEntryUpdated : shouldBubbleUp=false ,key=0|com.retro99.parrot|1001|null|10987
+10-10 22:45:45.666  3194  3194 D InterruptionStateProvider:  no Heads up : edgelighting enabled app. 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:45.769  1559  1559 D MediaSessionService: Audio playback is changed, config=AudioPlaybackConfiguration piid:6999 deviceIds:[] type:android.media.AudioTrack u/pid:10987/23436 state:started attr:AudioAttributes: usage=USAGE_MEDIA content=CONTENT_TYPE_SPEECH flags=0xA00(FLAG_DEEP_BUFFER+FLAG_MUTE_HAPTIC)  tags= bundle=null sessionId:7353 mutedState:none  FormatInfo{isSpatialized=false, channelMask=0x0, sampleRate=0}, removed=false
+10-10 22:45:45.783  9349 24869 I NearbyDiscovery: (REDACTED) ActiveMediaSessionManager: Find a trigger event! %s
+10-10 22:45:45.806  3194  3818 D SoundCraft.PlayingAudioConditionHandler: onPlaybackConfigChanged : lastStartedPackageName=null, lastStartedUid=-1, newStartedUid=10987, newStartPackageName=com.retro99.parrot, thread=Thread[RoutineHandlerThread,5,main]
+10-10 22:45:45.810  1559  3346 E AppOps  : attributionTag  not declared in manifest of com.retro99.parrot
+10-10 22:45:45.811  1559  3346 E AppOps  : attributionTag  not declared in manifest of com.retro99.parrot
+10-10 22:45:45.811  3194  4032 D AudioEraserAudioPlaybackStartable: [base by audio.eraser.v20260113] com.retro99.parrot is not allowed package
+10-10 22:45:45.816 23436 23436 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=308
+10-10 22:45:45.816  3194  3818 D SoundCraft.PlayingAudioConditionHandler: onPlaybackConfigChanged : lastStartedPackageName=com.retro99.parrot, lastStartedUid=10987, newStartedUid=10987, newStartPackageName=com.retro99.parrot, thread=Thread[RoutineHandlerThread,5,main]
+10-10 22:45:45.819 23436 23436 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=308
+10-10 22:45:45.827  3194  3818 D SoundCraft.PlayingAudioConditionHandler: onPlaybackConfigChanged : lastStartedPackageName=com.retro99.parrot, lastStartedUid=10987, newStartedUid=10987, newStartPackageName=com.retro99.parrot, thread=Thread[RoutineHandlerThread,5,main]
+10-10 22:45:45.830  3194  4136 D SecFgsManagerController: onForegroundStateChanged: [dialog:false]:[isForeground:true]:[packageName:com.retro99.parrot]:[token:android.os.BinderProxy@555700c]:[userId:0]
+10-10 22:45:45.841  3676  4195 I HoneySpace.NotificationListener: onNotificationPosted com.retro99.parrot: 0|com.retro99.parrot|1001|null|10987: 0
+10-10 22:45:45.841  3676  4195 I HoneySpace.NotificationListener: invalid notification: com.retro99.parrot UserHandle{0}: canShowBadge is false
+10-10 22:45:45.842  3194  3194 D InterruptionStateProvider:  no Heads up : edgelighting enabled app. 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:45.849  1559  3346 I WindowManager: Relayout Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}: viewVisibility=0 req=1080x2340 ty=1 d0
+10-10 22:45:45.850  1559  3346 D PowerManagerService: [api] acquire WakeLock SCREEN_BRIGHT_WAKE_LOCK           'WindowManager/displayId:0' ON_AFTER_RELEASE (uid=1000 isFrozen=false pid=1559 ws=WorkSource{10987 com.retro99.parrot} displayId=0 lock=502c06c)
+10-10 22:45:45.880  3194  3309 D MediaDataManager: Token changed, old null, new android.media.session.MediaSession$Token@e9c1d3
+10-10 22:45:45.880  3194  3194 D MediaDataManager: loadMediaDataWithLoader trigger onMediaDataLoaded key 0|com.retro99.parrot|1001|null|10987 playing true
+10-10 22:45:45.886  1559  6132 W MR2ServiceImpl: Router record not found for the target package: com.retro99.parrot
+10-10 22:45:45.895  3194  4032 D AudioEraserAudioPlaybackStartable: [base by audio.eraser.v20260113] com.retro99.parrot is not allowed package
+10-10 22:45:45.913  3194  3194 D MediaLogger: Media data loaded key[0|com.retro99.parrot|1001|null|10987] oldKey[0|com.retro99.parrot|1001|null|10987] title[chap] isActive[true]
+10-10 22:45:45.989  3194  3194 D MediaControlPanel: ColorUpdate bindArtworkAndColors key 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:45.990  3194  3194 D MediaLogger: [OA] Media player added [0|com.retro99.parrot|1001|null|10987] dataPlaying[true] playbackPlaying[true]
+10-10 22:45:45.996  3194  3302 D MediaControlPanel: ColorUpdate bindArtworkAndColors add artwork key 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:46.011  3194  3194 D MediaControlPanel: ColorUpdate bindArtworkAndColors key 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:46.011  3194  3194 D MediaLogger: [ENR] Media player added [0|com.retro99.parrot|1001|null|10987] dataPlaying[true] playbackPlaying[true]
+10-10 22:45:46.015  3194  3194 D MediaLogger: [QS] Media player added [0|com.retro99.parrot|1001|null|10987] dataPlaying[true] playbackPlaying[true]
+10-10 22:45:46.021  1559  6132 D MediaSessionService: The MediaKeyEventSessionChangedListener (android.os.BinderProxy@9104866) is removed by com.samsung.android.app.routineplus
+10-10 22:45:46.031  3194  3302 D MediaControlPanel: ColorUpdate bindArtworkAndColors add artwork key 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:46.032  3194  3194 D InterruptionStateProvider:  no Heads up : edgelighting enabled app. 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:46.042  3194  3194 D MediaControlPanel: ColorUpdate bindArtworkAndColors update artwork key 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:46.044  3194  3194 D MediaControlPanel: ColorUpdate bindArtworkAndColors update artwork end key 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:46.045  3194  3194 D Bubbles : onEntryUpdated : shouldBubbleUp=false ,key=0|com.retro99.parrot|1001|null|10987
+10-10 22:45:46.045  3194  3194 D InterruptionStateProvider:  no Heads up : edgelighting enabled app. 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:46.060  3194  3194 D InterruptionStateProvider:  no Heads up : edgelighting enabled app. 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:46.060  3194  3194 D MediaControlPanel: ColorUpdate bindArtworkAndColors update artwork key 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:46.060  3194  3194 D MediaControlPanel: ColorUpdate bindArtworkAndColors update artwork end key 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:46.079  3194  3194 I NowBarItemManager: onNowBarItemUpdated added , 0|com.retro99.parrot|1001|null|10987, MEDIA | 1 isChargingVIEnded=false / needToFullview=true/ ignoreBouncer = false
+10-10 22:45:46.121  3194  3194 D MediaLogger: [ENR] Media player removed [0|com.retro99.parrot|1001|null|10987]
+10-10 22:45:46.143  3194  3194 D MediaControlPanel: ColorUpdate bindArtworkAndColors key 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:46.143  3194  3194 D MediaLogger: [ENR] Media player added [0|com.retro99.parrot|1001|null|10987] dataPlaying[true] playbackPlaying[true]
+10-10 22:45:46.144  3194  3302 D MediaControlPanel: ColorUpdate bindArtworkAndColors add artwork key 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:46.209  3194  3194 D MediaControlPanel: ColorUpdate bindArtworkAndColors update artwork key 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:46.209  3194  3194 D MediaControlPanel: ColorUpdate bindArtworkAndColors update artwork end key 0|com.retro99.parrot|1001|null|10987
+10-10 22:45:46.956  1559  1559 I MediaSessionDataPlatform: getMediaType for uid: 10987 Audio
+10-10 22:46:31.223  1559  4968 E AppOps  : attributionTag  not declared in manifest of com.retro99.parrot
+10-10 22:46:31.223  1559  6132 E AppOps  : attributionTag  not declared in manifest of com.retro99.parrot
+10-10 22:46:31.223  1559  1559 D MediaSessionDataPlatform: remove record
+10-10 22:46:31.224  1559  1559 I MediaSessionDataPlatform: Do not send data because playing time too short 46272ms
+10-10 22:46:31.230 23436 23436 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=308
+10-10 22:46:31.233  1559  1559 D MediaSessionService: Audio playback is changed, config=AudioPlaybackConfiguration piid:6999 deviceIds:[3] type:android.media.AudioTrack u/pid:10987/23436 state:paused attr:AudioAttributes: usage=USAGE_MEDIA content=CONTENT_TYPE_SPEECH flags=0xA00(FLAG_DEEP_BUFFER+FLAG_MUTE_HAPTIC)  tags= bundle=null sessionId:7353 mutedState:none  FormatInfo{isSpatialized=false, channelMask=0x3, sampleRate=48000}, removed=false
+10-10 22:46:31.249  3194  3818 D SoundCraft.PlayingAudioConditionHandler: onPlaybackConfigChanged : lastStartedPackageName=com.retro99.parrot, lastStartedUid=10987, newStartedUid=-1, newStartPackageName=null, thread=Thread[RoutineHandlerThread,5,main]
+10-10 22:46:31.254  3194  3194 D MediaLogger: Media data loaded key[0|com.retro99.parrot|1001|null|10987] oldKey[0|com.retro99.parrot|1001|null|10987] title[chap] isActive[true]
+10-10 22:46:31.255  3194 29764 D SecFgsManagerController: onForegroundStateChanged: [dialog:false]:[isForeground:true]:[packageName:com.retro99.parrot]:[token:android.os.BinderProxy@555700c]:[userId:0]
+10-10 22:46:31.259  3194  3194 D MediaControlPanel: ColorUpdate bindArtworkAndColors key 0|com.retro99.parrot|1001|null|10987
+10-10 22:46:31.259  3194  3194 D MediaLogger: [OA] Media player updated [0|com.retro99.parrot|1001|null|10987] dataPlaying[false] playbackPlaying[false]
+10-10 22:46:31.261  3194  3302 D MediaControlPanel: ColorUpdate bindArtworkAndColors add artwork key 0|com.retro99.parrot|1001|null|10987
+10-10 22:46:31.263  3194  3194 D MediaControlPanel: ColorUpdate bindArtworkAndColors key 0|com.retro99.parrot|1001|null|10987
+10-10 22:46:31.263  3194  3194 D MediaLogger: [ENR] Media player updated [0|com.retro99.parrot|1001|null|10987] dataPlaying[false] playbackPlaying[false]
+10-10 22:46:31.266  3194  3194 D MediaLogger: [QS] Media player updated [0|com.retro99.parrot|1001|null|10987] dataPlaying[false] playbackPlaying[false]
+10-10 22:46:31.271  1559  3316 I WindowManager: Relayout Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}: viewVisibility=0 req=1080x2340 ty=1 d0
+10-10 22:46:31.273  1559  3316 D PowerManagerService: [api] release WakeLock SCREEN_BRIGHT_WAKE_LOCK           'WindowManager/displayId:0' ON_AFTER_RELEASE ACQ=-45s423ms (uid=1000 isFrozen=false pid=1559 ws=WorkSource{10987 com.retro99.parrot} displayId=0 lock=502c06c)
+10-10 22:46:31.278  3676  4195 I HoneySpace.NotificationListener: onNotificationPosted com.retro99.parrot: 0|com.retro99.parrot|1001|null|10987: 0
+10-10 22:46:31.278  3676  4195 I HoneySpace.NotificationListener: invalid notification: com.retro99.parrot UserHandle{0}: canShowBadge is false
+10-10 22:46:31.281  1559  3316 D PowerManagerService: [api] applyWakeLockFlagsOnReleaseLocked : userActivityNoUpdateLocked is called : SCREEN_BRIGHT_WAKE_LOCK           'WindowManager/displayId:0' ON_AFTER_RELEASE DISABLED (uid=1000 isFrozen=false pid=1559 ws=WorkSource{10987 com.retro99.parrot} displayId=0 lock=502c06c)
+10-10 22:46:31.309  3194  3194 I NowBarItemManager: onNowBarItemUpdated updated updatedNowBarItem = , 0|com.retro99.parrot|1001|null|10987, MEDIA | 1 oldNowBarItem = , 0|com.retro99.parrot|1001|null|10987, MEDIA | 1
+10-10 22:46:31.309  3194  3194 I NowBarItemManager: visibleItemListLog changed visibleList idx=0, , NOW_BRIEF_SUGGESTION_ON_NORMAL_KEY, NOWBRIEF_ON_LOCKSCREEN | 8 idx=1, -1|com.android.systemui|1006831526|noti_DoNotDisturb|10054, , NOTI | -1  -> visibleList idx=0, , 0|com.retro99.parrot|1001|null|10987, MEDIA | 1 idx=1, , NOW_BRIEF_SUGGESTION_ON_NORMAL_KEY, NOWBRIEF_ON_LOCKSCREEN | 8 idx=2, -1|com.android.systemui|1006831526|noti_DoNotDisturb|10054, , NOTI | -1 
+10-10 22:46:31.340  3194  3302 D MediaControlPanel: ColorUpdate bindArtworkAndColors add artwork key 0|com.retro99.parrot|1001|null|10987
+10-10 22:46:31.359  3194  3194 I NowBarMediaCardView@424: applySettingCardLayout 0 / , 0|com.retro99.parrot|1001|null|10987, MEDIA | 1 / settingCardView com.samsung.android.app.facewidget.presentation.NowbarCardSettingView{7a77b90 V.E...... ......I. 0,0-0,0 #7d0a0590 com.samsung.android.app.aodservice:id/nowbar_card_settings_rootview}
+10-10 22:46:31.367  3194  3194 D MediaControlPanel: ColorUpdate bindArtworkAndColors update artwork key 0|com.retro99.parrot|1001|null|10987
+10-10 22:46:31.367  3194  3194 D MediaControlPanel: ColorUpdate bindArtworkAndColors update artwork end key 0|com.retro99.parrot|1001|null|10987
+10-10 22:46:31.369  3194  3194 D MediaControlPanel: ColorUpdate bindArtworkAndColors update artwork key 0|com.retro99.parrot|1001|null|10987
+10-10 22:46:31.369  3194  3194 D MediaControlPanel: ColorUpdate bindArtworkAndColors update artwork end key 0|com.retro99.parrot|1001|null|10987
+10-10 22:46:31.484  3194  3194 D Bubbles : onEntryUpdated : shouldBubbleUp=false ,key=0|com.retro99.parrot|1001|null|10987
+10-10 22:46:31.485  3194  3194 D InterruptionStateProvider:  no Heads up : edgelighting enabled app. 0|com.retro99.parrot|1001|null|10987
+10-10 22:46:33.558 30931 30931 I HBD     : b [AiWriter] setContact : com.retro99.parrot
+10-10 22:46:33.663  1559  3107 D NetdEventListenerService: DNS Requested by 103, 10987(com.retro99.parrot), SUCCESS, 15ms
+10-10 22:46:34.287 23436 23436 D čič123: MediaSessionManager.release() called
+10-10 22:46:34.287 23436 23436 D čič123: release: stopping service (playback not active)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: ForegroundServiceController.stopService() called
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: java.lang.Exception: stack trace
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at com.retro99.reader.ui.playback.ForegroundServiceController.stopService(ForegroundServiceController.kt:59)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at com.retro99.reader.ui.media.MediaOverlayPlayer.release(MediaOverlayPlayer.kt:679)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at com.retro99.reader.ui.navigator.AndroidAudioController.close(AndroidAudioController.kt:344)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.activity.OnBackPressedCallback$$ExternalSyntheticAutoCloseableDispatcher0.m(D8$$SyntheticClass:0)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.lifecycle.viewmodel.internal.ViewModelImpl.closeWithRuntimeException(ViewModelImpl.kt:126)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.lifecycle.viewmodel.internal.ViewModelImpl.access$closeWithRuntimeException(ViewModelImpl.kt:34)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.lifecycle.viewmodel.internal.ViewModelImpl.clear(ViewModelImpl.kt:85)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.lifecycle.ViewModel.clear$lifecycle_viewmodel(ViewModel.jvm.kt:67)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.lifecycle.ViewModelStore.clear(ViewModelStore.kt:58)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.lifecycle.viewmodel.navigation3.EntryViewModel.clearViewModelStoreOwnerForKey(ViewModelStoreNavEntryDecorator.kt:145)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.lifecycle.viewmodel.navigation3.ViewModelStoreNavEntryDecorator._init_$lambda$0(ViewModelStoreNavEntryDecorator.kt:96)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.lifecycle.viewmodel.navigation3.ViewModelStoreNavEntryDecorator$$ExternalSyntheticLambda0.invoke(D8$$SyntheticClass:0)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.navigation3.runtime.DecoratedNavEntriesKt$decorateEntry$lambda$1$0$0$$inlined$onDispose$1.dispose(Effects.kt:84)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.compose.runtime.DisposableEffectImpl.onForgotten(Effects.kt:91)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.compose.runtime.internal.RememberEventDispatcher.dispatchRememberObservers(RememberEventDispatcher.kt:223)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.compose.runtime.CompositionImpl.disposeUnusedMovableContent(Composition.kt:1182)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.compose.runtime.Recomposer.discardUnusedMovableContentState(Recomposer.kt:1429)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.compose.runtime.Recomposer.access$discardUnusedMovableContentState(Recomposer.kt:191)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.compose.runtime.Recomposer$runRecomposeAndApplyChanges$2.invokeSuspend(Recomposer.kt:792)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.compose.ui.platform.AndroidUiDispatcher.performTrampolineDispatch(AndroidUiDispatcher.android.kt:79)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.compose.ui.platform.AndroidUiDispatcher.access$performTrampolineDispatch(AndroidUiDispatcher.android.kt:41)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at androidx.compose.ui.platform.AndroidUiDispatcher$dispatchCallback$1.run(AndroidUiDispatcher.android.kt:57)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at android.os.Handler.handleCallback(Handler.java:1070)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at android.os.Handler.dispatchMessage(Handler.java:125)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at android.os.Looper.dispatchMessage(Looper.java:358)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at android.os.Looper.loopOnce(Looper.java:288)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at android.os.Looper.loop(Looper.java:392)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at android.app.ActivityThread.main(ActivityThread.java:10346)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at java.lang.reflect.Method.invoke(Native Method)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:638)
+10-10 22:46:34.288 23436 23436 D ForegroundServiceController: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:972)
+10-10 22:46:34.289  3194  3214 D SecFgsManagerController: onForegroundStateChanged: [dialog:false]:[isForeground:false]:[packageName:com.retro99.parrot]:[token:android.os.BinderProxy@555700c]:[userId:0]
+10-10 22:46:34.295  1559  1559 D EdgeLightingManager: hideForNotification : packageName = com.retro99.parrot
+10-10 22:46:34.295  1559  1559 D EdgeLightingPolicyManager:NotificationGroup: remove : sbn : StatusBarNotification(pkg=com.retro99.parrot user=UserHandle{0} id=1001 tag=null key=0|com.retro99.parrot|1001|null|10987: Notification(channel=default_channel_id shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=ONLY_ALERT_ONCE|NO_CLEAR|FOREGROUND_SERVICE color=0x00000000 category=transport groupKey=media3_group_key actions=5 vis=PUBLIC semFlags=0x0 semPriority=0 semMissedCount=0 semScenarioType=0))
+10-10 22:46:34.296  1559  1559 D NotificationService: removeFlagFromNotificationLocked pkg = com.retro99.parrot notificationId = 1001, flag = 64
+10-10 22:46:34.307 23436 23436 D čič123: onDestroy() called
+10-10 22:46:34.307 23436 23436 D čič123: java.lang.Exception: stack trace
+10-10 22:46:34.307 23436 23436 D čič123: 	at com.retro99.reader.ui.playback.MediaPlaybackService.onDestroy(MediaPlaybackService.kt:373)
+10-10 22:46:34.307 23436 23436 D čič123: 	at android.app.ActivityThread.handleStopService(ActivityThread.java:6483)
+10-10 22:46:34.307 23436 23436 D čič123: 	at android.app.ActivityThread.-$$Nest$mhandleStopService(ActivityThread.java:0)
+10-10 22:46:34.307 23436 23436 D čič123: 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:3125)
+10-10 22:46:34.307 23436 23436 D čič123: 	at android.os.Handler.dispatchMessage(Handler.java:132)
+10-10 22:46:34.307 23436 23436 D čič123: 	at android.os.Looper.dispatchMessage(Looper.java:358)
+10-10 22:46:34.307 23436 23436 D čič123: 	at android.os.Looper.loopOnce(Looper.java:288)
+10-10 22:46:34.307 23436 23436 D čič123: 	at android.os.Looper.loop(Looper.java:392)
+10-10 22:46:34.307 23436 23436 D čič123: 	at android.app.ActivityThread.main(ActivityThread.java:10346)
+10-10 22:46:34.307 23436 23436 D čič123: 	at java.lang.reflect.Method.invoke(Native Method)
+10-10 22:46:34.307 23436 23436 D čič123: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:638)
+10-10 22:46:34.307 23436 23436 D čič123: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:972)
+10-10 22:46:34.307 23436 23436 D MediaPlaybackController: onServiceDestroyed() called
+10-10 22:46:34.307 23436 23436 D MediaPlaybackController: stopForwardingFlows()
+10-10 22:46:34.308 23436 23436 I MediaSessionImpl: Release 346e2f3 [AndroidXMedia3/1.10.0] [e1s, SM-S921B, samsung, 36] [media3.common, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+10-10 22:46:34.309  1559 12448 D MediaSessionService: Destroying com.retro99.parrot/androidx.media3.session.id./221 (userId=0)
+10-10 22:46:34.309  1559 12448 D MediaSessionService: Media button session is changed to null
+10-10 22:46:34.309  1559 12448 D MediaSessionService: destroySessionLocked: record=com.retro99.parrot/androidx.media3.session.id./221 (userId=0)
+10-10 22:46:34.310 23436 23436 I ExoPlayerImpl: Release 865b0a [AndroidXMedia3/1.10.0] [e1s, SM-S921B, samsung, 36] [media3.common, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+10-10 22:46:34.311  3676  3676 I HoneySpace.NotificationListener: onNotificationRemoved sbn : StatusBarNotification(pkg=com.retro99.parrot user=UserHandle{0} id=1001 tag=null key=0|com.retro99.parrot|1001|null|10987: Notification(channel=default_channel_id shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=ONLY_ALERT_ONCE|NO_CLEAR|FOREGROUND_SERVICE color=0x00000000 category=transport groupKey=media3_group_key actions=5 vis=PUBLIC semFlags=0x0 semPriority=0 semMissedCount=0 semScenarioType=0)), reason : 8
+10-10 22:46:34.311  1559  3012 D MediaSessionService: setFgsIfNoSessionIsLinkedToNotification: record=com.retro99.parrot/androidx.media3.session.id./221 (userId=0)
+10-10 22:46:34.312  1559  3012 I MediaSessionService: setFgsInactiveLocked: pkg=com.retro99.parrot uid=10987 notification=1001
+10-10 22:46:34.312  3676  4195 I HoneySpace.NotificationListener: onNotificationRemoved com.retro99.parrot: 0|com.retro99.parrot|1001|null|10987: 0
+10-10 22:46:34.312  1559  1559 D NotificationReminder: removeFromNotificationList record com.retro99.parrot
+10-10 22:46:34.314  3194  3302 D MediaDataManager: session destroyed for 0|com.retro99.parrot|1001|null|10987
+10-10 22:46:34.315  3194  3302 D MediaDataManager: Removing still-active player 0|com.retro99.parrot|1001|null|10987
+10-10 22:46:34.315  3194  3194 D S.S.N.  : onEntryRemoved parent : 0|com.retro99.parrot|1001|null|10987
+10-10 22:46:34.315  3409  3409 I MediaPlayerList: Removing media player com.retro99.parrot
+10-10 22:46:34.315  3409  3409 I MediaPlayerList: com.retro99.parrot doesn't have a browse service. Recycle player ID.
+10-10 22:46:34.316  3194  3194 D InsignificantCoordinator: onEntryRemoved :0|com.retro99.parrot|1001|null|10987 flags: 0 entrySize:0
+10-10 22:46:34.317  3194  3194 D MediaLogger: Media data removed [0|com.retro99.parrot|1001|null|10987]
+10-10 22:46:34.318  3194  3194 D SimplePlayLastSongHelper: lastRemovedPackage com.retro99.parrot
+10-10 22:46:34.319  3194  3194 D MediaLogger: [OA] Media player removed [0|com.retro99.parrot|1001|null|10987]
+10-10 22:46:34.320  3409  3409 I MediaPlayerList: Removing media player com.retro99.parrot
+10-10 22:46:34.320  3409  3409 I MediaPlayerList: com.retro99.parrot doesn't have a browse service. Recycle player ID.
+10-10 22:46:34.320  3409  3409 I MediaPlayerList: Removing media player com.retro99.parrot
+10-10 22:46:34.320  3409  3409 I MediaPlayerList: com.retro99.parrot doesn't have a browse service. Recycle player ID.
+10-10 22:46:34.321  3194  3194 D MediaLogger: [ENR] Media player removed [0|com.retro99.parrot|1001|null|10987]
+10-10 22:46:34.321  3194  3194 D NotificationMediaManager: Not dismissing 0|com.retro99.parrot|1001|null|10987 because it was removed by the system
+10-10 22:46:34.326  1559  3346 I MediaFocusControl: abandonAudioFocus() from uid/pid 10987/23436 clientId=android.media.AudioManager@62109a5androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@79f917a callingPack=com.retro99.parrot
+10-10 22:46:34.326  1559  3346 D MediaFocusControl: abandonAudioFocus, clientId = android.media.AudioManager@62109a5androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@79f917a
+10-10 22:46:34.327  1559  3346 D MediaFocusControl: selectFocusStack, uid = 10987, appDevice = 0, device = 2
+10-10 22:46:34.327  1559  3346 I MediaFocusControl: removeFocusStackEntry client:android.media.AudioManager@62109a5androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@79f917a
+10-10 22:46:34.340  1559  4168 D MediaSessionService: The MediaKeyEventSessionChangedListener (android.os.BinderProxy@9104866) is added by com.samsung.android.app.aodservice
+10-10 22:46:34.343  9349 24870 I NearbyDiscovery: (REDACTED) ActiveMediaSessionManager: The previous active package (%s) is not active now!
+10-10 22:46:35.674 23436 23436 D Activity: onKeyDown(KEYCODE_BACK), activity=com.retro99.parrot.android.MainActivity@f51ae3f
+10-10 22:46:35.705  1559  6132 D CoreBackPreview: Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@5618f03, mPriority=-1, mIsAnimationCallback=false, mOverrideBehavior=0}
+10-10 22:46:37.713  4042  4042 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:am force-stop com.retro99.parrot'
+10-10 22:46:37.781  1559 30526 I ActivityManager: Force stopping com.retro99.parrot appid=10987 user=0: from pid 25161
+10-10 22:46:37.791  1559 30526 I ActivityManager: Killing 23436:com.retro99.parrot/u0a987 (adj 0): stop com.retro99.parrot due to from pid 25161
+10-10 22:46:37.803  1559 30526 D ActivityManager: proc ProcessRecord{cca2ab3 23436:com.retro99.parrot/u0a987} already removed. so we skip next process.
+10-10 22:46:37.805  1559 30526 W ActivityTaskManager: Force removing ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530 f}}: app died, no saved state
+10-10 22:46:37.809  1559 30526 V WindowManager: Collecting in transition 951: Task{902af0e #67530 type=standard A=10987:com.retro99.parrot}, caller=com.android.server.wm.Transition.collectExistenceChange:40 com.android.server.wm.WindowProcessController.handleAppDied$1:506 com.android.server.am.ActivityManagerService.handleAppDiedLocked:246 com.android.server.am.ProcessList.removeProcessLocked:198 com.android.server.am.ProcessList.killPackageProcessesLSP:556 
+10-10 22:46:37.809  1559 30526 D WindowManager: prepareSync <SYNC_STATE_WAITING_FOR_DRAW>, mPrepareSyncSeqId=0, win=Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}
+10-10 22:46:37.815  1559 30526 V WindowManager: Collecting in transition 951: ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530 f}}, caller=com.android.server.wm.TransitionController.collect:7 com.android.server.wm.ActivityRecord.onRemovedFromDisplay:217 com.android.server.wm.ActivityRecord.removeFromHistory:169 com.android.server.wm.WindowProcessController.handleAppDied$1:549 com.android.server.am.ActivityManagerService.handleAppDiedLocked:246 
+10-10 22:46:37.817  1559 30526 D WindowManager: Changing focus from Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity} to null displayId=0 Callers=com.android.server.wm.ActivityRecord.onRemovedFromDisplay:412 com.android.server.wm.ActivityRecord.removeFromHistory:169 com.android.server.wm.WindowProcessController.handleAppDied$1:549 com.android.server.am.ActivityManagerService.handleAppDiedLocked:246 
+10-10 22:46:37.835  1559  3316 D InputDispatcher: Focus left window (0): 36be29e com.retro99.parrot/com.retro99.parrot.android.MainActivity
+10-10 22:46:37.843 29606 29606 I AFL#SSS:AssistHolder: onActivityEvent Snapshot Destroyed:ComponentInfo{com.retro99.parrot/com.retro99.parrot.android.MainActivity}
+10-10 22:46:37.855  1559  3346 I ImeTracker: com.retro99.parrot:855d4c3e: onRequestHide at ORIGIN_SERVER reason HIDE_REMOVE_CLIENT fromUser false
+10-10 22:46:37.855  1559  3346 I ImeTracker: com.retro99.parrot:855d4c3e: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-10 22:46:37.855  1559  2953 D ConnectivityService: releasing NetworkRequest [ REQUEST id=39451, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10987 RequestorUid: 10987 RequestorPkg: com.retro99.parrot UnderlyingNetworks: Null] ] (release request)
+10-10 22:46:37.856  1559  2226 I WindowManager: WIN DEATH: Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}
+10-10 22:46:37.856  1559  2226 V WindowManager: Remove Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity}: mSurfaceControl=Surface(name=com.retro99.parrot/com.retro99.parrot.android.MainActivity$_23436#18204)/@0x2031312 mAnimatingExit=false mRemoveOnExit=false mHasSurface=true surfaceShowing=true animating=false app-animation=false callers=com.android.server.wm.Session.binderDied:111 android.os.IBinder$DeathRecipient.binderDied:346 android.os.BinderProxy.sendDeathNotice:913 <bottom of call stack> <bottom of call stack> <bottom of call stack> 
+10-10 22:46:37.864  1559 30526 I AppsFilter: interaction: PackageSetting{1677d08 com.retro99.parrot.fixtures/10988} -> PackageSetting{d0acae3 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:37.864  1559 30526 I AppsFilter: interaction: PackageSetting{7952ec6 ai.devrev.mobile/10986} -> PackageSetting{d0acae3 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:37.864  1559 30526 I AppsFilter: interaction: PackageSetting{1e96e87 ai.devrev.mobile.staging/10984} -> PackageSetting{d0acae3 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:37.864  1559 30526 I AppsFilter: interaction: PackageSetting{37b61b4 ai.devrev.arcade.demo/10960} -> PackageSetting{d0acae3 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:37.864  1559 30526 I AppsFilter: interaction: PackageSetting{885a1dd ai.devrev.mobile.dev/10991} -> PackageSetting{d0acae3 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:37.864  1559 30526 I AppsFilter: interaction: PackageSetting{6257152 com.ai.bardly/10725} -> PackageSetting{d0acae3 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:37.864  1559 30526 I AppsFilter: interaction: PackageSetting{de46c23 org.retro99.storyteller/10911} -> PackageSetting{d0acae3 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:37.864  1559 30526 W ActivityManager: Invalid packageName: com.retro99.parrot
+10-10 22:46:37.873  3511  3511 D CarrierSvcBindHelper: onHandleForceStop: [com.retro99.parrot]
+10-10 22:46:37.875  1559  4168 V ActivityManager: Got obituary of 23436:com.retro99.parrot
+10-10 22:46:37.880  1559  2966 D LocationManagerService: package com.retro99.parrot reset
+10-10 22:46:37.885  3194  3194 D Navbar.Store: handleEvent(0) OnPackageRemoved(packageName=com.retro99.parrot) [Module] NavBarStoreImpl
+10-10 22:46:37.887  9349 24852 I NearbySharing: Got package event: PackageReplaced(packageName=com.retro99.parrot)
+10-10 22:46:37.888  3194  3194 D SecSTQuickControlRequestReceiver: onReceiveForPackage action = android.intent.action.PACKAGE_RESTARTED, pkgName = com.retro99.parrot
+10-10 22:46:37.903  1559  1662 D ChangeTransitionController:    ChangeInfo{bd3bb6c container=Task{902af0e #67530 type=standard A=10987:com.retro99.parrot} flags=0x0}
+10-10 22:46:37.903  1559  1662 D ChangeTransitionController:    ChangeInfo{dc9e535 container=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530 f} isExiting} flags=0x0}
+10-10 22:46:37.904  1559  1662 V WindowManager: Start calculating TransitionInfo based on participants: {Task{2cfbdbf #67445 type=home I=bitpit.launcher/.ui.HomeActivity}, WallpaperWindowToken{855de10 showWhenLocked=false}_<system>, Task{902af0e #67530 type=standard A=10987:com.retro99.parrot}, ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530 f} isExiting}, ActivityRecord{211998686 u0 bitpit.launcher/.ui.HomeActivity t67445}, Task{efe2c8c #67444 type=home}}
+10-10 22:46:37.904  1559  1662 V WindowManager:   Final targets: [ChangeInfo{516fb3b container=Task{efe2c8c #67444 type=home} flags=0x30}, ChangeInfo{bd3bb6c container=Task{902af0e #67530 type=standard A=10987:com.retro99.parrot} flags=0x0}, ChangeInfo{5153be container=WallpaperWindowToken{855de10 showWhenLocked=false}_<system> flags=0x0}]
+10-10 22:46:37.905  1559  1662 V WindowManager:         {WCT{RemoteToken{e14c71b Task{902af0e #67530 type=standard A=10987:com.retro99.parrot}}} m=CLOSE f=NONE leash=Surface(name=Task=67530#18195)/@0xb3afd59 sb=Rect(0, 0 - 1080, 2340) eb=Rect(0, 0 - 1080, 2340) epz=Point(1080, 2340) d=0 taskParent=-1 winMode=1 userId=0 inset=Rect(0, 0 - 0, 0) dim=true},
+10-10 22:46:37.920  1559  1658 V WindowManager:         {WCT{RemoteToken{e14c71b Task{902af0e #67530 type=standard A=10987:com.retro99.parrot}}} m=CLOSE f=NONE leash=Surface(name=Task=67530#18195)/@0xb3afd59 sb=Rect(0, 0 - 1080, 2340) eb=Rect(0, 0 - 1080, 2340) epz=Point(1080, 2340) d=0 taskParent=-1 winMode=1 userId=0 inset=Rect(0, 0 - 0, 0) dim=true},
+10-10 22:46:38.428  1559  6132 V WindowManager:    ChangeInfo{bd3bb6c container=Task{902af0e #67530 type=standard A=10987:com.retro99.parrot} flags=0x0}
+10-10 22:46:38.428  1559  6132 V WindowManager:    ChangeInfo{dc9e535 container=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530 f} isExiting} flags=0x0}
+10-10 22:46:38.429  1559  6132 V WindowManager: Setting visibility of Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity EXITING}: false, caller=com.android.server.wm.WindowContainer.sendAppVisibilityToClients:19 com.android.server.wm.WindowToken.setClientVisible:91 com.android.server.wm.ActivityRecord.commitVisibility:186 com.android.server.wm.TransitionController.finishTransition:989 com.android.server.wm.WindowOrganizerController.finishTransitionInner:34 
+10-10 22:46:38.430  1559  6132 W WindowManager: Exception thrown during dispatchAppVisibility Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity EXITING}
+10-10 22:46:38.431  1559  6132 D PersonaActivityHelper: token.toString()  Token{6204f3c ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t67530 f} isExiting}}
+10-10 22:46:38.431  1559  6132 V WindowManager: Remove Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity EXITING}: mSurfaceControl=Surface(name=com.retro99.parrot/com.retro99.parrot.android.MainActivity$_23436#18204)/@0x2031312 mAnimatingExit=true mRemoveOnExit=true mHasSurface=true surfaceShowing=true animating=false app-animation=false callers=com.android.server.wm.WindowToken.removeAllWindowsIfPossible:45 com.android.server.wm.WindowToken.removeIfPossible:16 com.android.server.wm.WindowToken.handleCompleteDeferredRemoval:5 com.android.server.wm.WindowContainer.handleCompleteDeferredRemoval:21 com.android.server.wm.TaskFragment.handleCompleteDeferredRemoval:17 com.android.server.wm.WindowContainer.handleCompleteDeferredRemoval:21 
+10-10 22:46:38.432  1559  6132 V WindowManager: Remove Window{36be29e u0 com.retro99.parrot/com.retro99.parrot.android.MainActivity EXITING}: mSurfaceControl=Surface(name=com.retro99.parrot/com.retro99.parrot.android.MainActivity$_23436#18204)/@0x2031312 mAnimatingExit=true mRemoveOnExit=true mHasSurface=true surfaceShowing=true animating=false app-animation=false callers=com.android.server.wm.WindowToken.removeAllWindowsIfPossible:45 com.android.server.wm.WindowToken.removeIfPossible:16 com.android.server.wm.ActivityRecord.onRemovedFromDisplay:365 com.android.server.wm.ActivityRecord.removeImmediately:46 com.android.server.wm.WindowToken.removeIfPossible:19 com.android.server.wm.WindowToken.handleCompleteDeferredRemoval:5 
+10-10 22:46:38.435  1559  6132 D ChangeTransitionController:    ChangeInfo{bd3bb6c container=Task{902af0e #67530 type=standard A=10987:com.retro99.parrot} flags=0x0}
+10-10 22:46:38.435  1559  6132 D ChangeTransitionController:    ChangeInfo{dc9e535 container=ActivityRecord{164153043 u0 com.retro99.parrot/.android.MainActivity t-1 f}} flags=0x0}
+10-10 22:46:45.352 18903 18903 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:45.354 18903 18903 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:45.354 18903 18903 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:47.672 23884 23884 I Finsky  : [2] VerifyApps: Install-time verification requested for package com.retro99.parrot, PackageManager id = 128, Verifier id = d5694589-b912-4d41-b82d-69fa6a3dab63
+10-10 22:46:47.675 22694 22721 I GOS:GameServiceReceiver:  PkgInstallStarted for com.retro99.parrot UserID : 0
+10-10 22:46:47.691 23884 23913 I Finsky  : [102] VerifyApps: [ADV] Starting verification task for com.retro99.parrot (id=128)
+10-10 22:46:47.693 23884 23913 I Finsky  : [102] VerifyApps: [ADV] Calling Verifier app on Forced Backport mode for com.retro99.parrot
+10-10 22:46:47.742 22694 25288 I GOS:GameIntentService: onPackageChanged(). extras: Bundle[{changeType=2, userId=0, type=15, packageName=com.retro99.parrot}]
+10-10 22:46:47.742 22694 25288 I GOS:GameIntentService: onPackageChanged(). changeType(INSTALL_STARTED), pkgName(com.retro99.parrot), UserHandle(0), userId(0), Installed(true)
+10-10 22:46:47.743 22694 25288 W GOS:SystemEventReactor: onPackageInstallStarted(). the pkg data already exists. packageName: com.retro99.parrot
+10-10 22:46:47.844 23884 23917 I Finsky  : [106] VerifyApps: [ADV] Calling Verifier app on Forced Backport mode for com.retro99.parrot
+10-10 22:46:47.844 23884 23917 I Finsky  : [106] VerifyApps: [ADV] Call Strategy for com.retro99.parrot (id=128): CALL_VERIFIER_APP_ON_FORCED_BACKPORT
+10-10 22:46:47.844 23884 23917 I Finsky  : [106] VerifyApps: [ADV] Calling Verifier app for com.retro99.parrot (id=128)
+10-10 22:46:47.893 22725 22751 I VerificationCheck: Verifying com.retro99.parrot (id: 580ff8443173da709506de6902c6946c)
+10-10 22:46:47.934 22725 22754 I VerificationCheck: Verification finished for com.retro99.parrot. Result: Pass(reason=SHELL_INSTALL, message=null)
+10-10 22:46:47.938 23884 23911 I Finsky  : [100] VerifyApps: [ADV] Verifier app returned response for com.retro99.parrot (id=128): verdict=1, reason=2
+10-10 22:46:47.938 23884 23911 I Finsky  : [100] VerifyApps: [ADV] Scan finished for com.retro99.parrot (id=128) with verdict 0
+10-10 22:46:47.939 23884 23911 I Finsky  : [100] VerifyApps: [ADV] Enforcing policy 0 for com.retro99.parrot. Scan verdict: 0
+10-10 22:46:47.939 23884 23911 I Finsky  : [100] VerifyApps: [ADV] Enforced verdict for com.retro99.parrot: VERIFICATION_ALLOW
+10-10 22:46:47.939 23884 23911 I Finsky  : [100] VerifyApps: [ADV] Policy enforced for com.retro99.parrot (id=128). Verdict: VERIFICATION_ALLOW
+10-10 22:46:47.940 23884 25289 I Finsky  : [303] VerifyApps: Anti-malware verification task started for package=com.retro99.parrot
+10-10 22:46:48.015 23884 25289 I Finsky  : [303] VerifyApps: chooseScanResult for package=com.retro99.parrot with timeout=15000ms
+10-10 22:46:48.016 23884 23911 I Finsky  : [100] VerifyApps: Starting APK Analysis scan for com.retro99.parrot.
+10-10 22:46:48.017 23884 23911 I Finsky  : [100] Scanning package com.retro99.parrot contents with client side protections. File: [J3jhP4DQb3X0S3XtcKkH7CMecK-n1k2mpLMPZMr0YHg]
+10-10 22:46:48.017 23884 23911 I Finsky  : [100] VerifyApps: APK Analysis scan finished for com.retro99.parrot. Verdict: 0
+10-10 22:46:48.018 23884 25289 I Finsky  : [303] VerifyApps: firstScanResult for package=com.retro99.parrot: 0
+10-10 22:46:48.202 23884 25290 I Finsky  : [304] VerifyApps: Verification package=com.retro99.parrot, id=128, response=0, upload_requested=false, enable_ecm=false
+10-10 22:46:48.202 23884 25290 I Finsky  : [304] VerifyApps: PAM result saving to datastore delayed for package: com.retro99.parrot
+10-10 22:46:48.202 23884 25289 I Finsky  : [303] VerifyApps: overallScanResult for package=com.retro99.parrot: 0
+10-10 22:46:48.202 23884 25289 I Finsky  : [303] VerifyApps: chooseScanResult returning verdict 0 for package=com.retro99.parrot
+10-10 22:46:48.207  1559  2216 I PackageManager:           pkg{com.retro99.parrot}
+10-10 22:46:48.207 23884 23884 I Finsky  : [2] VerifyApps: Install-time verification complete: id=128, package_name=com.retro99.parrot
+10-10 22:46:48.221  1559  1899 I PackageManager: Update package com.retro99.parrot code path from /data/app/~~FcqyhBONZ60taxaD-ZuTAA==/com.retro99.parrot-d9cyt9DMItxSfL1bYcNW_Q== to /data/app/vmdl1979105214.tmp; Retain data and using new
+10-10 22:46:48.221  1559  1899 D PersonaServiceHelper: in trim for persona 150 setting false PackageSetting{81121ce com.retro99.parrot/10987} com.retro99.parrot
+10-10 22:46:48.224  1559  1899 D SpqrService: Package is debuggable com.retro99.parrot
+10-10 22:46:48.245  1559  1899 I AppsFilter: interaction: PackageSetting{daa1188 com.retro99.parrot.fixtures/10988} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.245  1559  1899 I AppsFilter: interaction: PackageSetting{690ec2a ai.devrev.mobile/10986} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.245  1559  1899 I AppsFilter: interaction: PackageSetting{d17be73 ai.devrev.mobile.staging/10984} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.245  1559  1899 I AppsFilter: interaction: PackageSetting{79a83e8 ai.devrev.arcade.demo/10960} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.245  1559  1899 I AppsFilter: interaction: PackageSetting{1a381ed ai.devrev.mobile.dev/10991} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.245  1559  1899 I AppsFilter: interaction: PackageSetting{462970c com.ai.bardly/10725} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.245  1559  1899 I AppsFilter: interaction: PackageSetting{9bb85a8 org.retro99.storyteller/10911} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.245  1559  1899 I AppsFilter: interaction: PackageSetting{daa1188 com.retro99.parrot.fixtures/10988} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.245  1559  1899 I AppsFilter: interaction: PackageSetting{690ec2a ai.devrev.mobile/10986} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.245  1559  1899 I AppsFilter: interaction: PackageSetting{d17be73 ai.devrev.mobile.staging/10984} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.245  1559  1899 I AppsFilter: interaction: PackageSetting{79a83e8 ai.devrev.arcade.demo/10960} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.245  1559  1899 I AppsFilter: interaction: PackageSetting{1a381ed ai.devrev.mobile.dev/10991} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{462970c com.ai.bardly/10725} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{9bb85a8 org.retro99.storyteller/10911} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{daa1188 com.retro99.parrot.fixtures/10988} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{690ec2a ai.devrev.mobile/10986} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{d17be73 ai.devrev.mobile.staging/10984} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{79a83e8 ai.devrev.arcade.demo/10960} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{1a381ed ai.devrev.mobile.dev/10991} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{462970c com.ai.bardly/10725} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{9bb85a8 org.retro99.storyteller/10911} -> PackageSetting{49e8a05 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{daa1188 com.retro99.parrot.fixtures/10988} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{690ec2a ai.devrev.mobile/10986} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{d17be73 ai.devrev.mobile.staging/10984} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{79a83e8 ai.devrev.arcade.demo/10960} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{1a381ed ai.devrev.mobile.dev/10991} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{462970c com.ai.bardly/10725} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{9bb85a8 org.retro99.storyteller/10911} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{daa1188 com.retro99.parrot.fixtures/10988} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{690ec2a ai.devrev.mobile/10986} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{d17be73 ai.devrev.mobile.staging/10984} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{79a83e8 ai.devrev.arcade.demo/10960} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{1a381ed ai.devrev.mobile.dev/10991} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{462970c com.ai.bardly/10725} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{9bb85a8 org.retro99.storyteller/10911} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{daa1188 com.retro99.parrot.fixtures/10988} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.246  1559  1899 I AppsFilter: interaction: PackageSetting{690ec2a ai.devrev.mobile/10986} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.247  1559  1899 I AppsFilter: interaction: PackageSetting{d17be73 ai.devrev.mobile.staging/10984} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.247  1559  1899 I AppsFilter: interaction: PackageSetting{79a83e8 ai.devrev.arcade.demo/10960} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.247  1559  1899 I AppsFilter: interaction: PackageSetting{1a381ed ai.devrev.mobile.dev/10991} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.247  1559  1899 I AppsFilter: interaction: PackageSetting{462970c com.ai.bardly/10725} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.247  1559  1899 I AppsFilter: interaction: PackageSetting{9bb85a8 org.retro99.storyteller/10911} -> PackageSetting{b89fb44 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.279  1559  1899 D PermissionService: setAllowlistedRestrictedPermissionsUnchecked called for package - com.retro99.parrot
+10-10 22:46:48.279  1559  1899 D PermissionService: updateAdminPermissionsInternalcom.retro99.parrot
+10-10 22:46:48.279  1559  1899 D PermissionService: setAllowlistedRestrictedPermissionsUnchecked called for package - com.retro99.parrot
+10-10 22:46:48.279  1559  1899 D PermissionService: updateAdminPermissionsInternalcom.retro99.parrot
+10-10 22:46:48.280  1559  1899 D PermissionService: setAllowlistedRestrictedPermissionsUnchecked called for package - com.retro99.parrot
+10-10 22:46:48.280  1559  1899 D PermissionService: updateAdminPermissionsInternalcom.retro99.parrot
+10-10 22:46:48.328  1559  1677 I ActivityManager: Force stopping com.retro99.parrot appid=10987 user=-1: installPackageLI
+10-10 22:46:48.336  1559  1899 I PackageManager: installation completed for package:com.retro99.parrot. Final code path: /data/app/~~nqV-FgSSxtBo1t7ShXBUmg==/com.retro99.parrot-GYK2eoVX0zTNr3U5odSrfw==
+10-10 22:46:48.339  1559  1899 I AppsFilter: interaction: PackageSetting{1677d08 com.retro99.parrot.fixtures/10988} -> PackageSetting{f1aba12 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.339  1559  1899 I AppsFilter: interaction: PackageSetting{37b61b4 ai.devrev.arcade.demo/10960} -> PackageSetting{f1aba12 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.339  1559  1899 I AppsFilter: interaction: PackageSetting{6257152 com.ai.bardly/10725} -> PackageSetting{f1aba12 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.339  1559  1899 I AppsFilter: interaction: PackageSetting{de46c23 org.retro99.storyteller/10911} -> PackageSetting{f1aba12 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.339  1559  1899 I AppsFilter: interaction: PackageSetting{1677d08 com.retro99.parrot.fixtures/10988} -> PackageSetting{f1aba12 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.339  1559  1899 I AppsFilter: interaction: PackageSetting{37b61b4 ai.devrev.arcade.demo/10960} -> PackageSetting{f1aba12 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.339  1559  1899 I AppsFilter: interaction: PackageSetting{6257152 com.ai.bardly/10725} -> PackageSetting{f1aba12 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.340  1559  1899 I AppsFilter: interaction: PackageSetting{de46c23 org.retro99.storyteller/10911} -> PackageSetting{f1aba12 com.retro99.parrot/10987} BLOCKED
+10-10 22:46:48.342  1559  1899 I PackageManager: 0001/{caller=null, ver=21, pkg=com.retro99.parrot}
+10-10 22:46:48.348  1559  1899 I ActivityManager: Force stopping com.retro99.parrot appid=10987 user=0: pkg removed
+10-10 22:46:48.366  1559  2230 D OverlayManager: reconcileSettingsForPackage pkgName=com.retro99.parrot userId=10
+10-10 22:46:48.366  1559  2230 I OverlayManager: updateOverlaysForTarget() called with: targetPackage = [com.retro99.parrot], userId = [10], flags = [2]
+10-10 22:46:48.366  1559  2230 D OverlayManager: reconcileSettingsForPackage pkgName=com.retro99.parrot userId=0
+10-10 22:46:48.366  1559  2230 I OverlayManager: updateOverlaysForTarget() called with: targetPackage = [com.retro99.parrot], userId = [0], flags = [2]
+10-10 22:46:48.384  1559  1676 D MetaDataCollector: onReceive: done pkgName=com.retro99.parrot
+10-10 22:46:48.404  3511  3511 I VvmPkgInstalledRcvr: packageName: com.retro99.parrot, systemDialer: com.samsung.android.dialer
+10-10 22:46:48.411  3194  3194 D Navbar.Store: handleEvent(0) OnPackageRemoved(packageName=com.retro99.parrot) [Module] NavBarStoreImpl
+10-10 22:46:48.411  3511  3511 W VvmPkgInstalledRcvr: carrierVvmPkgAdded: carrier vvm packages doesn't contain com.retro99.parrot
+10-10 22:46:48.412  3194  3194 I GoodLockLifecycle: onPackageRemoved: com.retro99.parrot
+10-10 22:46:48.412  3194  3194 I LockStarSupportLifecycle: onPackageRemoved: com.retro99.parrot
+10-10 22:46:48.415  1559  2999 I AppWidgetServiceImpl: Received broadcast: android.intent.action.PACKAGE_ADDED, Updates all providers with com.retro99.parrot, userId: 0
+10-10 22:46:48.415  1559  3018 D ShortcutService: replacing package: com.retro99.parrot userId=0
+10-10 22:46:48.416  3194  3302 D BluetoothEventManager: AppPackageChangedHandler: package name = com.retro99.parrot
+10-10 22:46:48.416  1559  3091 I SdkSandboxManager: No SDKs used. Skipping SDK data reconcilation for CallingInfo{mUid=10987, mPackageName='com.retro99.parrot, mAppProcessToken='null'}
+10-10 22:46:48.416  1559  1676 D LauncherAppsService: Calling onPackageRemoved: com.retro99.parrot, EXTRA_REPLACING: true
+10-10 22:46:48.417  3511  3916 I SatelliteAppTracker: onPackageUpdateFinished : com.retro99.parrot
+10-10 22:46:48.417  3511  3916 I SatelliteAppTracker: onPackageModified : com.retro99.parrot
+10-10 22:46:48.418  3511  3916 E SatelliteAppTracker: packageName: com.retro99.parrot, value: null
+10-10 22:46:48.419  3511  3916 E SatelliteAppTracker: packageName: com.retro99.parrot, value: null
+10-10 22:46:48.419  3511  3916 E SatelliteAppTracker: packageName: com.retro99.parrot, value: null
+10-10 22:46:48.420  3511  3916 E SatelliteAppTracker: packageName: com.retro99.parrot, value: null
+10-10 22:46:48.420  3511  3916 E SatelliteAppTracker: packageName: com.retro99.parrot, value: null
+10-10 22:46:48.420  3511  3916 E SatelliteAppTracker: packageName: com.retro99.parrot, value: null
+10-10 22:46:48.424  3194  3194 D SecSTQuickControlRequestReceiver: onReceiveForPackage action = android.intent.action.PACKAGE_REMOVED, pkgName = com.retro99.parrot
+10-10 22:46:48.424  3194  3194 I GoodLockLifecycle: onPackageAdded: com.retro99.parrot
+10-10 22:46:48.424  3194  3194 I LockStarSupportLifecycle: onPackageAdded: com.retro99.parrot
+10-10 22:46:48.425 29585 29585 W MediaProvider: WorkProfileOwnerApps cache miss for package com.retro99.parrot
+10-10 22:46:48.427  3917  3996 I PackageInfoManager_FLP: action : ACTION_PACKAGE_REMOVED, packageName = com.retro99.parrot
+10-10 22:46:48.428  3917  3996 I PackageInfoManager_FLP: action : ACTION_PACKAGE_ADDED, packageName = com.retro99.parrot
+10-10 22:46:48.430  9349 25302 I NearbySharing: Got package event: PackageRemoved(packageName=com.retro99.parrot)
+10-10 22:46:48.431  9349 25301 I NearbySharing: Got package event: PackageAdded(packageName=com.retro99.parrot)
+10-10 22:46:48.434  1559  1559 I DomainFilter: packageRemoved() - packageName: com.retro99.parrot uid: 0
+10-10 22:46:48.434  3511  3511 D CarrierSvcBindHelper: onPackageUpdateFinished: com.retro99.parrot
+10-10 22:46:48.434  3511  3511 D CarrierSvcBindHelper: onPackageModified: com.retro99.parrot
+10-10 22:46:48.435  3511  3511 I VvmPkgInstalledRcvr: packageName: com.retro99.parrot, systemDialer: com.samsung.android.dialer
+10-10 22:46:48.435  3511  4106 D ImsResolver: maybeAddedImsService, packageName: com.retro99.parrot
+10-10 22:46:48.435  3511  4106 V ImsResolver: searchForImsServices: package=com.retro99.parrot, users=[UserHandle{0}]
+10-10 22:46:48.438  1559  1559 I Telecom : CarModeTracker: Package com.retro99.parrot is not tracked.: SSH.oR@5cI
+10-10 22:46:48.439  1559  2966 D LocationManagerService: package com.retro99.parrot reset
+10-10 22:46:48.439  1559  3181 I Pageboost: remove app @ runtime : com.retro99.parrot
+10-10 22:46:48.440 11716 11716 D BluetoothEventManager: AppPackageChangedHandler: package name = com.retro99.parrot
+10-10 22:46:48.441  1559  1559 D AS.AudioService: received android.intent.action.PACKAGE_ADDED replacing: true archival: false for package com.retro99.parrot with uid 10987
+10-10 22:46:48.441  3511  4106 V ImsResolver: searchForImsServices: package=com.retro99.parrot, users=[UserHandle{0}]
+10-10 22:46:48.441  1559  1559 I DomainFilter: packageAdded() - packageName: com.retro99.parrot, uid: 0
+10-10 22:46:48.442  1559  1559 D DualDARComnService: reConnectAgentsByPkgName:: package: com.retro99.parrot
+10-10 22:46:48.443 23884 23884 I Finsky  : [2] AIM: AppInfoCacheUpdater -> invalidating apps: [com.retro99.parrot]
+10-10 22:46:48.445  3511  3511 W VvmPkgInstalledRcvr: carrierVvmPkgAdded: carrier vvm packages doesn't contain com.retro99.parrot
+10-10 22:46:48.445 22808 22808 I FILP/PackageIntentReceiver: pkgName : com.retro99.parrot
+10-10 22:46:48.446  1559  1559 I Telecom : SamsungOpenCommunicationPlatformPolicyPackageBroadcastReceiver : action : android.intent.action.PACKAGE_ADDED / packageName : com.retro99.parrot
+10-10 22:46:48.446 23884 23917 I Finsky  : [106] AIM: AppInfoManager-Perf > OnDeviceAppInfo > cacheHitCount=0, cacheMissCount=1. Missed  in cache (limit 10) : [com.retro99.parrot]
+10-10 22:46:48.449  1559  3728 I Telecom : SamsungOpenCommunicationPlatformPolicyPackageHandler : handleMessage : { when=-2ms what=0 obj=com.retro99.parrot target=com.samsung.server.telecom.advancedcall.ocp.policy.broadcast.SamsungOpenCommunicationPlatformPolicyPackageHandler async=false heapIndex=-1 }.what
+10-10 22:46:48.453  1559  1559 W AlarmManager: Package com.retro99.parrot, uid 10987 lost permission to set exact alarms!
+10-10 22:46:48.454  1559  1559 D ApplicationPolicy: No updatable permission to DENY found for com.retro99.parrot(0)
+10-10 22:46:48.455  1559  1559 D ApplicationPolicy: No updatable permission to GRANT found for com.retro99.parrot(0)
+10-10 22:46:48.455  1559  3181 I Pageboost: appinfo : com.retro99.parrot 0 0 0 0
+10-10 22:46:48.455  1559  3181 I Pageboost: Reset this app info : com.retro99.parrot 
+10-10 22:46:48.464  1559  3181 I Pageboost: add app to global @ runtime: com.retro99.parrot
+10-10 22:46:48.467  1559  2230 D OverlayManager: reconcileSettingsForPackage pkgName=com.retro99.parrot userId=0
+10-10 22:46:48.467  1559  2230 I OverlayManager: updateOverlaysForTarget() called with: targetPackage = [com.retro99.parrot], userId = [0], flags = [0]
+10-10 22:46:48.467  1559  2230 D OverlayManager: reconcileSettingsForPackage pkgName=com.retro99.parrot userId=10
+10-10 22:46:48.467  1559  2230 I OverlayManager: updateOverlaysForTarget() called with: targetPackage = [com.retro99.parrot], userId = [10], flags = [0]
+10-10 22:46:48.468  1559  2332 W PackageConfigPersister: App-specific configuration not found for packageName: com.retro99.parrot and userId: 0
+10-10 22:46:48.468  1559  2332 W PackageConfigPersister: App-specific configuration not found for packageName: com.retro99.parrot and userId: 10
+10-10 22:46:48.469  1559  2268 D SEP_UNION_SemDeviceInfoManagerService: Package com.retro99.parrot is removed on User 0 
+10-10 22:46:48.469 22808 25318 I FILP/FilterInstaller: removeFromFS : com.retro99.parrot, cursor size : 0
+10-10 22:46:48.472 23884 25311 I Finsky  : [311] Asset module broadcast after update successful for package com.retro99.parrot.
+10-10 22:46:48.478 16093 16093 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.478 11716 11716 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.478 17181 17181 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.478 22816 22816 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.478 22725 22725 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.478 29585 29585 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.479 29620 29620 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.479 22532 22532 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.479 22406 22406 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.479 18903 18903 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.479 14187 14187 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.480 26837 26837 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.480 32765 32765 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.480  4732  4732 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.480  4238  4238 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.480  5917  5917 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.480 22941 22941 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.481 10944 10944 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.481 17570 17570 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.481 19441 19441 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.481 22321 22321 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.481  3850  3850 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.481 31490 31490 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.481 10680 10680 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.481 32346 32346 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.482  3469  3469 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.482  3511  3511 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.483 22110 22110 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.483  3902  3902 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.483  1559  1559 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.483 16717 16717 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.483  3393  3393 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.484  3194  3194 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.484  3457  3457 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.486  1559  3091 I SdkSandboxManager: No SDKs used. Skipping SDK data reconcilation for CallingInfo{mUid=10987, mPackageName='com.retro99.parrot, mAppProcessToken='null'}
+10-10 22:46:48.486  1559  1559 D AS.AudioService: received android.intent.action.PACKAGE_REPLACED replacing: true archival: false for package com.retro99.parrot with uid 10987
+10-10 22:46:48.486  1559  1559 I DomainFilter: packageReplaced() - packageName: com.retro99.parrot oldUid: 10987 newUid:10987
+10-10 22:46:48.487  3194  3194 D SecSTQuickControlRequestReceiver: onReceiveForPackage action = android.intent.action.PACKAGE_REPLACED, pkgName = com.retro99.parrot
+10-10 22:46:48.488 23884 23884 I Finsky  : [2] AIM: AppInfoCacheUpdater -> invalidating apps: [com.retro99.parrot]
+10-10 22:46:48.489 23884 23912 I Finsky  : [101] AIM: AppInfoManager-Perf > OnDeviceAppInfo > cacheHitCount=0, cacheMissCount=1. Missed  in cache (limit 10) : [com.retro99.parrot]
+10-10 22:46:48.489 23884 23884 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.494  3511  3511 D SatelliteController: packageStateChanged: package:com.retro99.parrot defaultSmsPackageName: com.google.android.apps.messaging satelliteGatewayServicePackageName: 
+10-10 22:46:48.495 16093 16093 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.495 11716 11716 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.495 10944 10944 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.495 16717 16717 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.496 22816 22816 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.496 17181 17181 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.496 22725 22725 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.496 18903 18903 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.496 29620 29620 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.496 29585 29585 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.496 26837 26837 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.497 22406 22406 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.497 22532 22532 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.497 32765 32765 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.497 19441 19441 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.497  4732  4732 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.498 17570 17570 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.498 22321 22321 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.498  4238  4238 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.498 32346 32346 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.498 10680 10680 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.498  3902  3902 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.498  3469  3469 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.498  1559  1559 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.499  5917  5917 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.499 14187 14187 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.499 22110 22110 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.499  3194  3194 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.499  3393  3393 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.499 31490 31490 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.499  3850  3850 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.499  3511  3511 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.499  3457  3457 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.500 16093 16093 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.500 10944 10944 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.501 11716 11716 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.501 16717 16717 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.501 17181 17181 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.501 29585 29585 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.501 22816 22816 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.501 29620 29620 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.502 22725 22725 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.502 26837 26837 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.502 22532 22532 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.502  3850  3850 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.502 18903 18903 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.502 22406 22406 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.502 10680 10680 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.503 32765 32765 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.503  4732  4732 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.503 14187 14187 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.503 19441 19441 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.503  5917  5917 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.503 22110 22110 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.503 22321 22321 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.504  4238  4238 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.504 31490 31490 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.504 17570 17570 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.505  1559  1559 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.505 32346 32346 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.505  3457  3457 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.505  3393  3393 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.505  3469  3469 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.505  3902  3902 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.505  3511  3511 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.505  3194  3194 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.506  1559  1899 W ActivityManager: Skipping broadcast of Intent { act=android.intent.action.MY_PACKAGE_REPLACED flg=0x4000010 pkg=com.retro99.parrot (has extras) }: user 10 and its parent (if any) are stopped
+10-10 22:46:48.516 22817 22817 I Routine@Core[5.0.03.22]: PackageChangedHandler: collectMetadata packageName - com.retro99.parrot
+10-10 22:46:48.517 23884 23884 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.517 22817 22817 I Routine@Core[5.0.03.22]: MetadataLoaderImpl: scheduleCollectPackageJob - packageName:com.retro99.parrot
+10-10 22:46:48.517 23884 23884 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.519 22817 22817 I Routine@Core[5.0.03.22]: MetadataSyncBacklog: add: null + com.retro99.parrot
+10-10 22:46:48.524 22808 22808 I FILP/PackageIntentReceiver: pkgName : com.retro99.parrot
+10-10 22:46:48.530  9349  9349 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.534  9349  9349 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.534  9349  9349 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.539  9349 25301 I NearbySharing: Got package event: PackageReplaced(packageName=com.retro99.parrot)
+10-10 22:46:48.542 22836 22836 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.542  9349 25324 I ProximityAuth: [RecentAppsMediator] Package added: (user=UserHandle{0}) com.retro99.parrot
+10-10 22:46:48.543 22817 22817 I Routine@Core[5.0.03.22]: MetadataLoaderJobService: JOB_ID_COLLECT_PACKAGE, com.retro99.parrot
+10-10 22:46:48.546 22836 22836 I SafetyLabelChangedBroadcastReceiver: received broadcast packageName: com.retro99.parrot, current user: UserHandle{0}, packageChangeEvent: UPDATE, intent user: UserHandle{0}
+10-10 22:46:48.546 22836 22836 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.546 22836 22836 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.547 22808 25318 I FILP/FilterInstaller: Delete all filter DB result : com.retro99.parrot, 0
+10-10 22:46:48.548 22808 25318 I FILP/FilterInstaller: Delete filter DB result : com.retro99.parrot, 0
+10-10 22:46:48.548 22808 25318 I FILP/FilterInstaller: Delete my filter DB result : com.retro99.parrot, 0
+10-10 22:46:48.555 29373 29373 I ContentBlock.Receiver: handleAction action: android.intent.action.PACKAGE_REPLACED, packageName: com.retro99.parrot
+10-10 22:46:48.560 22817 23073 I Routine@Core[5.0.03.22]: PackageMetadataLoadManager: collect: com.retro99.parrot
+10-10 22:46:48.562 22808 25318 I FILP/FilterInstaller: uninstallFilters mPackageName: com.retro99.parrot
+10-10 22:46:48.564 22817 23073 I Routine@Core[5.0.03.22]: PackageMetadataLoadManager: collectWithCollectors - Collect Start! package = com.retro99.parrot
+10-10 22:46:48.571 22941 22941 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.572 22941 22941 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.580 22941 23020 I Finsky:background: [97] IQ:PSL: skipping onPackageRemoved(replacing=true) for untracked package=com.retro99.parrot
+10-10 22:46:48.621  9349 25349 W SQLiteLog: (28) double-quoted string literal: "com.retro99.parrot"
+10-10 22:46:48.728 10194 10194 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.728 10194 10194 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.728 10194 10194 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:46:48.858 22694 25376 I GOS:GameIntentService: onHandleIntent. GameIntentService. type: 15, pkgName: com.retro99.parrot
+10-10 22:46:48.871 19416 19416 W NeoBean_AomManager: onReceive() packageName : com.retro99.parrot
+10-10 22:46:48.872 19416 19416 W NeoBean_AomManager: onReceive() packageName : com.retro99.parrot
+10-10 22:46:48.872 19416 19416 W NeoBean_AomManager: onReceive() packageName : com.retro99.parrot
+10-10 22:46:48.873 22966 22966 I Notification4WatchManager_AM: NotificationPackageReceiver.onReceive-action: android.intent.action.PACKAGE_REMOVED, userId: 0, packageName: com.retro99.parrot
+10-10 22:46:48.873 22966 22966 W Notification4WatchManager_AM: NotificationPackageReceiver.onReceive-com.retro99.parrot is updating now.
+10-10 22:46:48.874 22966 22966 I Notification4WatchManager_AM: NotificationPackageReceiver.onReceive-action: android.intent.action.PACKAGE_ADDED, userId: 0, packageName: com.retro99.parrot
+10-10 22:46:48.927 22694 25376 I GOS:GameIntentService: onPackageChanged(). extras: Bundle[{changeType=0, manifestCategory=-1, userId=0, pkgName=com.retro99.parrot, type=15, packageName=com.retro99.parrot, categoryOverride=-1}]
+10-10 22:46:48.927 22694 25376 I GOS:GameIntentService: onPackageChanged(). changeType(INSTALLED), pkgName(com.retro99.parrot), UserHandle(0), userId(0), Installed(true)
+10-10 22:46:48.927 22694 25376 I GOS:GameIntentService: onPkgInstalled(), appInfoCategory: null, packageName: com.retro99.parrot
+10-10 22:46:48.930 22694 25376 I GOS:FilteredPmAppCategoryGetter: getCategoryCode(). categoryCode:undefined, packageName:com.retro99.parrot
+10-10 22:46:48.930 22694 25376 I GOS:SystemEventReactor: onPackageInstalled(). categoryByAppInfo=undefined, packageName=com.retro99.parrot
+10-10 22:46:48.993  1559  1676 D MetaDataCollector: onReceive: done pkgName=com.retro99.parrot
+10-10 22:46:48.994  1559  1676 I AdaptiveAppByDefaultLogger: sendSaBroadcast update:com.retro99.parrot;36;Unspecified;True;False;False
+10-10 22:46:48.995 16093 16108 D LauncherApps: onPackageChanged 0,com.retro99.parrot
+10-10 22:46:48.995  1559  1676 D LauncherApps: onPackageChanged 0,com.retro99.parrot
+10-10 22:46:48.995  3194 29764 D LauncherApps: onPackageChanged 0,com.retro99.parrot
+10-10 22:46:48.995  3676  3676 I HoneySpace.PackageOperationTracker: onPackageChanged - com.retro99.parrot UserHandle{0}
+10-10 22:46:48.995 29620 18332 D LauncherApps: onPackageChanged 0,com.retro99.parrot
+10-10 22:46:48.998  1559  1676 D EnterpriseDeviceManagerService: onPackageUpdateFinished - packageName: com.retro99.parrot, uid: 10987
+10-10 22:46:48.998  1559  3895 I AppWidgetServiceImpl: getInstalledProvidersForProfiles lock in com.retro99.parrot
+10-10 22:46:48.998  3676  8098 I HoneySpace.IconCache: updateSpecificIconCacheAndDB : com.retro99.parrot UserHandle{0}
+10-10 22:46:48.998  3676  8098 I HoneySpace.IconCache: remove icon cache & DB : com.retro99.parrot UserHandle{0}
+10-10 22:46:48.999  3676  8098 I HoneySpace.IconCache: removeSpecificIconDb: com.retro99.parrot UserHandle{0}
+10-10 22:46:49.000  1559  1676 D EnterpriseDeviceManagerService: onPackageUpdateFinished - packageName: com.retro99.parrot, uid: 1010987
+10-10 22:46:49.000  1559  1676 D MetaDataCollector: onReceive: done pkgName=com.retro99.parrot
+10-10 22:46:49.003 22694 25381 I GOS:GameIntentService: onHandleIntent. GameIntentService. type: 15, pkgName: com.retro99.parrot
+10-10 22:46:49.018  3676  8098 I AppIconSolution: getThemeIconWithBG called with public API, pkg = com.retro99.parrot, mode = 48
+10-10 22:46:49.018  3676  8098 I AppIconSolution: return adaptive icon for com.retro99.parrot, isNight = true
+10-10 22:46:49.018  3676  8098 I LauncherActivityInfo: packageName: com.retro99.parrot, useThemeIcon: false, height: 576, width: 576, density: 640
+10-10 22:46:49.026  3676  8098 I HoneySpace.HoneySpacePackageSourceImpl: Package changed : com.retro99.parrot
+10-10 22:46:49.026  3676  3676 I HoneySpace.HoneySpaceManagerContainer: refreshHoneyPlugin, packageName: com.retro99.parrot
+10-10 22:46:49.026  3676  3676 I HoneySpace.AppsEdge.Panel.ViewModel: packageChanged : com.retro99.parrot
+10-10 22:46:49.027  3676 31605 I HoneySpace.IconCache: add icon DB: [com.retro99.parrot/.android.MainActivity#UserHandle{0}] - IconAndLabel(icon=android.graphics.Bitmap@431e101, label=Parrot) | false | 640 | false |true | -4175040
+10-10 22:46:49.074 22694 25381 I GOS:GameIntentService: onPackageChanged(). extras: Bundle[{changeType=8, manifestCategory=-1, userId=0, pkgName=com.retro99.parrot, type=15, packageName=com.retro99.parrot, categoryOverride=-1}]
+10-10 22:46:49.074 22694 25381 I GOS:GameIntentService: onPackageChanged(). changeType(REPLACED), pkgName(com.retro99.parrot), UserHandle(0), userId(0), Installed(true)
+10-10 22:46:49.224 22817 23073 I Routine@Core[5.0.03.22]: MetaUpdater: update: packageName=com.retro99.parrot, collectorType=UNKNOWN
+10-10 22:46:50.857 22817 22817 I Routine@Core[5.0.03.22]: MetadataLoaderJobService: metadataLoadingCompleted: collectPackageInBG - com.retro99.parrot
+10-10 22:48:03.372 14251 14251 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:48:03.374 14251 14251 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:48:03.374 14251 14251 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:48:03.383 14187 14187 D ForegroundServiceLauncher: Check if service HighAccuracyLocationService is running. Service running = false
+10-10 22:51:54.282 21780 21780 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:51:54.283 21780 21780 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:51:54.283 21780 21780 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:51:54.283 21780 21780 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:51:54.283 21780 21780 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:51:54.284 21780 21780 D ActivityThread: Package [com.retro99.parrot] reported as REPLACED, but missing application info. Assuming REMOVED.
+10-10 22:52:03.396 14187 14187 D ForegroundServiceLauncher: Check if service HighAccuracyLocationService is running. Service running = false
