@@ -67,7 +67,13 @@ internal class TtsAudioGeneratorCore(
     private val prepared: TtsPreparedStore? = null,
     private val encoder: TtsPreparedAudioEncoder? = null,
     private val ioContext: CoroutineContext = Dispatchers.IO,
+    @Suppress("UnusedPrivateProperty")
+    private val nanoTime: () -> Long = System::nanoTime,
 ) : TtsSentenceAudioSource {
+
+    /** As [prepareSentence], with the time generating and encoding took. */
+    suspend fun prepareSentenceMeasured(id: PreparedChapterId, text: String, voiceId: String?, rate: Float, pitch: Float): PreparedSentenceWork =
+        PreparedSentenceWork(prepareSentence(id, text, voiceId, rate, pitch))
 
     suspend fun prepareSentence(id: PreparedChapterId, text: String, voiceId: String?, rate: Float, pitch: Float): PreparedAudioEncoding {
         val store = prepared ?: return PreparedAudioEncoding.Failure

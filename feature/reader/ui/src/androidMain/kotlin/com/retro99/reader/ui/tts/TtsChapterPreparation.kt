@@ -20,7 +20,21 @@ internal data class TtsChapterPreparationInput(
 internal interface TtsPreparationSentenceSource {
     fun key(text: String, settings: PreparedVoiceSettings): String
     suspend fun prepare(id: PreparedChapterId, text: String, settings: PreparedVoiceSettings): PreparedAudioEncoding
+
+    /** As [prepare], saying how long generating and encoding took when this call did both. */
+    suspend fun prepareMeasured(
+        id: PreparedChapterId,
+        text: String,
+        settings: PreparedVoiceSettings,
+    ): PreparedSentenceWork = PreparedSentenceWork(prepare(id, text, settings))
 }
+
+/**
+ * One sentence's outcome. [workMs] is the time synthesis and encoding took, without any
+ * wait for the synthesis turn; null when nothing was generated (already prepared, copied
+ * from another chapter, or made from a cached WAV), which is no measure of this voice.
+ */
+internal data class PreparedSentenceWork(val encoding: PreparedAudioEncoding, val workMs: Long? = null)
 
 /** The prepared store, behind a seam a host test can fake. */
 internal interface TtsPreparationChapterStore {
@@ -43,6 +57,8 @@ internal class TtsChapterPreparationCore(
     private val analytics: TtsChapterPreparationAnalytics,
     private val usableBytes: () -> Long,
     private val now: () -> Long = System::currentTimeMillis,
+    @Suppress("UnusedPrivateProperty")
+    private val speed: TtsPreparationSpeedLog = TtsPreparationSpeedLog { _, _ -> },
 ) {
     private val mutableState = MutableStateFlow<TtsChapterPreparationState>(TtsChapterPreparationState.Idle)
     val state: StateFlow<TtsChapterPreparationState> = mutableState.asStateFlow()

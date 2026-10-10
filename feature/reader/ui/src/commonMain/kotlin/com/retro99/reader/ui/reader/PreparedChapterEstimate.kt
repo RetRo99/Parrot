@@ -29,6 +29,8 @@ internal fun preparedVoiceKind(voice: TtsVoice?): PreparedVoiceKind = when {
 data class PreparedChapterMeasured(
     val msPerSentence: Long? = null,
     val bytesPerSentence: Long? = null,
+    /** Synthesis and encoding time per character of text, from this device's own record. */
+    val msPerCharacter: Double? = null,
 )
 
 /**
@@ -61,6 +63,7 @@ internal fun preparedChapterEstimate(
     sentenceCount: Int?,
     voiceKind: PreparedVoiceKind,
     measured: PreparedChapterMeasured? = null,
+    @Suppress("UnusedParameter") characterCount: Int? = null,
 ): PreparedChapterEstimate? {
     if (sentenceCount == null || sentenceCount <= 0) return null
     val msPerSentence = measured?.msPerSentence?.takeIf { it > 0 }
