@@ -70,6 +70,9 @@ internal fun sanitizeAnalyticsParameters(parameters: Map<String, Any>): Map<Stri
             key in SAFE_LONG_KEYS && value is Long && value in 0..MAX_SAFE_LONG ->
                 put(key, value)
 
+            key in SAFE_BYTE_COUNT_KEYS && value is Long && value in 0..MAX_SAFE_BYTE_COUNT ->
+                put(key, value)
+
             key in SAFE_FLOAT_KEYS && value is Float && value.isFinite() && value in 0f..MAX_SAFE_FLOAT ->
                 put(key, value)
         }
@@ -278,6 +281,13 @@ private val SAFE_FLOAT_KEYS = setOf(
 
 private const val MAX_HTTP_STATUS_CODE = 599
 private const val MAX_SAFE_LONG = 31_536_000_000L // one year; reject malformed/unbounded durations
+
+/** How big one uploaded file was. A size is never an identifier. */
+private val SAFE_BYTE_COUNT_KEYS = setOf("size_bytes")
+
+// 4 GiB: larger than any single file the app uploads, so a value above it is
+// malformed rather than merely large.
+private const val MAX_SAFE_BYTE_COUNT = 4_294_967_296L
 private const val MAX_SAFE_FLOAT = 4f
 
 private val PRODUCT_ENUM_DIMENSIONS = mapOf(

@@ -151,6 +151,8 @@ fun ReaderScreen(
     onComparePositions: () -> Unit = {},
     onClose: (ReaderCloseSource) -> Unit,
     onSettingsClick: () -> Unit,
+    /** "Manage storage" on the prepared-chapter row: the cloud account screen. */
+    onManageCloudStorage: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: ReaderViewModel = koinViewModel {
         parametersOf(
@@ -160,6 +162,7 @@ fun ReaderScreen(
             isLastBookOnLaunch,
             onClose,
             onSettingsClick,
+            onManageCloudStorage,
             readerOpenEntryPoint,
             readerOpenCorrelationId,
             linkedResumeResolved,

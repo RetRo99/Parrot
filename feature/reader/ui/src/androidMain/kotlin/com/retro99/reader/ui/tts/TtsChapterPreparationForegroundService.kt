@@ -93,13 +93,7 @@ class TtsChapterPreparationForegroundService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(TranslationsR.string.tts_chapter_preparation_notification_title))
-            .setContentText(
-                getString(
-                    TranslationsR.string.tts_chapter_preparation_notification_progress,
-                    running?.done ?: 0,
-                    running?.total ?: 0,
-                ),
-            )
+            .setContentText(progressText(running))
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .setOngoing(true)
@@ -118,6 +112,25 @@ class TtsChapterPreparationForegroundService : Service() {
                 }
             }
             .build()
+    }
+
+    private fun progressText(running: TtsChapterPreparationState.Running?): String {
+        val text = chapterPreparationNotificationText(running)
+        val resource = when (text.line) {
+            TtsChapterPreparationNotificationLine.COUNT ->
+                TranslationsR.string.tts_chapter_preparation_notification_progress
+            TtsChapterPreparationNotificationLine.WAITING ->
+                TranslationsR.string.tts_chapter_preparation_notification_progress_waiting
+            TtsChapterPreparationNotificationLine.TIME_LEFT ->
+                TranslationsR.string.tts_chapter_preparation_notification_progress_left
+            TtsChapterPreparationNotificationLine.TIME_LEFT_SHORT ->
+                TranslationsR.string.tts_chapter_preparation_notification_progress_left_short
+            TtsChapterPreparationNotificationLine.TIME_LEFT_HOURS ->
+                TranslationsR.string.tts_chapter_preparation_notification_progress_left_hours
+            TtsChapterPreparationNotificationLine.CANCELLING ->
+                TranslationsR.string.tts_chapter_preparation_notification_cancelling
+        }
+        return getString(resource, *text.args.toTypedArray())
     }
 
     private fun createNotificationChannel() {

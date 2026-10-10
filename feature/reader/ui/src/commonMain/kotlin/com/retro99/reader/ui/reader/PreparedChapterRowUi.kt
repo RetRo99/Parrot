@@ -7,7 +7,14 @@ import org.jetbrains.compose.resources.StringResource
 import resources.translations.general_cancel
 import resources.translations.general_retry
 import resources.translations.reader_tts_delete
+import resources.translations.reader_tts_prepared_chapter_audio_length
+import resources.translations.reader_tts_prepared_chapter_audio_length_hours
+import resources.translations.reader_tts_prepared_chapter_audio_length_short
+import resources.translations.reader_tts_prepared_chapter_cancelling
 import resources.translations.reader_tts_prepared_chapter_continue
+import resources.translations.reader_tts_prepared_chapter_estimate
+import resources.translations.reader_tts_prepared_chapter_estimate_hours
+import resources.translations.reader_tts_prepared_chapter_estimate_short
 import resources.translations.reader_tts_prepared_chapter_failed
 import resources.translations.reader_tts_prepared_chapter_failed_space
 import resources.translations.reader_tts_prepared_chapter_hint
@@ -17,10 +24,15 @@ import resources.translations.reader_tts_prepared_chapter_other_speed
 import resources.translations.reader_tts_prepared_chapter_partly
 import resources.translations.reader_tts_prepared_chapter_prepare
 import resources.translations.reader_tts_prepared_chapter_prepare_again
-import resources.translations.reader_tts_prepared_chapter_progress
+import resources.translations.reader_tts_prepared_chapter_progress_left
+import resources.translations.reader_tts_prepared_chapter_progress_left_hours
+import resources.translations.reader_tts_prepared_chapter_progress_left_short
+import resources.translations.reader_tts_prepared_chapter_progress_waiting
 import resources.translations.reader_tts_prepared_chapter_ready
 import resources.translations.reader_tts_prepared_chapter_voice_pack
 import resources.translations.reader_tts_prepared_chapter_voices
+import resources.translations.reader_tts_prepared_cloud_download
+import resources.translations.reader_tts_prepared_cloud_manage_storage
 import resources.translations.reader_tts_prepared_chapter_voice_terms
 import kotlin.math.roundToInt
 
@@ -33,6 +45,12 @@ internal enum class PreparedChapterAction(val label: StringResource, val isDestr
     DELETE(StringRes.reader_tts_delete, isDestructive = true),
     RETRY(StringRes.general_retry),
     OPEN_VOICES(StringRes.reader_tts_prepared_chapter_voices),
+
+    /** Fetch a chapter another device prepared. Only ever on request. */
+    DOWNLOAD(StringRes.reader_tts_prepared_cloud_download),
+
+    /** To the cloud account screen, where the allowance and its breakdown are. */
+    MANAGE_STORAGE(StringRes.reader_tts_prepared_cloud_manage_storage),
 }
 
 /**
@@ -46,6 +64,11 @@ internal data class PreparedChapterRowUi(
     val progress: Float? = null,
     val isFailure: Boolean = false,
     val actions: List<PreparedChapterAction> = emptyList(),
+    /** A second, quieter line under the status; null means none. */
+    val detail: StringResource? = null,
+    val detailArgs: List<Any> = emptyList(),
+    /** Actions that are shown but cannot be pressed right now. */
+    val disabled: Set<PreparedChapterAction> = emptySet(),
 )
 
 /** Bytes as the row says them; the same wording the Settings total uses. */
@@ -63,21 +86,37 @@ internal fun preparedRateLabel(rate: Float): String {
     }
 }
 
-/** @param voiceLabel name of the voice prepared audio was made for, when it is still known. */
+/**
+ * @param voiceLabel name of the voice prepared audio was made for, when it is still known.
+ * @param estimate what preparing this chapter is about to cost, when the sentence count is
+ *   known. Null leaves the plain hint, which says preparing takes a while without saying
+ *   how long: better than a number invented from a sentence count nobody has counted yet.
+ */
 internal fun preparedChapterRowUi(
     state: PreparedChapterRowState,
     voiceLabel: String? = null,
+    estimate: PreparedChapterEstimate? = null,
 ): PreparedChapterRowUi = when (state) {
     PreparedChapterRowState.NotPrepared -> PreparedChapterRowUi(
-        status = StringRes.reader_tts_prepared_chapter_hint,
+        status = notPreparedStatus(estimate),
+        statusArgs = notPreparedArgs(estimate),
         actions = listOf(PreparedChapterAction.PREPARE),
+        detail = audioLengthDetail(estimate?.audioMinutes),
+        detailArgs = audioLengthArgs(estimate?.audioMinutes),
     )
 
     is PreparedChapterRowState.Preparing -> PreparedChapterRowUi(
-        status = StringRes.reader_tts_prepared_chapter_progress,
-        statusArgs = listOf(state.done, state.total),
+        status = preparingStatus(state),
+        statusArgs = preparingArgs(state),
         progress = if (state.total > 0) state.done.toFloat() / state.total else 0f,
         actions = listOf(PreparedChapterAction.CANCEL),
+    )
+
+    is PreparedChapterRowState.Cancelling -> PreparedChapterRowUi(
+        status = StringRes.reader_tts_prepared_chapter_cancelling,
+        progress = if (state.total > 0) state.done.toFloat() / state.total else 0f,
+        actions = listOf(PreparedChapterAction.CANCEL),
+        disabled = setOf(PreparedChapterAction.CANCEL),
     )
 
     PreparedChapterRowState.PreparingAnotherChapter -> PreparedChapterRowUi(
@@ -130,3 +169,56 @@ internal fun preparedChapterRowUi(
         actions = listOf(PreparedChapterAction.OPEN_VOICES),
     )
 }
+
+private fun notPreparedStatus(estimate: PreparedChapterEstimate?): StringResource = when {
+    estimate == null -> StringRes.reader_tts_prepared_chapter_hint
+    estimate.minutes == 0 -> StringRes.reader_tts_prepared_chapter_estimate_short
+    estimate.minutes >= MINUTES_PER_HOUR -> StringRes.reader_tts_prepared_chapter_estimate_hours
+    else -> StringRes.reader_tts_prepared_chapter_estimate
+}
+
+private fun notPreparedArgs(estimate: PreparedChapterEstimate?): List<Any> {
+    if (estimate == null) return emptyList()
+    val size = preparedChapterEstimateSizeLabel(estimate.bytes)
+    return when {
+        estimate.minutes == 0 -> listOf(size)
+        estimate.minutes >= MINUTES_PER_HOUR -> listOf(
+            estimate.minutes / MINUTES_PER_HOUR,
+            estimate.minutes % MINUTES_PER_HOUR,
+            size,
+        )
+        else -> listOf(estimate.minutes, size)
+    }
+}
+
+private fun preparingStatus(state: PreparedChapterRowState.Preparing): StringResource =
+    when (preparedTimeLeftLabel(state.remainingMs)) {
+        // No time left yet: say one is coming, in the place it will appear, rather than
+        // leaving the counts alone and looking as though time were never going to be said.
+        null -> StringRes.reader_tts_prepared_chapter_progress_waiting
+        PreparedTimeLeftLabel.UnderMinute -> StringRes.reader_tts_prepared_chapter_progress_left_short
+        is PreparedTimeLeftLabel.Minutes -> StringRes.reader_tts_prepared_chapter_progress_left
+        is PreparedTimeLeftLabel.Hours -> StringRes.reader_tts_prepared_chapter_progress_left_hours
+    }
+
+private fun preparingArgs(state: PreparedChapterRowState.Preparing): List<Any> =
+    listOf<Any>(state.done, state.total) + when (val left = preparedTimeLeftLabel(state.remainingMs)) {
+        null, PreparedTimeLeftLabel.UnderMinute -> emptyList()
+        is PreparedTimeLeftLabel.Minutes -> listOf(left.minutes)
+        is PreparedTimeLeftLabel.Hours -> listOf(left.hours, left.minutes)
+    }
+
+private fun audioLengthDetail(minutes: Int?): StringResource? = when {
+    minutes == null -> null
+    minutes == 0 -> StringRes.reader_tts_prepared_chapter_audio_length_short
+    minutes >= MINUTES_PER_HOUR -> StringRes.reader_tts_prepared_chapter_audio_length_hours
+    else -> StringRes.reader_tts_prepared_chapter_audio_length
+}
+
+private fun audioLengthArgs(minutes: Int?): List<Any> = when {
+    minutes == null || minutes == 0 -> emptyList()
+    minutes >= MINUTES_PER_HOUR -> listOf(minutes / MINUTES_PER_HOUR, minutes % MINUTES_PER_HOUR)
+    else -> listOf(minutes)
+}
+
+private const val MINUTES_PER_HOUR = 60

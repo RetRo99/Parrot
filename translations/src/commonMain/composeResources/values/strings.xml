@@ -582,8 +582,19 @@
     <!-- Prepared chapters -->
     <string name="reader_tts_prepared_chapter_title" tools:ignore="MissingTranslation">This chapter</string>
     <string name="reader_tts_prepared_chapter_hint" tools:ignore="MissingTranslation">Preparing takes a while. Afterwards this chapter plays instantly.</string>
+    <string name="reader_tts_prepared_chapter_estimate" tools:ignore="MissingTranslation">About %1$d minutes · about %2$s</string>
+    <string name="reader_tts_prepared_chapter_estimate_hours" tools:ignore="MissingTranslation">About %1$d h %2$d min · about %3$s</string>
+    <string name="reader_tts_prepared_chapter_estimate_short" tools:ignore="MissingTranslation">Under a minute · about %1$s</string>
+    <string name="reader_tts_prepared_chapter_audio_length" tools:ignore="MissingTranslation">About %1$d minutes of audio</string>
+    <string name="reader_tts_prepared_chapter_audio_length_hours" tools:ignore="MissingTranslation">About %1$d h %2$d min of audio</string>
+    <string name="reader_tts_prepared_chapter_audio_length_short" tools:ignore="MissingTranslation">Under a minute of audio</string>
     <string name="reader_tts_prepared_chapter_prepare" tools:ignore="MissingTranslation">Prepare this chapter</string>
     <string name="reader_tts_prepared_chapter_progress" tools:ignore="MissingTranslation">%1$d of %2$d sentences</string>
+    <string name="reader_tts_prepared_chapter_progress_waiting" tools:ignore="MissingTranslation">%1$d of %2$d sentences · working out how long is left…</string>
+    <string name="reader_tts_prepared_chapter_progress_left" tools:ignore="MissingTranslation">%1$d of %2$d sentences · about %3$d min left</string>
+    <string name="reader_tts_prepared_chapter_progress_left_hours" tools:ignore="MissingTranslation">%1$d of %2$d sentences · about %3$d h %4$d min left</string>
+    <string name="reader_tts_prepared_chapter_progress_left_short" tools:ignore="MissingTranslation">%1$d of %2$d sentences · under a minute left</string>
+    <string name="reader_tts_prepared_chapter_cancelling" tools:ignore="MissingTranslation">Cancelling…</string>
     <string name="reader_tts_prepared_chapter_other_busy" tools:ignore="MissingTranslation">Another chapter is being prepared.</string>
     <string name="reader_tts_prepared_chapter_ready" tools:ignore="MissingTranslation">Ready, plays instantly · %1$s</string>
     <string name="reader_tts_prepared_chapter_partly" tools:ignore="MissingTranslation">%1$d of %2$d sentences prepared</string>
@@ -598,6 +609,28 @@
     <string name="reader_tts_prepared_chapter_voices" tools:ignore="MissingTranslation">Go to voices</string>
     <string name="reader_tts_prepared_chapter_delete_title" tools:ignore="MissingTranslation">Delete prepared audio?</string>
     <string name="reader_tts_prepared_chapter_delete_message" tools:ignore="MissingTranslation">This chapter will have to be prepared again before it plays instantly.</string>
+    <string name="reader_tts_prepared_chapter_delete_message_cloud" tools:ignore="MissingTranslation">This removes the prepared audio from this device and from Parrot Cloud. This chapter will have to be prepared again before it plays instantly.</string>
+    <!-- Prepared chapters in Parrot Cloud -->
+    <string name="reader_tts_prepared_cloud_backed_up" tools:ignore="MissingTranslation">Backed up to Parrot Cloud</string>
+    <string name="reader_tts_prepared_cloud_queued" tools:ignore="MissingTranslation">Waiting to back up</string>
+    <string name="reader_tts_prepared_cloud_uploading" tools:ignore="MissingTranslation">Backing up to Parrot Cloud…</string>
+    <string name="reader_tts_prepared_cloud_waiting_wifi" tools:ignore="MissingTranslation">Will back up on Wi-Fi</string>
+    <string name="reader_tts_prepared_cloud_waiting_book" tools:ignore="MissingTranslation">Will back up once this book is backed up</string>
+    <string name="reader_tts_prepared_cloud_waiting_books" tools:ignore="MissingTranslation">Will back up after your books</string>
+    <string name="reader_tts_prepared_cloud_storage_full" tools:ignore="MissingTranslation">Parrot Cloud storage is full, so this is not backed up.</string>
+    <string name="reader_tts_prepared_cloud_retrying" tools:ignore="MissingTranslation">Backup didn\'t finish. It will try again.</string>
+    <string name="reader_tts_prepared_cloud_failed" tools:ignore="MissingTranslation">This couldn\'t be backed up.</string>
+    <string name="reader_tts_prepared_cloud_not_allowed" tools:ignore="MissingTranslation">Backup isn\'t available for this account yet.</string>
+    <string name="reader_tts_prepared_cloud_manage_storage" tools:ignore="MissingTranslation">Manage storage</string>
+    <string name="reader_tts_prepared_cloud_available" tools:ignore="MissingTranslation">In Parrot Cloud, plays instantly · %1$s</string>
+    <string name="reader_tts_prepared_cloud_available_other" tools:ignore="MissingTranslation">In Parrot Cloud, made for other settings · %1$s</string>
+    <string name="reader_tts_prepared_cloud_download" tools:ignore="MissingTranslation">Download</string>
+    <string name="reader_tts_prepared_cloud_downloading" tools:ignore="MissingTranslation">Downloading from Parrot Cloud…</string>
+    <string name="reader_tts_prepared_cloud_installing" tools:ignore="MissingTranslation">Checking the download…</string>
+    <string name="reader_tts_prepared_cloud_download_failed_network" tools:ignore="MissingTranslation">The download didn\'t finish. Check your connection.</string>
+    <string name="reader_tts_prepared_cloud_download_failed_space" tools:ignore="MissingTranslation">Not enough free space on this device for it.</string>
+    <string name="reader_tts_prepared_cloud_download_failed_rejected" tools:ignore="MissingTranslation">That download couldn\'t be used, so nothing was installed.</string>
+    <string name="reader_tts_prepared_cloud_download_failed_gone" tools:ignore="MissingTranslation">It isn\'t in Parrot Cloud any more.</string>
     <string name="reader_tts_prepared_audio" tools:ignore="MissingTranslation">Prepared audio</string>
     <string name="reader_tts_prepared_audio_total" tools:ignore="MissingTranslation">%1$s on this device</string>
     <string name="reader_tts_prepared_audio_empty" tools:ignore="MissingTranslation">Nothing prepared yet</string>
@@ -1714,6 +1747,8 @@
     <string name="parrot_cloud_sync_authentication">Your session has expired. Sign in again to sync. Your changes are saved on this phone.</string>
     <string name="parrot_cloud_sync_error">Parrot Cloud couldn’t finish syncing. Your changes are saved on this phone. Try again later.</string>
     <string name="parrot_cloud_storage_used">%1$s of %2$s</string>
+    <string name="parrot_cloud_storage_books" tools:ignore="MissingTranslation">Books</string>
+    <string name="parrot_cloud_storage_prepared_audio" tools:ignore="MissingTranslation">Prepared audio</string>
     <string name="parrot_cloud_storage_accessibility">%1$s of %2$s used</string>
     <string name="parrot_cloud_storage_almost_full">Almost full — remove books from Parrot Cloud to make space.</string>
     <string name="parrot_cloud_storage_unavailable">Storage usage is unavailable right now. Try syncing again later.</string>

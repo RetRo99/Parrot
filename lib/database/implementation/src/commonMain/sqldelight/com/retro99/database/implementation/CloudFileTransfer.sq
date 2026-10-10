@@ -20,7 +20,13 @@ CREATE TABLE IF NOT EXISTS cloud_file_transfers (
     next_attempt_at TEXT,
     last_error TEXT,
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    -- Added by 42.sqm. A column added here must stay at the END of the table,
+    -- where ALTER TABLE ... ADD COLUMN puts it on an upgraded device, or a
+    -- freshly created database and an upgraded one disagree and
+    -- verifySqlDelightMigration fails.
+    relative_path TEXT NOT NULL DEFAULT '',
+    source_path TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_cloud_file_transfers_eligible
@@ -36,6 +42,17 @@ INSERT OR REPLACE INTO cloud_file_transfers(
     content_hash_algorithm, upload_id, storage_path, tus_upload_url, tus_expires_at,
     rights_attestation, state, attempt_count, next_attempt_at, last_error, created_at, updated_at
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- A transfer that carries its own relative path and source bytes. The statement
+-- above is kept for the book's own file, where both take their column defaults.
+insertCloudFileTransferWithSource:
+INSERT OR REPLACE INTO cloud_file_transfers(
+    transfer_id, server_id, direction, library_book_id, cloud_book_file_id,
+    media_type, staging_path, size_bytes, bytes_transferred, content_hash,
+    content_hash_algorithm, upload_id, storage_path, tus_upload_url, tus_expires_at,
+    rights_attestation, state, attempt_count, next_attempt_at, last_error, created_at,
+    updated_at, relative_path, source_path
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getCloudFileTransfer:
 SELECT * FROM cloud_file_transfers WHERE transfer_id = ?;

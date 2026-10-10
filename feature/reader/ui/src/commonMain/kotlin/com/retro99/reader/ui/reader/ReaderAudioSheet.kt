@@ -146,6 +146,10 @@ internal data class AudioSheetUi(
     val preparedChapter: PreparedChapterRowState? = null,
     /** Name of the voice prepared audio was made for, when that voice is still installed. */
     val preparedChapterVoiceLabel: String? = null,
+    /** What preparing the chapter on screen is about to cost, when it can be estimated. */
+    val preparedChapterEstimate: PreparedChapterEstimate? = null,
+    /** What Parrot Cloud adds to that row: one line of status and at most one button. */
+    val preparedChapterCloud: PreparedChapterCloudInputs = PreparedChapterCloudInputs(),
 ) {
     /** Estimated time to the end of the chapter; real for narration, sentence-based otherwise. */
     val remainingInChapterMs: Long
@@ -184,6 +188,8 @@ internal data class AudioSheetActions(
     val onPrepareChapter: () -> Unit = {},
     val onCancelChapterPreparation: () -> Unit = {},
     val onDeletePreparedChapter: () -> Unit = {},
+    val onDownloadPreparedChapter: () -> Unit = {},
+    val onManageCloudStorage: () -> Unit = {},
 )
 
 @Composable
@@ -461,13 +467,17 @@ private fun DeviceVoiceBody(ui: AudioSheetUi, hasNarration: Boolean, actions: Au
         PreparedChapterCard(
             state = preparedChapter,
             voiceLabel = ui.preparedChapterVoiceLabel,
+            estimate = ui.preparedChapterEstimate,
             isEink = ui.isEink,
             actions = PreparedChapterActions(
                 onPrepare = actions.onPrepareChapter,
                 onCancel = actions.onCancelChapterPreparation,
                 onDelete = actions.onDeletePreparedChapter,
                 onOpenVoices = actions.onChangeVoice,
+                onDownload = actions.onDownloadPreparedChapter,
+                onManageStorage = actions.onManageCloudStorage,
             ),
+            cloud = ui.preparedChapterCloud,
         )
     }
     Spacer(Modifier.height(12.dp))

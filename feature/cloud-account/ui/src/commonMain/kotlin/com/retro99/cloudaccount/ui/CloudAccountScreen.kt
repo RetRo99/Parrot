@@ -370,12 +370,34 @@ private fun ParrotCloudStorageCard(state: CloudAccountViewState) {
         }
         Spacer(Modifier.height(10.dp))
         CloudProgress((usage.usedBytes.toDouble() / usage.quotaBytes).toFloat(), error = almostFull, modifier = Modifier.semantics { contentDescription = description })
+        cloudStorageBreakdown(usage).forEach { row ->
+            Spacer(Modifier.height(6.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                CloudText(stringResource(row.label), secondary = true)
+                CloudText(row.size, secondary = true)
+            }
+        }
         if (almostFull) {
             Spacer(Modifier.height(8.dp))
             CloudText(stringResource(StringRes.parrot_cloud_storage_almost_full), error = true)
         }
+        GetMoreStorageSlot()
     }
 }
+
+/**
+ * **The one place a "get more storage" action will be attached.**
+ *
+ * Paid storage is its own project and nothing is built for it here, so this
+ * deliberately renders nothing: the brief forbids showing a button that does
+ * nothing. It sits at the bottom of the storage card, under the allowance and
+ * its breakdown, because that is where a user looks after finding out they are
+ * full -- and it is where "Manage storage" on the prepared-chapter row lands.
+ *
+ * When that project starts, this is the whole change on this screen.
+ */
+@Composable
+private fun GetMoreStorageSlot() = Unit
 
 @Composable
 private fun ParrotCloudSettingsCard(state: CloudAccountViewState, dispatch: IntentDispatcher<CloudAccountIntent>) {

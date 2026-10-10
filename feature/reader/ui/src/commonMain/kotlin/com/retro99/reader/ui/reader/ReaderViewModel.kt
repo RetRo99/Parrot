@@ -126,6 +126,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -155,6 +156,7 @@ class ReaderViewModel(
     @InjectedParam private val isLastBookOnLaunch: Boolean,
     @InjectedParam private val onClose: (ReaderCloseSource) -> Unit,
     @InjectedParam private val onSettingsClick: () -> Unit,
+    @InjectedParam private val onManageCloudStorage: () -> Unit,
     @InjectedParam private val readerOpenEntryPoint: String?,
     @InjectedParam private val readerOpenCorrelationId: String?,
     @InjectedParam private val linkedResumeResolved: Boolean,
@@ -552,6 +554,8 @@ class ReaderViewModel(
             ReaderIntent.PrepareChapter -> prepareChapter()
             ReaderIntent.CancelChapterPreparation -> ttsController.cancelChapterPreparation()
             ReaderIntent.DeletePreparedChapter -> deletePreparedChapter()
+            ReaderIntent.DownloadPreparedChapter -> downloadPreparedChapter()
+            ReaderIntent.ManageCloudStorage -> onManageCloudStorage()
             is ReaderIntent.AcceptSupertonicTermsAndSelect -> {
                 supertonicTermsStore.acceptCurrentTerms()
                 updateState { state -> state.copy(hasAcceptedSupertonicTerms = true) }
@@ -1672,6 +1676,26 @@ class ReaderViewModel(
             .flatMapLatest { href -> ttsController.preparedChapterAudio(href) }
             .onEach { audio -> updateState { state -> state.copy(preparedChapterAudio = audio) } }
             .launchIn(viewModelScope)
+        // Counted while the Listening sheet is open, and again for each chapter the reader
+        // moves to; a closed sheet reads nothing.
+        combine(
+            bookController.currentLocator.map { locator -> locator.href }.distinctUntilChanged(),
+            viewState.map { state -> state.isListenSheetVisible }.distinctUntilChanged(),
+        ) { href, isSheetOpen -> href.takeIf { isSheetOpen } }
+            .flatMapLatest { href ->
+                if (href == null) emptyFlow() else ttsController.preparedChapterText(href)
+            }
+            .onEach { text -> updateState { state -> state.copy(preparedChapterText = text) } }
+            .launchIn(viewModelScope)
+        ttsController.preparedChapterMeasured
+            .onEach { measured -> updateState { state -> state.copy(preparedChapterMeasured = measured) } }
+            .launchIn(viewModelScope)
+        bookController.currentLocator
+            .map { locator -> locator.href }
+            .distinctUntilChanged()
+            .flatMapLatest { href -> ttsController.preparedChapterCloud(href) }
+            .onEach { cloud -> updateState { state -> state.copy(preparedChapterCloud = cloud) } }
+            .launchIn(viewModelScope)
     }
 
     private fun prepareChapter() {
@@ -1689,6 +1713,12 @@ class ReaderViewModel(
     private fun deletePreparedChapter() {
         viewModelScope.launch {
             ttsController.deletePreparedChapter(bookController.currentLocator.first().href)
+        }
+    }
+
+    private fun downloadPreparedChapter() {
+        viewModelScope.launch {
+            ttsController.downloadPreparedChapter(bookController.currentLocator.first().href)
         }
     }
 

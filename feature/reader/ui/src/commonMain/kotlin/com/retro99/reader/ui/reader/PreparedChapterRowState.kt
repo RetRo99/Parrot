@@ -12,7 +12,10 @@ internal sealed interface PreparedChapterRowState {
 
     data object NotPrepared : PreparedChapterRowState
 
-    data class Preparing(val done: Int, val total: Int) : PreparedChapterRowState
+    data class Preparing(val done: Int, val total: Int, val remainingMs: Long? = null) : PreparedChapterRowState
+
+    /** Cancel was pressed; shown until the job has really stopped. */
+    data class Cancelling(val done: Int, val total: Int) : PreparedChapterRowState
 
     data object PreparingAnotherChapter : PreparedChapterRowState
 
@@ -55,10 +58,12 @@ internal fun derivePreparedChapterRow(
 ): PreparedChapterRowState? {
     if (!isReadAloudAvailable || isNarrationSelected || chapterHref == null) return null
     if (preparation is TtsChapterPreparationState.Running) {
-        return if (preparation.chapterHref == chapterHref) {
-            PreparedChapterRowState.Preparing(preparation.done, preparation.total)
-        } else {
+        return if (preparation.chapterHref != chapterHref) {
             PreparedChapterRowState.PreparingAnotherChapter
+        } else if (preparation.isCancelling) {
+            PreparedChapterRowState.Cancelling(preparation.done, preparation.total)
+        } else {
+            PreparedChapterRowState.Preparing(preparation.done, preparation.total, preparation.remainingMs)
         }
     }
     if (voice != PreparedChapterVoice.USABLE) {

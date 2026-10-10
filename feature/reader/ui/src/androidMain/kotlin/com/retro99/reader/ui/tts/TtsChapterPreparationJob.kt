@@ -3,6 +3,7 @@ package com.retro99.reader.ui.tts
 import android.content.Context
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.ReaderAnalyticsEvent
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,13 +25,30 @@ class TtsChapterPreparationJob(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    /**
+     * Where a finished chapter is offered for backup. Set by
+     * `TtsPreparedChapterBackup`, which is created at app start; nothing else
+     * reads it, and preparation works exactly as before when it is null.
+     */
+    internal var onPrepared: ((PreparedChapterId, PreparedVoiceSettings) -> Unit)? = null
+
+    /**
+     * This device's measured preparation speed, voice by voice. Its own file beside the
+     * prepared store, never inside it and never in a chapter's manifest.
+     */
+    private val speedFile = TtsPreparationSpeedFile(File(context.filesDir, PREPARATION_SPEED_FILE))
+
     private val core = TtsChapterPreparationCore(
         sentences = GeneratorSentences(generator),
-        chapters = StoreChapters(prepared),
+        chapters = StoreChapters(prepared) { id, settings -> onPrepared?.invoke(id, settings) },
         scope = scope,
         analytics = AnalyticsLog(analytics),
         usableBytes = { context.filesDir.usableSpace },
+        speed = speedFile,
     )
+
+    /** What has been measured so far; an empty record when nothing has, or it cannot be read. */
+    internal fun measuredSpeed(): TtsPreparationSpeedRecord = speedFile.read()
 
     val state: StateFlow<TtsChapterPreparationState> = core.state
 
@@ -53,9 +71,21 @@ private class GeneratorSentences(private val generator: TtsAudioGenerator) : Tts
         settings: PreparedVoiceSettings,
     ): PreparedAudioEncoding =
         generator.prepareSentence(id, text, settings.voiceId, settings.rate, settings.pitch)
+
+    override suspend fun prepareMeasured(
+        id: PreparedChapterId,
+        text: String,
+        settings: PreparedVoiceSettings,
+    ): PreparedSentenceWork =
+        generator.prepareSentenceMeasured(id, text, settings.voiceId, settings.rate, settings.pitch)
 }
 
-private class StoreChapters(private val prepared: TtsPreparedAudioStore) : TtsPreparationChapterStore {
+private const val PREPARATION_SPEED_FILE = "tts-preparation-speed.txt"
+
+private class StoreChapters(
+    private val prepared: TtsPreparedAudioStore,
+    private val onPrepared: (PreparedChapterId, PreparedVoiceSettings) -> Unit,
+) : TtsPreparationChapterStore {
     override fun begin(id: PreparedChapterId, settings: PreparedVoiceSettings, keys: List<String>) {
         prepared.store.begin(id, settings, keys)
     }
@@ -66,6 +96,9 @@ private class StoreChapters(private val prepared: TtsPreparedAudioStore) : TtsPr
     override fun markComplete(id: PreparedChapterId) = prepared.store.markComplete(id)
 
     override fun enforceLimit(active: PreparedChapterId) = prepared.store.enforceLimit(active)
+
+    override fun prepared(id: PreparedChapterId, settings: PreparedVoiceSettings) =
+        onPrepared(id, settings)
 }
 
 /** Two events per preparation, with no text, no titles and no identifiers. */

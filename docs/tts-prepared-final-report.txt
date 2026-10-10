@@ -1,0 +1,171 @@
+--- REPORT ---
+Branch: tts/prepare-time (worktree .claude/worktrees/tts-prepare-time)
+Commits this run (hash + subject, oldest first):
+4fe371f2 Merge branch 'tts/prepared-cloud' into tts/prepare-time (Step 0)
+a6200e75 test(tts): the row and the notification should promise a time while they have none
+c1913c8f feat(tts): say a time is coming while preparing has not worked one out
+(docs commit: the final report after step 1)
+1842316f test(tts): the size should come from the audio length, not from a count of sentences
+e75a7b9b feat(tts): the size estimate is the audio's length at the encoder's bit rate
+(docs commit: the final report after step 2)
+397a54a9 test(tts): a transfer that finishes should tell the row to read again (W2)
+f188e8f0 fix(tts): a transfer that finishes now tells the row to read again (W2)
+(docs commit: the final report after step 3, before the build)
+Steps complete (0-4): all of 0, 1, 2, 3 and 4.
+Step 0: merged (yes/no, conflicts); per module after the merge, <module> <passed>/<total>, one line each:
+Yes, merged with no conflicts; only documents and evidence differed.
+feature/reader/ui testAndroidHostTest 767/767
+feature/reader/ui iosSimulatorArm64Test 479/479
+feature/books/data testAndroidHostTest 151/151
+feature/cloud-account/ui testAndroidHostTest 28/28
+lib/analytics/implementation testAndroidHostTest 80/80
+composeApp testAndroidHostTest 65/65
+The owner then said iOS tests need not be run, so later verifies omit that task.
+Step 1: the placeholder's text in the row and in the notification; tests failed first (yes/no) and one failure text:
+Both read "%1$d of %2$d sentences · working out how long is left…", so
+"2 of 369 sentences · working out how long is left…". Yes, five failures first, e.g.
+"the notification promises a time in the same place while it has none ::
+java.lang.AssertionError: expected:<WAITING> but was:<COUNT>".
+Step 2: how the size is worked out now, with the bit rate and overhead used and where they came from; what it gives for the Samsung case (219 kB actual); tests failed first (yes/no):
+Size = the audio length the row already computes, at 48 000 bit/s, plus 1 050 bytes of
+container a file. The bit rate is AndroidTtsPreparedAacEncoder's own MediaFormat
+.KEY_BIT_RATE (line 43). The overhead is the mean of the six-sentence Samsung table in
+docs/tts-prepared-chapters.md: each row's M4A bytes less its measured duration at that bit
+rate leaves 954 to 1 190 bytes, mean 1 046. Because the rate is applied at synthesis, the
+file's length is the listening length, so a faster speed gives a smaller file. The fixed
+spoken length a sentence also had to rise (2.2 s -> 3.9 s Kokoro, 2.5 s -> 4.4 s system):
+at 2.2 s the new arithmetic still said 128 kB, so the owner's quarter could not be met.
+3.9 s comes from the only real chapter ever measured on a device - nine Kokoro sentences,
+219 kB of AAC, which at 48 kbit/s less the container is about 35 s - corroborated by its
+emulator playback reaching sentence 7 of 9 within 25 s. Samsung case: 220 050 bytes,
+labelled "220 kB", against 219 kB actual, 0.5% out; it said 130 kB before. The
+preparation-time figures are untouched, that estimate having been observed right.
+Yes, nine failures first, e.g. "the nine sentences the Samsung really wrote estimate to
+about their 219 kB :: java.lang.AssertionError: estimated 126000 against 219000, off by
+0.4246575342465753".
+Step 3: was the previous analysis right (yes/no, what differed); what signals the refresh now (file and function); each test, failed first (yes/no) and one failure text; wiring test name; does transfer progress reach the row (yes/no):
+Right in substance, wrong in one part. Right: the three flows combine only
+chapterPreparationJob.state and preparedAudioRevision, refreshPreparedAudio() is called on
+user actions only, both queues follow a transfer to its end and tell nobody, and the
+download queue needed the same treatment. Wrong: the analytics gate is not the production
+cause. TtsPreparedChapterBackup takes a non-null @Provided Analytics, so in the real app
+watchOutcome did run; it simply signalled nobody. The gate was still worth removing - it
+also meant an uploaded archive was never deleted on a build without analytics.
+Signals now: PreparedChapterBackupQueue.watchOutcome and .ended, and
+PreparedChapterDownloadQueue.watchAndInstall, all calling the new onTransferChanged;
+TtsPreparedChapterBackup.onTransferChanged bumps its new `settled` state flow; and
+AndroidTtsController's three flows take it in through the new
+PreparedAudioTriggers.preparedAudioTriggers.
+Tests, all failed first (yes), in PreparedChapterBackupQueueTest: "an upload that reaches
+its end asks the row to read again, exactly once", "a failed upload, a full allowance and a
+cancelled one each ask once", "the row is told even with no analytics at all", "the engine
+moving before the end reaches the row too", "an account that may not upload is an end the
+row is told about", "an engine that refuses before queueing is an end the row is told
+about". In PreparedChapterDownloadQueueTest: "an installed chapter asks the row to read
+again, exactly once", "a refused archive asks the row to read again as well", "a download
+that never arrives asks the row to read again", "the engine moving before the end reaches
+the row too". In PreparedAudioTriggersTest (new): "the engine settling is a reason to
+re-read", "the sheet opened again, or the chapter left and come back, reads afresh", "the
+preparation job and the controller's own doings still count". One failure text: "an upload
+that reaches its end asks the row to read again, exactly once ::
+java.lang.AssertionError: one refresh for the one end expected:<1> but was:<0>".
+Wiring test: PreparedChapterRefreshWiringTest "the queues the real graph builds are wired
+to the signal the row watches", in composeApp. I checked it is not vacuous: with
+onTransferChanged removed from one queue's construction it fails with "queue's signal does
+not reach the flow the row watches".
+Does transfer progress reach the row: the engine's state changes do, now - "Waiting to back
+up" -> "Uploading" -> "Backed up" are each signalled. The byte count does not, and cannot:
+PreparedChapterTransfer carries only state, willRetry and lastError, and no row string has
+a place for a percentage. That is unchanged by this run and is a deliberate limit, not a
+bug I left.
+Step 3: row right when the sheet opens after a finished transfer, and after a chapter change and back (covered by which tests):
+PreparedAudioTriggersTest "the sheet opened again, or the chapter left and come back, reads
+afresh" covers both: it settles the signal before anybody collects, then asserts a new
+collector is answered at once rather than waiting for the next change. Both cases are the
+same thing in the code - a new collection of preparedChapterAudio/preparedChapterCloud -
+because every source is a state flow. That the state read then is the right one is covered
+by the existing PreparedChapterDownloadQueueTest "a downloaded chapter is verified,
+installed and plays instantly" (stateOf is Installed after the settle) and by the new
+backup-queue end tests.
+Step 4: installed on the Xiaomi (yes/no, its address, commit installed); any command sent to any device beyond devices, getprop and that install (yes/no):
+Yes. 10.41.65.3:5555, confirmed by ro.product.model 2602BPC18G before anything was
+installed. The APK is the one built at f188e8f0 (the Step 3 fix, the last code commit; the
+report commit after it changes no code), at
+androidApp/build/outputs/apk/debug/androidApp-debug.apk, installed with
+adb -s 10.41.65.3:5555 install -r, which answered "Success".
+No. Three commands to any device in the whole run: adb devices, one getprop on the Xiaomi,
+and that install. The Samsung RFCWC0SSVDM and emulator-5554 were listed by adb devices and
+never addressed.
+What the owner should try on the phone, as a short list of steps and what each should show:
+1 Open a book, Listening sheet. The "Prepare this chapter" row should now give a larger
+  size than before - for a 9-sentence chapter about 220 kB, not 130 kB - and an audio
+  length to match.
+2 Press Prepare. For the first two sentences the row and the notification should both read
+  "N of M sentences · working out how long is left…", in the place the time appears.
+3 Keep watching. As soon as a time is worked out the promise should be replaced by it, and
+  it should never come back during that run.
+4 With Parrot Cloud linked and auto-backup on, wait after the chapter finishes. The row
+  should move from "Waiting to back up" to "Backed up to Parrot Cloud" on its own, with no
+  restart and without closing the sheet.
+5 On a second device, Download the chapter. The row should move from "Downloading from
+  Parrot Cloud…" to "Ready, plays instantly" on its own.
+6 Leave the chapter and come back, or close and reopen the sheet, right after a transfer
+  finishes. The row should be right immediately.
+Existing tests edited (name + why), or "none":
+Step 1: PreparedChapterRowUiTest "preparing counts the sentences with a progress bar and only
+cancel", TtsPreparationTimeLeftTest "before there is an estimate the row says only the
+count" (renamed "before there is a time left the row promises one in its place") and
+TtsPreparationTimeLeftJobTest "the notification says the same count and time left and
+names nothing": all three pinned the old count-only line that Step 1 replaces.
+Step 2: PreparedChapterEstimateTest "kokoro uses its own measured figures", "a system
+voice is slower and larger per sentence than kokoro" and "a 151 sentence chapter with
+kokoro"; PreparedChapterAudioLengthTest "without a record the audio length comes from the
+fixed spoken length per sentence"; PreparedChapterTextTest "the not prepared row shows the
+estimate once the count is known" and "a chapter change shows the new chapter's estimate
+and never the old one". All six pinned the old 14/16 kB a sentence or the old 2.2 s spoken
+length; each had its expected figure replaced, no assertion removed or weakened.
+New string keys (list):
+reader_tts_prepared_chapter_progress_waiting (commonMain),
+tts_chapter_preparation_notification_progress_waiting (androidMain).
+Per module after this run: <module> <passed>/<total>, one line each:
+feature/reader/ui testAndroidHostTest 790/790
+feature/books/data testAndroidHostTest 151/151
+feature/cloud-account/ui testAndroidHostTest 28/28
+lib/analytics/implementation testAndroidHostTest 80/80
+composeApp testAndroidHostTest 66/66
+Zero failures, errors or skips, read from build/test-results XML. iOS was not re-run at the
+owner's instruction, so feature/reader/ui iosSimulatorArm64Test stands at its Step 0
+479/479 and does not include this run's new commonTest cases.
+App build result: :androidApp:assembleDebug BUILD SUCCESSFUL, 766 tasks, 78 executed.
+Any machine-wide process kill used (must be no): no.
+Not done or partly done, and why:
+Nothing in steps 0-4 is partial. iOS tests were not re-run, the owner having said they need
+not be, so the iOS count below is from Step 0 and predates this run's new commonTest cases.
+Everything the brief put outside this run was left alone: no device was driven, the
+remaining cloud checks were not made, and no server, supabase, purchasing, iPhone, voice
+engine, read-aloud engine or manifest-format file was touched.
+Tests skipped, ignored or weakened (file + name + reason), or "none": none.
+Places the prompt was ambiguous and what I chose:
+Step 1: the notification text function also answers for "nothing running at all" (0 of 0
+sentences). I kept the bare count there and show the promise only while a run exists.
+Step 2: the brief said to keep the device's own measured figure where one exists, but there
+are two - a flat bytes-a-sentence from past manifests and a measured audio length per
+character. I prefer the audio length, because it knows this chapter's text; the flat figure
+is kept for a device that has one but no audio length. The brief also did not ask for the
+fixed spoken length to change, but its acceptance test cannot pass without it, so I raised
+it and left the preparation-time figures alone.
+Step 3: the brief named the four upload ends "uploaded, failed, storage full, not allowed".
+The first three are the engine's terminal rows; "not allowed" is returned synchronously
+before anything is queued, so I signal on that and on the other synchronous ends (refused,
+pack rejected) as well, and not on the states that mean "later" or "nothing to do".
+Step 3: the brief described a settable callback surfaced from TtsPreparedChapterBackup. I
+used a StateFlow instead, because the facade is app-wide while a controller is per reader
+screen, so a single settable callback would be overwritten by the last screen to attach;
+and because a state flow is what answers a fresh collector at once.
+Files changed outside feature/reader, feature/books, translations, composeApp tests and docs: none.
+Known problems I am leaving:
+The row still shows no percentage during a transfer, only its state; see Step 3 above.
+The 3.9 s fixed spoken length rests on one nine-sentence chapter, so a device that has
+prepared nothing yet still has a rough figure; it is replaced by that device's own record
+after three sentences. The container overhead is an average, not the exact per-file cost.
+--- END REPORT ---

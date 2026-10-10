@@ -13,6 +13,7 @@ import com.retro99.reader.ui.playback.MediaPlaybackController
 import com.retro99.reader.ui.playback.NotificationPermissionHandler
 import com.retro99.reader.ui.publication.EpubPublication
 import com.retro99.reader.ui.tts.NeuralVoicePackage
+import com.retro99.reader.ui.reader.PreparedChapterCloudInputs
 import com.retro99.reader.ui.reader.PreparedChapterVoice
 import com.retro99.reader.ui.reader.preparedChapterVoice
 import com.retro99.reader.ui.tts.PreparedChapterId
@@ -24,7 +25,12 @@ import com.retro99.reader.ui.tts.TtsChapterPreparationJob
 import com.retro99.reader.ui.tts.TtsChapterPreparationRequest
 import com.retro99.reader.ui.tts.TtsChapterPreparationState
 import com.retro99.reader.ui.tts.TtsPreparationVoiceKind
+import com.retro99.reader.ui.reader.PreparedChapterMeasured
+import com.retro99.reader.ui.reader.PreparedChapterText
+import com.retro99.reader.ui.reader.readPreparedChapterText
 import com.retro99.reader.ui.tts.TtsPreparedAudioStore
+import com.retro99.reader.ui.tts.TtsPreparedChapterBackup
+import com.retro99.reader.ui.tts.preparedAudioTriggers
 import com.retro99.reader.ui.tts.TtsPreparedChapterAudio
 import com.retro99.reader.ui.tts.TtsPlaybackInfo
 import com.retro99.reader.ui.tts.TtsPreparationProgress
@@ -70,6 +76,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
@@ -95,6 +102,7 @@ class AndroidTtsController(
     private val preparationStateHolder: TtsVoicePreparationStateHolder,
     private val chapterPreparationJob: TtsChapterPreparationJob,
     private val preparedAudioStore: TtsPreparedAudioStore,
+    private val preparedChapterBackup: TtsPreparedChapterBackup,
     private val previewPlayer: TtsPreviewPlayer,
     private val wordPlayer: TtsWordPlayer,
     private val mediaPlaybackController: MediaPlaybackController,
@@ -740,8 +748,73 @@ class AndroidTtsController(
      * store is a few small files, and nothing else can change what is prepared for a chapter.
      */
     override fun preparedChapterAudio(chapterHref: String): Flow<TtsPreparedChapterAudio> =
-        combine(chapterPreparationJob.state, preparedAudioRevision) { _, _ -> Unit }
+        preparedAudioTriggers(chapterPreparationJob.state, preparedAudioRevision, preparedChapterBackup.settled)
             .map { withContext(Dispatchers.IO) { readPreparedChapterAudio(chapterHref) } }
+
+    /**
+     * Counts the chapter on screen for the row's estimate. Read-aloud's loaded sentences
+     * are counted where they are; otherwise the page is read and only its counts are kept.
+     * Nothing here assigns [sentences], touches the engine or starts a service.
+     */
+    override fun preparedChapterText(chapterHref: String): Flow<PreparedChapterText?> = flow {
+        emit(null)
+        withTimeoutOrNull(CHAPTER_READY_TIMEOUT_MS) {
+            readyChapterHref.first { readyHref -> readyHref == chapterHref }
+        } ?: return@flow
+        emit(
+            readPreparedChapterText(
+                chapterHref = chapterHref,
+                loaded = {
+                    sentences.takeIf { sentencesChapterHref == chapterHref }
+                        ?.map { sentence -> sentence.text }
+                },
+                currentHref = { lastLocator?.href },
+                readPage = { bookController.getChapterSentences().map { sentence -> sentence.text } },
+            ),
+        )
+    }
+
+    /**
+     * The device's own average bytes per sentence for the voice selected now, taken from the
+     * manifests of chapters it has already finished, and its own measured synthesis speed
+     * for that voice from the preparation job's record.
+     */
+    override val preparedChapterMeasured: Flow<PreparedChapterMeasured> =
+        preparedAudioTriggers(chapterPreparationJob.state, preparedAudioRevision, preparedChapterBackup.settled)
+            .map { withContext(Dispatchers.IO) { readPreparedChapterMeasured() } }
+
+    private fun readPreparedChapterMeasured(): PreparedChapterMeasured = runCatching {
+        val voice = voiceId
+        val speed = chapterPreparationJob.measuredSpeed()
+        val msPerCharacter = speed.msPerCharacter(voice)
+        val audioMsPerCharacter = speed.audioMsPerCharacter(voice)
+        val matching = preparedAudioStore.store.completeChapters()
+            .filter { it.settings.voiceId == voice && it.sentences > 0 }
+        if (matching.isEmpty()) return@runCatching PreparedChapterMeasured(
+            msPerCharacter = msPerCharacter,
+            audioMsPerCharacter = audioMsPerCharacter,
+        )
+        val sentences = matching.sumOf { it.sentences.toLong() }
+        val bytes = matching.sumOf { it.totalBytes }
+        PreparedChapterMeasured(
+            bytesPerSentence = if (sentences > 0) bytes / sentences else null,
+            msPerCharacter = msPerCharacter,
+            audioMsPerCharacter = audioMsPerCharacter,
+        )
+    }.getOrElse { PreparedChapterMeasured() }
+
+    override fun preparedChapterCloud(chapterHref: String): Flow<PreparedChapterCloudInputs> =
+        preparedAudioTriggers(chapterPreparationJob.state, preparedAudioRevision, preparedChapterBackup.settled)
+            .map { withContext(Dispatchers.IO) { readPreparedChapterCloud(chapterHref) } }
+
+    override suspend fun downloadPreparedChapter(chapterHref: String) {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                preparedChapterBackup.download(preparedChapterId(chapterHref), preparedVoiceSettings())
+            }.onFailure { error -> Log.e(TAG, "Failed to download prepared chapter", error) }
+        }
+        refreshPreparedAudio()
+    }
 
     override suspend fun prepareChapter(chapterHref: String): TtsChapterPreparationRequest {
         val voice = runCatching { synthesizer.availableVoices() }.getOrDefault(emptyList())
@@ -789,8 +862,13 @@ class AndroidTtsController(
 
     override suspend fun deletePreparedChapter(chapterHref: String) {
         withContext(Dispatchers.IO) {
-            runCatching { preparedAudioStore.store.delete(preparedChapterId(chapterHref)) }
+            val id = preparedChapterId(chapterHref)
+            runCatching { preparedAudioStore.store.delete(id) }
                 .onFailure { error -> Log.e(TAG, "Failed to delete prepared chapter", error) }
+            // The confirmation says the cloud copy goes too, so it goes. The
+            // local copy is already gone either way: that is what was asked.
+            runCatching { preparedChapterBackup.remove(id, preparedVoiceSettings()) }
+                .onFailure { error -> Log.e(TAG, "Failed to remove cloud prepared chapter", error) }
         }
         refreshPreparedAudio()
     }
@@ -832,6 +910,22 @@ class AndroidTtsController(
         rate = TtsSpeechRate.coerce(rate),
         pitch = pitch,
     )
+
+    private suspend fun readPreparedChapterCloud(chapterHref: String): PreparedChapterCloudInputs {
+        val id = preparedChapterId(chapterHref)
+        val settings = preparedVoiceSettings()
+        return runCatching {
+            PreparedChapterCloudInputs(
+                backup = preparedChapterBackup.stateOf(id, settings),
+                download = preparedChapterBackup.downloadStateOf(id, settings),
+                cloudAudio = preparedChapterBackup.cloudAudioFor(id, settings),
+            )
+        }.getOrElse { error ->
+            Log.e(TAG, "Failed to read prepared chapter cloud state", error)
+            // Reading aloud is local. An unreachable cloud says nothing.
+            PreparedChapterCloudInputs()
+        }
+    }
 
     private fun readPreparedChapterAudio(chapterHref: String): TtsPreparedChapterAudio {
         val state = runCatching {

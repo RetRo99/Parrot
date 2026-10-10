@@ -651,6 +651,13 @@ fun HomeNavigation(
                                         HomeNavigationIntent.NavigateTo(HomeDestination.Settings)
                                     )
                                 },
+                                // "Manage storage" on the prepared-chapter row.
+                                // SyncAndBackup is where CloudAccountScreen lives.
+                                onManageCloudStorage = {
+                                    intentDispatcher(
+                                        HomeNavigationIntent.NavigateTo(HomeDestination.SyncAndBackup)
+                                    )
+                                },
                             )
                         }
                     }

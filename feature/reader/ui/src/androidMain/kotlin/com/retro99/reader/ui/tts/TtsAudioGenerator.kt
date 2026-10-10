@@ -5,6 +5,8 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -37,6 +39,9 @@ class TtsAudioGenerator(
     internal suspend fun prepareSentence(id: PreparedChapterId, text: String, voiceId: String?, rate: Float, pitch: Float): PreparedAudioEncoding =
         core.prepareSentence(id, text, voiceId, rate, pitch)
 
+    internal suspend fun prepareSentenceMeasured(id: PreparedChapterId, text: String, voiceId: String?, rate: Float, pitch: Float): PreparedSentenceWork =
+        core.prepareSentenceMeasured(id, text, voiceId, rate, pitch)
+
     /** The prepared-store key for one sentence, so a chapter's order can be planned up front. */
     internal fun preparedKey(text: String, voiceId: String?, rate: Float, pitch: Float): String =
         core.preparedKey(text, voiceId, rate, pitch)
@@ -67,9 +72,31 @@ internal class TtsAudioGeneratorCore(
     private val prepared: TtsPreparedStore? = null,
     private val encoder: TtsPreparedAudioEncoder? = null,
     private val ioContext: CoroutineContext = Dispatchers.IO,
+    private val nanoTime: () -> Long = System::nanoTime,
 ) : TtsSentenceAudioSource {
 
-    suspend fun prepareSentence(id: PreparedChapterId, text: String, voiceId: String?, rate: Float, pitch: Float): PreparedAudioEncoding {
+    suspend fun prepareSentence(id: PreparedChapterId, text: String, voiceId: String?, rate: Float, pitch: Float): PreparedAudioEncoding =
+        prepareSentenceMeasured(id, text, voiceId, rate, pitch).encoding
+
+    /**
+     * As [prepareSentence], with the time synthesis and encoding took when this call did
+     * both. The wait for the synthesis turn is outside the measurement, so a preparation
+     * held up by live listening does not look like a slow voice.
+     */
+    suspend fun prepareSentenceMeasured(id: PreparedChapterId, text: String, voiceId: String?, rate: Float, pitch: Float): PreparedSentenceWork {
+        var workMs: Long? = null
+        val encoding = prepareSentence(id, text, voiceId, rate, pitch) { measured -> workMs = measured }
+        return PreparedSentenceWork(encoding, workMs.takeIf { encoding is PreparedAudioEncoding.Success })
+    }
+
+    private suspend fun prepareSentence(
+        id: PreparedChapterId,
+        text: String,
+        voiceId: String?,
+        rate: Float,
+        pitch: Float,
+        onWork: (Long) -> Unit,
+    ): PreparedAudioEncoding {
         val store = prepared ?: return PreparedAudioEncoding.Failure
         val encoder = encoder ?: return PreparedAudioEncoding.Failure
         val effectiveRate = TtsSpeechRate.coerce(rate)
@@ -90,7 +117,12 @@ internal class TtsAudioGeneratorCore(
                 val output = File.createTempFile("prepared-encode-", ".$PREPARED_AUDIO_EXTENSION", wav.parentFile)
                 temporary = output
                 check(output.delete()) // The atomic encoder never overwrites an existing destination.
-                when (val encoded = encoder.encode(wav, output)) {
+                val encodeStartedAt = nanoTime()
+                val encoded = encoder.encode(wav, output)
+                generated.synthesisMs?.let { synthesisMs ->
+                    onWork(synthesisMs + (nanoTime() - encodeStartedAt) / NANOS_PER_MS)
+                }
+                when (encoded) {
                     PreparedAudioEncoding.Failure -> PreparedAudioEncoding.Failure
                     is PreparedAudioEncoding.Success -> {
                         store.add(id, key, encoded.file, encoded.durationMs)
@@ -123,7 +155,12 @@ internal class TtsAudioGeneratorCore(
     private val lockRegistryMutex = Mutex()
     private val synthesisLocks = mutableMapOf<String, LockEntry>()
     private val synthesisGate = TtsSynthesisPriorityGate()
-    private data class GeneratedAudio(val result: TtsSynthesisResult, val privateWav: File? = null)
+    private data class GeneratedAudio(
+        val result: TtsSynthesisResult,
+        val privateWav: File? = null,
+        /** Time inside the synthesis turn; null when nothing was synthesized. */
+        val synthesisMs: Long? = null,
+    )
 
     override suspend fun synthesize(
         text: String,
@@ -152,15 +189,21 @@ internal class TtsAudioGeneratorCore(
                 val outputFile = if (preparation) {
                     File.createTempFile("prepared-synthesis-", ".wav", cache.fileFor(key).parentFile)
                 } else cache.fileFor(key)
+                var synthesisMs: Long? = null
                 val result = try {
                     synthesisGate.run(preparation) {
+                        val startedAt = nanoTime()
                         synthesizer.synthesize(
                             text = text,
                             voiceId = voiceId,
                             rate = effectiveRate,
                             pitch = pitch,
                             outputFile = outputFile,
-                        )
+                        ).also { synthesisMs = (nanoTime() - startedAt) / NANOS_PER_MS }
+                    }.also {
+                        // A voice that finished although its preparation was cancelled: the
+                        // private WAV has no owner any more, so it goes like any failure's.
+                        if (preparation) currentCoroutineContext().ensureActive()
                     }
                 } catch (error: Throwable) {
                     outputFile.delete()
@@ -175,7 +218,7 @@ internal class TtsAudioGeneratorCore(
                     if (!preparation) cache.onStored(resultFile)
                     return@withSynthesisLock GeneratedAudio(result.copy(
                         durationMs = result.durationMs ?: cache.durationMs(resultFile),
-                    ), if (preparation) resultFile else null)
+                    ), if (preparation) resultFile else null, synthesisMs)
                 }
                 // TTS-F03: the output file is the cache entry, so anything a failed or
                 // cancelled synthesis left there would be served as a valid hit forever.
@@ -225,5 +268,9 @@ internal class TtsAudioGeneratorCore(
         val mutex: Mutex,
         var users: Int = 0,
     )
+
+    private companion object {
+        const val NANOS_PER_MS = 1_000_000L
+    }
 
 }

@@ -1454,6 +1454,74 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun preparedAudioBackupKeepsOnlyItsOutcomeAndSize() {
+        val parameters = sanitizeAnalyticsParameters(
+            ReaderAnalyticsEvent.TtsPreparedAudioBackupEnded(
+                outcome = "uploaded",
+                sizeBytes = 2_097_152L,
+            ).parameters,
+        )
+
+        assertEquals(
+            mapOf(
+                "operation" to "tts_prepared_audio_backup",
+                "stage" to "ended",
+                "outcome" to "uploaded",
+                "size_bytes" to 2_097_152L,
+            ),
+            parameters,
+        )
+    }
+
+    @Test
+    fun preparedAudioBackupDropsAnythingItDoesNotRecognize() {
+        val parameters = sanitizeAnalyticsParameters(
+            mapOf(
+                "operation" to "tts_prepared_audio_backup",
+                "stage" to "ended",
+                "outcome" to "storage_full",
+                "size_bytes" to 4_096L,
+                // None of these may ever reach the provider.
+                "book_uuid" to "11111111-1111-4111-8111-111111111111",
+                "chapter_href" to "chapter-one.xhtml",
+                "book_title" to "Pride and Prejudice",
+                "voice_id" to "en_heart",
+                "relative_path" to "tts-prepared/abc/def.zip",
+                "error_message" to "quota_exceeded for user 42",
+            ),
+        )
+
+        assertEquals(
+            mapOf(
+                "operation" to "tts_prepared_audio_backup",
+                "stage" to "ended",
+                "outcome" to "storage_full",
+                "size_bytes" to 4_096L,
+            ),
+            parameters,
+        )
+    }
+
+    @Test
+    fun preparedAudioBackupRejectsASizeThatIsNotABoundedCount() {
+        listOf(
+            "size_bytes" to -1L,
+            "size_bytes" to 4_294_967_297L,
+            "size_bytes" to "2097152",
+            "size_bytes" to 2_097_152,
+        ).forEach { (key, value) ->
+            val parameters = sanitizeAnalyticsParameters(
+                mapOf("operation" to "tts_prepared_audio_backup", key to value),
+            )
+            assertEquals(
+                mapOf<String, Any>("operation" to "tts_prepared_audio_backup"),
+                parameters,
+                "$value should not be reported as a size",
+            )
+        }
+    }
+
+    @Test
     fun chapterPreparationEventsKeepVoiceKindCountAndOutcome() {
         val started = sanitizeAnalyticsParameters(
             ReaderAnalyticsEvent.TtsChapterPreparationStarted(

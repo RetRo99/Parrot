@@ -3,9 +3,11 @@ package com.retro99.reader.ui.tts
 import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** One chapter's worth of work, frozen at the moment the button was pressed. */
@@ -20,7 +22,21 @@ internal data class TtsChapterPreparationInput(
 internal interface TtsPreparationSentenceSource {
     fun key(text: String, settings: PreparedVoiceSettings): String
     suspend fun prepare(id: PreparedChapterId, text: String, settings: PreparedVoiceSettings): PreparedAudioEncoding
+
+    /** As [prepare], saying how long generating and encoding took when this call did both. */
+    suspend fun prepareMeasured(
+        id: PreparedChapterId,
+        text: String,
+        settings: PreparedVoiceSettings,
+    ): PreparedSentenceWork = PreparedSentenceWork(prepare(id, text, settings))
 }
+
+/**
+ * One sentence's outcome. [workMs] is the time synthesis and encoding took, without any
+ * wait for the synthesis turn; null when nothing was generated (already prepared, copied
+ * from another chapter, or made from a cached WAV), which is no measure of this voice.
+ */
+internal data class PreparedSentenceWork(val encoding: PreparedAudioEncoding, val workMs: Long? = null)
 
 /** The prepared store, behind a seam a host test can fake. */
 internal interface TtsPreparationChapterStore {
@@ -28,6 +44,12 @@ internal interface TtsPreparationChapterStore {
     fun isPrepared(id: PreparedChapterId, key: String): Boolean
     fun markComplete(id: PreparedChapterId)
     fun enforceLimit(active: PreparedChapterId)
+
+    /**
+     * The chapter is finished and settled on disk. Where backup is offered it,
+     * and nothing else happens here, so a host test needs no backup at all.
+     */
+    fun prepared(id: PreparedChapterId, settings: PreparedVoiceSettings) = Unit
 }
 
 internal class TtsChapterPreparationCore(
@@ -37,18 +59,26 @@ internal class TtsChapterPreparationCore(
     private val analytics: TtsChapterPreparationAnalytics,
     private val usableBytes: () -> Long,
     private val now: () -> Long = System::currentTimeMillis,
+    private val speed: TtsPreparationSpeedLog = TtsPreparationSpeedLog { _, _ -> },
 ) {
     private val mutableState = MutableStateFlow<TtsChapterPreparationState>(TtsChapterPreparationState.Idle)
     val state: StateFlow<TtsChapterPreparationState> = mutableState.asStateFlow()
 
+    /** Guards the claim, the launch and the cancel, so a cancel can never miss a starting job. */
+    private val lock = Any()
+
     @Volatile
     private var cancelRequested = false
+    private var running: Job? = null
 
     /**
      * Claims the job and starts the work, or says why it did not. The claim is made before
      * this returns, so a second press cannot start a second chapter.
      */
-    fun start(input: TtsChapterPreparationInput): TtsChapterPreparationRequest {
+    fun start(input: TtsChapterPreparationInput): TtsChapterPreparationRequest =
+        synchronized(lock) { claim(input) }
+
+    private fun claim(input: TtsChapterPreparationInput): TtsChapterPreparationRequest {
         if (input.texts.isEmpty()) return TtsChapterPreparationRequest.UNAVAILABLE
         while (true) {
             val current = mutableState.value
@@ -68,16 +98,40 @@ internal class TtsChapterPreparationCore(
             )
             if (!claimed) continue
             cancelRequested = false
-            scope.launch { run(input) }
+            running = scope.launch { run(input) }
             return TtsChapterPreparationRequest.STARTED
         }
     }
 
     fun key(text: String, settings: PreparedVoiceSettings): String = sentences.key(text, settings)
 
-    /** Stops after the sentence in flight: native synthesis already running is never cut off. */
-    fun cancel() {
+    /**
+     * Says so at once and abandons the sentence in flight. The state turns to cancelling
+     * before this returns; cancelling the job's coroutine is what stops a neural generation
+     * in progress (its callback sees the cancelled job) and takes a waiting sentence out of
+     * the synthesis queue. A voice that cannot be interrupted finishes its sentence first,
+     * and the state stays cancelling until it has. Harmless when nothing runs, or twice.
+     */
+    fun cancel() = synchronized(lock) {
+        if (mutableState.value !is TtsChapterPreparationState.Running) return@synchronized
         cancelRequested = true
+        mutableState.update { current ->
+            (current as? TtsChapterPreparationState.Running)?.copy(isCancelling = true) ?: current
+        }
+        running?.cancel()
+    }
+
+    /** Progress never takes back a cancel that has been pressed in the meantime. */
+    private fun progress(chapterHref: String, done: Int, total: Int, remainingMs: Long?) {
+        mutableState.update { current ->
+            TtsChapterPreparationState.Running(
+                chapterHref = chapterHref,
+                done = done,
+                total = total,
+                remainingMs = remainingMs,
+                isCancelling = (current as? TtsChapterPreparationState.Running)?.isCancelling == true,
+            )
+        }
     }
 
     private suspend fun run(input: TtsChapterPreparationInput) {
@@ -87,6 +141,13 @@ internal class TtsChapterPreparationCore(
         try {
             val keys = input.texts.map { text -> sentences.key(text, input.settings) }
             chapters.begin(input.id, input.settings, keys)
+            // Only what this run still has to generate counts towards the time left.
+            val pending = keys.map { key -> !chapters.isPrepared(input.id, key) }
+            var remainingCharacters = input.texts.indices.sumOf { index ->
+                if (pending[index]) input.texts[index].length else 0
+            }
+            val runSamples = mutableListOf<TtsPreparationSample>()
+            var timeLeft: TtsPreparationTimeLeft? = null
             var done = 0
             for ((index, text) in input.texts.withIndex()) {
                 if (cancelRequested) {
@@ -96,9 +157,16 @@ internal class TtsChapterPreparationCore(
                 }
                 if (!chapters.isPrepared(input.id, keys[index])) {
                     // One retry: a slow voice occasionally fails a single sentence.
-                    var encoded = sentences.prepare(input.id, text, input.settings)
-                    if (encoded is PreparedAudioEncoding.Failure) {
-                        encoded = sentences.prepare(input.id, text, input.settings)
+                    var work = sentences.prepareMeasured(input.id, text, input.settings)
+                    if (work.encoding is PreparedAudioEncoding.Failure && !cancelRequested) {
+                        work = sentences.prepareMeasured(input.id, text, input.settings)
+                    }
+                    val encoded = work.encoding
+                    if (encoded is PreparedAudioEncoding.Failure && cancelRequested) {
+                        // An interrupted sentence may report a failure; it is the cancel.
+                        outcome = OUTCOME_CANCELLED
+                        mutableState.value = TtsChapterPreparationState.Cancelled(input.id.chapterHref)
+                        return
                     }
                     if (encoded is PreparedAudioEncoding.Failure) {
                         mutableState.value = TtsChapterPreparationState.Failed(
@@ -107,13 +175,22 @@ internal class TtsChapterPreparationCore(
                         )
                         return
                     }
+                    measured(input, text, work)?.let { sample -> runSamples += sample }
                 }
+                if (pending[index]) remainingCharacters -= text.length
                 done++
-                mutableState.value =
-                    TtsChapterPreparationState.Running(input.id.chapterHref, done, input.texts.size)
+                // Worked out only when a sentence finishes: while preparation waits for the
+                // synthesis turn nothing finishes, so the time left stands still.
+                timeLeft = nextPreparationTimeLeft(
+                    shown = timeLeft,
+                    estimateMs = preparationRemainingMs(runSamples, remainingCharacters),
+                    nowMs = now(),
+                )
+                progress(input.id.chapterHref, done, input.texts.size, timeLeft?.remainingMs)
             }
             chapters.markComplete(input.id)
             chapters.enforceLimit(input.id)
+            chapters.prepared(input.id, input.settings)
             outcome = OUTCOME_COMPLETED
             mutableState.value = TtsChapterPreparationState.Completed(input.id.chapterHref)
         } catch (cancelled: CancellationException) {
@@ -136,6 +213,26 @@ internal class TtsChapterPreparationCore(
                 ),
             )
         }
+    }
+
+    /** Only a sentence this run generated is a measurement; a failed record is never fatal. */
+    private fun measured(
+        input: TtsChapterPreparationInput,
+        text: String,
+        work: PreparedSentenceWork,
+    ): TtsPreparationSample? {
+        val workMs = work.workMs?.takeIf { it > 0 } ?: return null
+        if (text.isEmpty()) return null
+        // Audio made at 1.5x is two thirds as long as the same sentence at normal speed.
+        val audioMs = (work.encoding as? PreparedAudioEncoding.Success)?.durationMs ?: 0L
+        val sample = TtsPreparationSample(
+            workMs = workMs,
+            characters = text.length,
+            audioMs = (audioMs * input.settings.rate).toLong().coerceAtLeast(0L),
+        )
+        runCatching { speed.record(input.settings.voiceId, sample) }
+            .onFailure { error -> Log.e(TAG, "Could not record preparation speed", error) }
+        return sample
     }
 
     /** Enough room for the chapter's compressed audio and the manifest, with headroom. */

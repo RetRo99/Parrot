@@ -82,7 +82,37 @@ internal class CloudFilesSqlDelightDao(
     }
 
     suspend fun saveTransfer(transfer: CloudFileTransferEntity) = withContext(Dispatchers.IO) {
-        databaseManager.getDatabase().cloudFileTransferQueries.insertCloudFileTransfer(
+        val queries = databaseManager.getDatabase().cloudFileTransferQueries
+        if (transfer.relativePath.isNotEmpty() || transfer.sourcePath != null) {
+            queries.insertCloudFileTransferWithSource(
+                transfer_id = transfer.transferId,
+                server_id = transfer.serverId,
+                direction = transfer.direction,
+                library_book_id = transfer.libraryBookId,
+                cloud_book_file_id = transfer.cloudBookFileId,
+                media_type = transfer.mediaType,
+                staging_path = transfer.stagingPath,
+                size_bytes = transfer.sizeBytes,
+                bytes_transferred = transfer.bytesTransferred,
+                content_hash = transfer.contentHash,
+                content_hash_algorithm = transfer.contentHashAlgorithm,
+                upload_id = transfer.uploadId,
+                storage_path = transfer.storagePath,
+                tus_upload_url = transfer.tusUploadUrl,
+                tus_expires_at = transfer.tusExpiresAt,
+                rights_attestation = transfer.rightsAttestation,
+                state = transfer.state,
+                attempt_count = transfer.attemptCount.toLong(),
+                next_attempt_at = transfer.nextAttemptAt,
+                last_error = transfer.lastError,
+                created_at = transfer.createdAt,
+                updated_at = transfer.updatedAt,
+                relative_path = transfer.relativePath,
+                source_path = transfer.sourcePath,
+            )
+            return@withContext
+        }
+        queries.insertCloudFileTransfer(
             transfer_id = transfer.transferId,
             server_id = transfer.serverId,
             direction = transfer.direction,
@@ -214,6 +244,8 @@ private fun Cloud_file_transfers.toEntity() = CloudFileTransferEntity(
     tusUploadUrl = tus_upload_url,
     tusExpiresAt = tus_expires_at,
     rightsAttestation = rights_attestation,
+    relativePath = relative_path,
+    sourcePath = source_path,
     state = state,
     attemptCount = attempt_count.toInt(),
     nextAttemptAt = next_attempt_at,

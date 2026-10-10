@@ -1,5 +1,57 @@
 # Prepared chapters
 
+## Prepare-time run (2026-10-11, branch `tts/prepare-time`)
+
+Four changes to the "Prepare this chapter" row. Where this section and the older ones
+below disagree, this section is the current behaviour.
+
+**The estimate before the press.** The row no longer takes its sentence count from
+read-aloud's engine, which is zero until read-aloud has started. `TtsController.
+preparedChapterText(href)` counts the sentences and characters of the chapter on screen;
+`ReaderViewModel` asks for it while the Listening sheet is open and again for each
+chapter the reader moves to. On Android it counts read-aloud's loaded sentences where
+they belong to that chapter and otherwise reads the loaded page (three tries for a page
+not laid out yet) and keeps only the counts. It starts no synthesis and no service and
+assigns nothing in the controller. `preparedChapterRowEstimate` shows a count only for
+the chapter it was made for; an empty chapter or a count still being read leaves the
+plain line.
+
+**This device's own speed.** The job measures each sentence it really generates: time
+inside the synthesis turn plus encoding (`workMs`), the sentence's characters, and the
+length of the audio it became at normal speed (`audioMs`). Skipped, copied and
+cache-fed sentences are no measurement, and neither is the wait for the synthesis turn.
+The unit is **milliseconds per character**, chosen from how the engines work, not from
+device numbers (the run could not drive a phone); the record keeps the raw pairs, so
+per-sentence figures can still be worked out. It is a rolling window of the newest 60
+measurements per voice id in `filesDir/tts-preparation-speed.txt`, one line per
+measurement (`workMs characters audioMs voiceId`), read fail-closed line by line. It
+is **not** in any `manifest.json`; the manifest format is unchanged. A sentence far
+slower than the rest counts as at most three times the median speed. Fewer than three
+measurements, no file or an unreadable file mean the fixed figures are used.
+
+**The audio length.** Under the estimate the row says "About 35 minutes of audio",
+from the same record (or the fixed spoken length per sentence), divided by the
+selected reading speed.
+
+**Time left while preparing.** `TtsChapterPreparationState.Running.remainingMs` is the
+characters this run still has to generate at the speed this run has measured; null
+until three sentences have been generated in this run. It is worked out only when a
+sentence finishes, so while live listening holds the synthesis turn it stands still.
+`nextPreparationTimeLeft` keeps it steady: nothing new more often than every five
+seconds, and downwards only unless the value shown was wrong by a quarter and at least
+half a minute. The row and the notification show the same value with the estimate's
+rounding.
+
+**Cancel.** `TtsChapterPreparationCore.cancel()` turns the state to
+`Running(isCancelling = true)` and cancels the job's coroutine before it returns. The
+neural synthesizers stop a generation whose job is no longer active (unchanged
+`NeuralGenerationCallback`); a queued sentence leaves the synthesis gate and a live
+request behind it is served next. The sentence in flight is abandoned and leaves
+nothing in the prepared store or the sentence cache; the chapter stays a valid partly
+prepared one. A voice that cannot be interrupted finishes its sentence, which is then
+kept, and the row says "Cancelling…" until it returns. This replaces the older rule
+below that cancel waits for the sentence in flight.
+
 ## Run status (2026-10-10)
 
 ### Continuation checkpoint
