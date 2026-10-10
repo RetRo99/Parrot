@@ -6,8 +6,9 @@ Commits this run (hash + subject, oldest first):
   bec5e38e docs(tts): step 0, the design answers and the baseline
   (one further commit records this hash in the report, which could not name
   its own parent before that parent existed)
-Steps complete this run, and steps complete in total (0-7): Step 0 only this
-run; 1 of 8 in total (Step 0). Steps 1-7 not built.
+Steps complete this run, and steps complete in total (0-7): Steps 0 and 1 this
+run; 2 of 8 in total (Step 0, Step 1). Steps 2-7 not built. Step 1 is complete as
+written but NOT verified: none of its SQL has been run, see below.
 Step 0: can prepared audio be one more cloud_book_files row (yes/no, what had to
 change); what an older Android app and the iPhone app do with an unknown media
 type (file and line), and how that risk is handled:
@@ -86,15 +87,74 @@ store:
   on both devices, sha256("5:local" + libraryBookId)/sha256(chapterHref), which is
   what makes a cloud download installable on the second device with no remapping.
 Step 1: migration file name; what it changes (list); pgTAP tests added (count);
-was the SQL actually run locally (yes/no, and if no, why): not built. No migration
-and no pgTAP test was written this run. NO SQL HAS BEEN RUN: there is no container
-runtime on this machine at all (docker absent from PATH, /Applications/Docker.app,
-~/.docker/bin, colima, podman and orbstack all absent), so the local Supabase
-stack cannot be started. scripts/supabase/test.sh was run once before any change
-and failed with DbConnectError ECONNREFUSED 127.0.0.1:54322.
+was the SQL actually run locally (yes/no, and if no, why):
+  File: supabase/migrations/20261010000000_parrot_cloud_prepared_audio.sql.
+  Tests: supabase/tests/prepared_audio_test.sql, 38 assertions, plan(38).
+  Runbook: supabase/PREPARED_AUDIO_ROLLOUT.md.
+  Media type tts_prepared_audio; relative path
+  tts-prepared/<sha256(chapter href)>/<sha256(voice, model version, rate, pitch)>.zip
+  - two 64-char lowercase hex hashes and nothing else, so no title, href or text
+  can appear in it.
+  What it changes:
+   1. Four table constraints, NOT VALID then validated in the style of
+      20261003000000: on both cloud_book_files and cloud_book_uploads, a
+      prepared-audio relative_path must match the two-hash pattern and size_bytes
+      must be at most 64 MiB (67108864).
+   2. book_has_available_backup(uuid), a new private helper: true when the book has
+      an available file that is not prepared audio and whose hash is not blocked.
+   3. reserve_book_upload wrapped. The current definition is renamed to
+      reserve_book_upload_before_prepared_audio and re-executed with its
+      self-qualified parameters rewritten - the same pg_get_functiondef/replace
+      dance 20260924000004:8-22 used, and needed for the same reason. The wrapper
+      adds, for tts_prepared_audio only: the upload allow-list first, then
+      invalid_upload_metadata for a path that is not two hashes (including the
+      empty path), file_too_large above 64 MiB, cloud_book_not_owned,
+      content_blocked when the book's own backup hash is blocked, and
+      book_backup_unavailable when the book has no usable backup. Every other media
+      type falls straight through untouched.
+   4. cascade_prepared_audio_deletion plus two triggers (see the cascade line).
+   5. get_storage_usage gains prepared_audio_bytes and books_bytes; all five
+      existing keys keep their name and meaning, and books_bytes is derived as the
+      remainder so the two parts always add up to the charged used_bytes.
+  Deliberately NOT changed: the bucket (its MIME types already allow
+  application/octet-stream, which is what TusUploadMetadata.contentType() produces
+  for this media type; its 2 GiB limit stays above the new 64 MiB reserve cap), the
+  rights attestation, the allow-list mechanism, and every RPC not named above.
+  WAS THE SQL RUN: **NO. Not once, not in part.** There is no container runtime AND
+  no Postgres binary of any kind on this machine: docker is absent from PATH,
+  /Applications/Docker.app and ~/.docker/bin do not exist, and colima, podman,
+  orbstack, psql, postgres, initdb and pg_ctl are all absent. Only the supabase CLI
+  is installed. scripts/supabase/test.sh was run once before any change and failed
+  with DbConnectError ECONNREFUSED 127.0.0.1:54322. What was verified instead is
+  only structural - balanced dollar-quote tags, balanced begin/end, balanced
+  parentheses, and every line cited from an existing migration re-read at its
+  stated line. That is NOT a substitute for running it. The 38 new assertions have
+  never been seen to pass or to fail, and the write-a-failing-test-first discipline
+  was impossible: the test file was written before the migration body, in that
+  order, but no red run and no green run exists. The owner must do
+  PREPARED_AUDIO_ROLLOUT.md step 1 before applying this anywhere.
 Step 1: cascade on book backup delete, takedown, block-list and account deletion
-(tested yes/no each): not built, none tested. Step 0 established what each does
-today: book backup delete acts on one row only
+(tested yes/no each): all four are BUILT and all four have a written test, but NO
+test has been executed, so "tested" is no in the only sense that counts. Built and
+covered by an unexecuted assertion: book backup delete YES (an after-update
+trigger on cloud_book_files when any non-prepared row enters deleting and no usable
+backup is left - this covers delete_book_file AND admin_takedown_book_file with one
+trigger and no further renames; the media-type condition in its when clause is what
+stops it recursing); takedown YES (same trigger); block-list YES (a separate
+after-insert trigger on cloud_content_blocklist, unconditional for every book
+holding a non-prepared file of the blocked hash - it needs its own path because
+admin_block_content_hash deletes nothing and every block check matches on the
+blocked hash, which a book's prepared audio does not share); account deletion YES
+(already correct before this work, asserted anyway). The cascade gives each
+prepared chapter exactly the lifecycle delete_book_file gives an ordinary file: an
+available row is marked deleting and its bytes credited by the existing
+complete_book_file_deletion; a row that never became available has its reservation
+released and is then either orphan-accounted and marked deleting (its object did
+materialise) or deleted outright (it did not), because its bytes were only ever
+reserved and must not be credited twice; a row already deleting is skipped, which
+makes it idempotent.
+  Step 0 established what each path did BEFORE this work: book backup delete acts
+on one row only
 (20260924000002_parrot_cloud_delete_incomplete_backup.sql:1-162) - cascade needed;
 takedown acts on one row only
 (20260925000006_parrot_cloud_drop_unified_library_residue.sql:92-207) - cascade
@@ -107,7 +167,14 @@ is ALREADY correct via the FK on delete cascade
 nothing needed. The orphan GC needs nothing: it selects from cloud_book_files
 without reference to media type
 (20260924000000_parrot_cloud_orphan_gc.sql:309-549).
-Step 1: existing server tests edited (name + why), or "none": none.
+Step 1: existing server tests edited (name + why), or "none": none. The migration
+replaces reserve_book_upload and get_storage_usage, so book_files_test.sql,
+finalize_book_upload_test.sql, rls_isolation_test.sql, abuse_operations_test.sql,
+security_hardening_test.sql, non_available_book_delete_test.sql, orphan_gc_test.sql
+and storage_policy_test.sql all exercise replaced functions and must pass unedited.
+None was touched. Because nothing could be run, I cannot claim they still pass - if
+any fails when the owner runs the suite, the wrapper changed existing behaviour and
+the wrapper must be fixed, never the test.
 Step 2: archive format; checks on unpack (list); what a rejected archive leaves
 behind: not built.
 Step 3: when a chapter is queued; states built (list); was the existing transfer
@@ -116,11 +183,12 @@ Step 4: how a device learns what the cloud holds; download states built (list):
 not built.
 Step 5: row states added (list); new string keys (list); where the "get more
 storage" hook is (file and function): not built.
-Does iPhone behave exactly as before (yes/no) and how I know: yes - no source file
-of any kind was changed this run, only two documents were added. Step 0 also
-established by reading that prepared-audio rows would be inert on iPhone once
-built, because iOS runs the same commonMain applier and the same
-LocalBooksRepository.kt:83 relative-path gate.
+Does iPhone behave exactly as before (yes/no) and how I know: yes - not one line of
+Kotlin, Swift or Gradle configuration was changed this run. Everything added is SQL
+or documentation. The iOS reader test task was run anyway and is unchanged at
+357/357. Step 0 also established by reading that prepared-audio rows will be inert
+on iPhone once the feature exists, because iOS runs the same commonMain applier and
+the same LocalBooksRepository.kt:83 relative-path gate.
 Existing app tests edited (name + why), or "none": none.
 Per module, before and after: <module> <passed>/<total> -> <passed>/<total> (one
 line each):
@@ -136,11 +204,12 @@ line each):
   after are identical because no code was changed this run.)
 Does a test resolve the new classes from the real Koin graph (yes/no, name): no -
 no new class was added this run.
-App build results (Android assemble, iOS framework): not run this run. No source
-file was changed, so both builds are unaffected; the baseline test suite over all
-eight modules compiled and passed green.
-Server test suite result (passed/total, or "not run"): not run - no container
-runtime on this machine, see Step 1 above.
+App build results (Android assemble, iOS framework): not run this run, because no
+Kotlin, Swift or Gradle file was changed, so neither build can have moved. The
+eight-module test suite was run twice, before and after, and compiled and passed
+green both times.
+Server test suite result (passed/total, or "not run"): NOT RUN. 38 new assertions
+written, 0 executed. No container runtime and no Postgres binary on this machine.
 Device used (model + serial), any command sent to another device (yes/no): no
 device was used this run. No adb command was sent to any device, so no command was
 sent to another device.
@@ -148,25 +217,42 @@ On the phone with nothing deployed: prepare and play still work (yes/no); what t
 row showed about backup; any crash, loop or unasked-for error (yes/no): not checked
 this run - Step 7 not reached and no code was changed that could affect the phone.
 What the owner must do before the end-to-end check (list):
-  1. Nothing yet - there is no migration to apply. The gate passed, but Step 1 was
-     not reached, so no SQL exists.
-  2. When a migration does exist: run it against a local Supabase stack first. This
-     machine has no container runtime, so no agent run from here can run SQL; an
-     agent-written migration must be run by the owner or on a machine with Docker
-     before it is applied anywhere.
+  1. Run the migration locally, on a machine that has Docker: supabase start, then
+     scripts/supabase/reset.sh, then scripts/supabase/test.sh. This has NEVER been
+     done. It is step 1 of supabase/PREPARED_AUDIO_ROLLOUT.md and it is mandatory,
+     not optional.
+  2. Read the pgTAP output. All 38 prepared_audio_test.sql assertions must pass AND
+     the eight existing suites that exercise the replaced reserve_book_upload and
+     get_storage_usage must pass unedited. If an existing one fails, the wrapper
+     changed existing behaviour: fix the wrapper, not the test.
+  3. Run the two pre-apply queries in PREPARED_AUDIO_ROLLOUT.md step 2; both must
+     return 0, or the new constraints stay NOT VALID.
+  4. Only then apply it, and run the five verification queries in step 4.
+  5. The end-to-end check itself (upload, see the usage, download on a second
+     device, delete, storage full) additionally needs Steps 2 to 5, which are not
+     built, so it cannot be attempted yet even with the migration applied. The
+     client-side checklist for it will be written with Step 5.
 State the phone was left in (voice, rate, screen, prepared audio deleted yes/no):
 unchanged - the phone was never touched this run. Nothing was installed, no
 setting was altered, and no prepared audio was created, so none needed deleting.
 Why the run ended where it did (finished / out of time / blocked, and on what):
-Finished Step 0 and stopped there, on the brief's own first requirement that Step 0
-is a gate to be written down and committed before any code. The gate PASSED, so
-this is not a blocked run - Step 1 is open for the next one. It ended here rather
-than continuing because the remaining budget was better spent getting the design
-answers right and verified line by line than on starting a migration that could not
-be run on this machine anyway.
+Finished Step 0 (gate passed, committed) and Step 1 (written, committed), and
+stopped before Step 2. Not blocked - Step 2 is pure host-testable Kotlin and is
+open for the next run. I stopped here because Step 1 is the last thing I can do
+where the inability to execute SQL is a stated, accepted condition of the brief;
+going on to Step 2 would start stacking client code on a server contract that has
+never been exercised. The honest state is that Step 1's value is real but
+unverified, and that is worth handing over cleanly rather than burying under more
+code.
 Done this run:
   - Created branch tts/prepared-cloud from origin/main ae1c40f8 in the supplied
     worktree, and committed the brief as the first commit.
+  - Step 1: wrote the migration, its 38 pgTAP assertions and the owner's rollout
+    and rollback runbook. Found and closed the block-list hole that neither the
+    delete path nor the takedown path would have caught (admin_block_content_hash
+    deletes nothing and every block check matches on the blocked hash, which
+    prepared audio does not share), and chose triggers over three more RPC renames
+    so only one existing function had to be wrapped.
   - Ran scripts/supabase/test.sh once before changing anything and established that
     the local server tests CANNOT run here, with the reason: no container runtime is
     installed, not merely a stopped daemon.
@@ -179,9 +265,11 @@ Done this run:
     misbehaviours it guards against, and decided to enforce a never-empty
     relative_path with a server CHECK rather than by client convention.
   - Wrote docs/tts-prepared-cloud.md and this report, and committed both.
-Not done or partly done, and why: Steps 1 to 7 are entirely not built. Step 0 is a
-gate the brief requires to be committed before any code, and this run did that and
-stopped; nothing of Step 1 was begun, so nothing is half-built.
+Not done or partly done, and why: Steps 2 to 7 are entirely not built, so nothing
+is half-built on the client side. Step 1 is written in full but UNVERIFIED - every
+line of its SQL is unexecuted, which is the one sense in which it is partly done,
+and the brief anticipated exactly this case and told me to write it anyway and say
+so plainly.
 Tests skipped, ignored or weakened (file + name + reason), or "none": none.
 Places the brief was ambiguous and what I chose:
   1. The brief says to stop after Step 0 if "takedown is tied to a single file".
@@ -203,21 +291,40 @@ Places the brief was ambiguous and what I chose:
      those names". All eight exist as written; none had to be substituted.
 Files changed outside supabase, scripts/supabase, lib/server-parrot-cloud,
 feature/books, feature/reader, feature/cloud-account, feature/settings,
-lib/analytics, translations, composeApp tests and docs: none. The only files added
-are docs/tts-prepared-cloud-brief.md, docs/tts-prepared-cloud.md and
-docs/tts-prepared-cloud-report.txt. No existing file of any kind was modified.
+lib/analytics, translations, composeApp tests and docs: none. Six files added, all
+inside supabase/ or docs/: supabase/migrations/20261010000000_parrot_cloud_prepared_audio.sql,
+supabase/tests/prepared_audio_test.sql, supabase/PREPARED_AUDIO_ROLLOUT.md,
+docs/tts-prepared-cloud-brief.md, docs/tts-prepared-cloud.md and
+docs/tts-prepared-cloud-report.txt. NO EXISTING FILE OF ANY KIND WAS MODIFIED - no
+existing migration, no existing test, no Kotlin source.
 Known problems I am leaving:
   1. No SQL can be run from this machine. Until that is solved, every migration an
      agent writes here is unrun and must not be applied by the owner, per the brief.
-  2. The three cascades (book backup delete, takedown, block-list) are real gaps
-     that exist the moment the first prepared chapter is uploaded: audio would
-     outlive its book. They must be in the same migration as the new media type,
-     never a later one.
-  3. admin_block_content_hash deletes nothing today, so blocking a book's hash will
-     not reach its prepared audio by any existing mechanism - the cascade has to be
-     attached to the block path itself, not inferred from the hash.
-  4. The never-empty relative_path rule is the single thing protecting older apps.
-     If a future change ever relaxes it, or removes the relativePath.isEmpty()
-     filter at LocalBooksRepository.kt:83, older installs break in the three ways
-     listed above. Both places should be commented to say so when Step 1 lands.
+  2. All three cascades are in the same migration as the new media type, which is
+     where they have to be: each is a real gap the moment the first prepared
+     chapter is uploaded, because audio would otherwise outlive its book. Do not
+     split them into a follow-up migration.
+  3. The block-list cascade is attached to an after-insert trigger on
+     cloud_content_blocklist, which means it only fires for blocks added AFTER this
+     migration. Any hash already on the block-list when it is applied will not
+     retroactively clear prepared audio. Today that is harmless, because no
+     prepared audio exists anywhere yet, but it stops being harmless if this
+     migration is ever applied to a database that already has some.
+  4. Deleting one of two representations keeps the audio. The cascade asks
+     book_has_available_backup, so deleting a book's EPUB while its audiobook copy
+     stays backed up does NOT remove prepared audio. "Deleting the book's backup"
+     reads to me as the last usable copy going, not any one file; if the owner means
+     any file, the trigger drops its condition and becomes unconditional.
+  5. The cascade's sync_changes rows get lower change_ids than the ebook's own,
+     because the after-update trigger runs inside the same statement, so a device
+     hears that the audio is going very slightly before it hears about the book.
+     Each change applies independently, so I believe this is cosmetic, but it has
+     not been observed - like everything else in Step 1.
+  6. The never-empty relative_path rule is the single thing protecting older apps.
+     If a future change ever relaxes cloud_book_files_prepared_audio_path_check, or
+     removes the relativePath.isEmpty() filter at LocalBooksRepository.kt:83, older
+     installs break in the three ways listed above. The migration says so in its
+     header comment and beside the constraint; LocalBooksRepository.kt:83 does NOT
+     yet carry that comment, because no Kotlin was touched this run. Add it with
+     Step 3.
 --- END REPORT ---

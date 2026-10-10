@@ -10,7 +10,10 @@ Branch `tts/prepared-cloud`, based on `ae1c40f8`.
 
 Step 0 is complete and the gate is **passed**: a prepared chapter can be one more
 `cloud_book_files` row, and the compatibility risk in answer 3 below is preventable
-from the server side. Steps 1 to 7 are not built.
+from the server side.
+
+Step 1 is written but **its SQL has NOT been run** — see below; nothing could be
+executed on this machine. Steps 2 to 7 are not built.
 
 ### Can the local Supabase stack run here?
 
@@ -239,6 +242,116 @@ prepared-audio row as one of the book's own media resources — and shows it is 
 from the server side by a never-empty `relative_path`, enforced by a constraint rather
 than by client agreement. **Step 0 does not block. Step 1 may start.**
 
-## Steps 1 to 7
+## Step 1: the server
+
+One new migration, `supabase/migrations/20261010000000_parrot_cloud_prepared_audio.sql`,
+and one new pgTAP file, `supabase/tests/prepared_audio_test.sql` (`plan(38)`). The
+owner's runbook is `supabase/PREPARED_AUDIO_ROLLOUT.md`.
+
+### THE SQL HAS NOT BEEN RUN
+
+Not once, not in part. There is no container runtime and no Postgres binary of any
+kind on this machine (`docker`, `colima`, `podman`, `orbstack`, `psql`, `postgres`,
+`initdb` and `pg_ctl` are all absent; only the `supabase` CLI is installed), so the
+local stack could not be started and `scripts/supabase/test.sh` could not execute.
+What was verified instead is only structural: balanced dollar-quote tags, balanced
+`begin`/`end`, balanced parentheses, and every line cited from an existing migration
+re-read at its stated line. **That is not a substitute for running it.** The brief is
+explicit that the owner does not apply SQL that has not been run, and this SQL has
+not been run. `PREPARED_AUDIO_ROLLOUT.md` step 1 is therefore mandatory, not
+optional, and the 38 new assertions have never been seen to pass or fail.
+
+A consequence worth stating plainly: the usual discipline of writing a test, watching
+it fail, then making it pass was **impossible** here. The test file was written before
+the migration body, in that order, but no red run and no green run exists.
+
+### The contract
+
+Media type `tts_prepared_audio`. Relative path
+`tts-prepared/<sha256(chapter href)>/<sha256(voice id, model version, rate, pitch)>.zip`
+— two 64-character lowercase hex hashes and nothing else, so no title, href or text
+can appear in it. Storage path, bucket and MIME type are unchanged from any other
+book file.
+
+### What the migration changes
+
+1. **Four table constraints**, `NOT VALID` then validated, in the style of
+   `20261003000000`: on both `cloud_book_files` and `cloud_book_uploads`, a
+   prepared-audio row's `relative_path` must match the two-hash pattern, and its
+   `size_bytes` must be at most 64 MiB (67108864).
+2. **`book_has_available_backup(uuid)`**, a new private helper: true when the book
+   has an `available` file that is not prepared audio and whose content hash is not
+   on the block-list. This is both the precondition for uploading audio and the test
+   the cascade uses to decide when audio has to go.
+3. **`reserve_book_upload` is wrapped.** The current definition is renamed to
+   `reserve_book_upload_before_prepared_audio` and re-executed with its
+   self-qualified parameters rewritten — the same `pg_get_functiondef` and `replace`
+   dance `20260924000004:8-22` used for the previous rename, and necessary for the
+   same reason. The new wrapper adds, for `tts_prepared_audio` only: the upload
+   allow-list first (so the answer does not depend on media type), then
+   `invalid_upload_metadata` for a path that is not two hashes (**including the empty
+   path**), `file_too_large` above 64 MiB, `cloud_book_not_owned`, `content_blocked`
+   when the book's own backup hash is blocked, and `book_backup_unavailable` when the
+   book has no usable backup. Every other media type falls straight through
+   untouched.
+4. **Three cascades, so audio never outlives its book.** `cascade_prepared_audio_deletion`
+   puts every prepared chapter of a book through exactly the lifecycle
+   `delete_book_file` gives an ordinary file — an `available` row is marked
+   `deleting` and its bytes are credited by the existing `complete_book_file_deletion`;
+   a row that never became available has its live reservation released and is then
+   either orphan-accounted and marked `deleting` (its object did materialise) or
+   deleted outright (it did not), because its bytes were only ever *reserved* and must
+   not be credited twice; a row already `deleting` is skipped, which makes the whole
+   thing idempotent. It is reached two ways:
+   - an **`after update` trigger on `cloud_book_files`** when any non-prepared-audio
+     row enters `deleting` and no usable backup is left. This covers
+     `delete_book_file` **and** `admin_takedown_book_file` with one trigger and no
+     further renames, and will cover anything added later that marks a file deleting.
+     The media-type condition in the `when` clause is what stops it recursing.
+   - an **`after insert` trigger on `cloud_content_blocklist`**, unconditional for
+     every book holding a non-prepared file of the blocked hash. This one needs its
+     own path because `admin_block_content_hash` deletes nothing and every block check
+     matches on the blocked hash, which a book's prepared audio does not share — so
+     without it, blocking a book leaves its audio downloadable.
+   - **account deletion and orphan GC need nothing**, as Step 0 answer 2 established.
+5. **`get_storage_usage` gains `prepared_audio_bytes` and `books_bytes`.** All five
+   existing keys keep their name and meaning. `books_bytes` is derived as the
+   remainder rather than summed, so the two parts always add up to the `used_bytes`
+   the account is actually charged.
+
+### What it deliberately does not change
+
+The bucket (its MIME types already allow `application/octet-stream`, which is what
+`TusUploadMetadata.contentType()` produces for this media type, and its 2 GiB limit
+stays above the new 64 MiB reserve cap); the rights attestation; the upload
+allow-list mechanism; and every RPC not named above. No existing migration was
+edited. No existing pgTAP test was edited.
+
+### Existing tests that must still pass unedited
+
+The migration replaces `reserve_book_upload` and `get_storage_usage`, so
+`book_files_test.sql`, `finalize_book_upload_test.sql`, `rls_isolation_test.sql`,
+`abuse_operations_test.sql`, `security_hardening_test.sql`,
+`non_available_book_delete_test.sql`, `orphan_gc_test.sql` and
+`storage_policy_test.sql` all exercise replaced functions. None was edited. If any
+fails when the owner runs the suite, the wrapper has changed existing behaviour and
+must be fixed rather than the test.
+
+### Judgements made here, so they can be overruled
+
+- **Deleting one of two representations keeps the audio.** The cascade asks
+  `book_has_available_backup`, so deleting a book's EPUB while its audiobook copy
+  stays backed up does *not* remove prepared audio. "Deleting the book's backup"
+  reads to me as the last usable copy going, not any one file. If the owner means any
+  file, the trigger drops its condition and becomes unconditional.
+- **A takedown reaches the audio twice, harmlessly.** `admin_takedown_book_file`
+  inserts the block row *and* marks the file deleting, so both triggers fire; the
+  second finds nothing left to do.
+- **The device hears about the audio slightly before the book.** The cascade's
+  `sync_changes` rows get lower `change_id`s than the ebook's own, because the
+  `after update` trigger runs inside the same statement. Each change applies
+  independently, so this is cosmetic.
+
+## Steps 2 to 7
 
 Not built.
