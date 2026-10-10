@@ -6,6 +6,7 @@ import com.retro99.reader.ui.tts.TtsChapterPreparationRequest
 import com.retro99.reader.ui.tts.TtsChapterPreparationState
 import com.retro99.reader.ui.reader.PreparedChapterCloudInputs
 import com.retro99.reader.ui.reader.PreparedChapterMeasured
+import com.retro99.reader.ui.reader.PreparedChapterText
 import com.retro99.reader.ui.tts.TtsPreparedChapterAudio
 import com.retro99.reader.ui.tts.SpeakWordState
 import com.retro99.reader.ui.tts.TtsPreparationProgress
@@ -154,6 +155,14 @@ interface TtsController : NarrationController {
      */
     val preparedChapterMeasured: Flow<PreparedChapterMeasured>
         get() = flowOf(PreparedChapterMeasured())
+
+    /**
+     * How much text [chapterHref] holds, for the estimate on the row before anything is
+     * pressed. Null while it is being read and whenever it cannot be known. Reading it
+     * only counts the loaded page: it starts no synthesis and no service, and leaves a
+     * read-aloud session and the sentences it has loaded alone.
+     */
+    fun preparedChapterText(chapterHref: String): Flow<PreparedChapterText?> = flowOf(null)
 
     /** Prepared audio for [chapterHref] with the voice, speed and pitch selected now. */
     fun preparedChapterAudio(chapterHref: String): Flow<TtsPreparedChapterAudio> =

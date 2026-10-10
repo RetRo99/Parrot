@@ -26,6 +26,8 @@ import com.retro99.reader.ui.tts.TtsChapterPreparationRequest
 import com.retro99.reader.ui.tts.TtsChapterPreparationState
 import com.retro99.reader.ui.tts.TtsPreparationVoiceKind
 import com.retro99.reader.ui.reader.PreparedChapterMeasured
+import com.retro99.reader.ui.reader.PreparedChapterText
+import com.retro99.reader.ui.reader.readPreparedChapterText
 import com.retro99.reader.ui.tts.TtsPreparedAudioStore
 import com.retro99.reader.ui.tts.TtsPreparedChapterBackup
 import com.retro99.reader.ui.tts.TtsPreparedChapterAudio
@@ -73,6 +75,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
@@ -746,6 +749,29 @@ class AndroidTtsController(
     override fun preparedChapterAudio(chapterHref: String): Flow<TtsPreparedChapterAudio> =
         combine(chapterPreparationJob.state, preparedAudioRevision) { _, _ -> Unit }
             .map { withContext(Dispatchers.IO) { readPreparedChapterAudio(chapterHref) } }
+
+    /**
+     * Counts the chapter on screen for the row's estimate. Read-aloud's loaded sentences
+     * are counted where they are; otherwise the page is read and only its counts are kept.
+     * Nothing here assigns [sentences], touches the engine or starts a service.
+     */
+    override fun preparedChapterText(chapterHref: String): Flow<PreparedChapterText?> = flow {
+        emit(null)
+        withTimeoutOrNull(CHAPTER_READY_TIMEOUT_MS) {
+            readyChapterHref.first { readyHref -> readyHref == chapterHref }
+        } ?: return@flow
+        emit(
+            readPreparedChapterText(
+                chapterHref = chapterHref,
+                loaded = {
+                    sentences.takeIf { sentencesChapterHref == chapterHref }
+                        ?.map { sentence -> sentence.text }
+                },
+                currentHref = { lastLocator?.href },
+                readPage = { bookController.getChapterSentences().map { sentence -> sentence.text } },
+            ),
+        )
+    }
 
     /**
      * The device's own average bytes per sentence for the voice selected now, taken from the

@@ -764,8 +764,9 @@ internal fun ReaderOverlayContent(
                     preparation = viewState.chapterPreparation,
                     voice = preparedChapterVoice(selectedVoice, viewState.hasAcceptedSupertonicTerms),
                 ),
-                preparedChapterEstimate = preparedChapterEstimate(
-                    sentenceCount = viewState.ttsSentenceCount,
+                preparedChapterEstimate = preparedChapterRowEstimate(
+                    chapterHref = currentPosition?.href,
+                    text = viewState.preparedChapterText,
                     voiceKind = preparedVoiceKind(selectedVoice),
                     measured = viewState.preparedChapterMeasured,
                 ),
