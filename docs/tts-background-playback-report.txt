@@ -10,7 +10,8 @@ e37d63e2 test(tts): the screen lies when the player is taken away (failing)
 0d5fd910 fix(tts): keep the playback service through a chapter handover
 2208659c test(tts): the stop after a handover still takes the service (failing)
 673670f1 fix(tts): a stop with nothing loaded leaves the media service alone
-(plus the documents and evidence commit made after this report was first written)
+b2f4f778 docs(tts): the device pass, the findings and the run report
+(this report's own update is the commit after b2f4f778)
 
 Steps complete (1-5): 1, 2, 3, 4 and 5 all done. Step 4's recorded-narration check
 could not be completed because narration does not play on this phone on either build;
