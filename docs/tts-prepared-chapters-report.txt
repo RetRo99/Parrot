@@ -1,48 +1,36 @@
 --- REPORT ---
-Branch: tts/prepared-chapters
-Leftover worktree removed (yes/no, why not): yes; clean status, git worktree remove succeeded.
-Dead Play: which guard stopped the press (file and line); test failed before the fix (yes/no) and the failure text; confirmed on the phone (yes/no): ReaderViewModel.kt:2544, isTtsReadAloud false; yes, Play must reach the controller even before page availability. Expected <1>, actual <0>; yes, first text chapter, one attempted and one succeeded (1327 ms).
-Was the cause what the prompt suggested (yes/no), and if not, what it was: yes.
+Branch: tts/prepared-chapters (worktree .claude/worktrees/tts-investigation)
+Format switch: production encoder now (class); tests that failed first; existing tests edited for it (name + why): AndroidTtsPreparedAacEncoder (@Single binds TtsPreparedAudioEncoder; the WAV-copying AndroidTtsPreparedAudioEncoder is deleted). Failed first: PreparedAudioFormatTest "the store names prepared audio m4a and serves the duration the encoder measured", "a prepared WAV chapter from the previous build is not prepared and is cleaned up", "the current manifest format version is the AAC one"; composeApp PreparedAudioWiringTest (real graph resolved the WAV copier). Edited: PreparedAudioFormatTest (it pinned the withdrawn WAV choice; rewritten to pin AAC), TtsPreparedStoreTest (prepared file names .wav -> .m4a and the required-version literal 1 -> 2, mechanical), PreparedAudioWiringTest (production class name).
+Sample files for listening: copied (yes/no), which sentences, where: not built (step 8 not reached)
 Commits this run (hash + subject, oldest first):
-542736b3 docs: commit prepared chapters owner brief
-8fe3cfdc test(reader): pin empty-chapter Play regression (intentionally red)
-071d8867 fix(reader): let Play search ahead from an empty chapter
-f87bedcf docs: record Samsung empty-chapter Play fix evidence
-46d27157 test(tts): specify AAC codec pump (intentionally red)
-eca84193 feat(tts): implement atomic platform AAC prepared audio encoder
-0b19d065 feat(tts): select WAV fallback after Samsung AAC duration gate
-d561f8bf test(tts): specify prepared store safety and resume (intentionally red)
-0ed7f197 feat(tts): add atomic resumable prepared chapter store
-5cc02748 test(tts): pin prepared lookup and live synthesis priority (intentionally red)
-9478844e feat(tts): serve prepared audio with live-first synthesis priority
-e78f2339 docs: checkpoint steps 1-3 report and step 4 handoff
-(This final documentation-only report commit is listed in git log and the final response.)
-Steps complete this run, and steps complete in total (1-8): 1,2,3; 1,2,3 (WAV fallback, subjective AAC join check unavailable).
-Step 1: format chosen; six-sentence measurements (WAV bytes, compressed bytes, duration difference per sentence in ms); joins audibly worse than WAV (yes/no); fell back to WAV (yes/no, why): WAV; Kokoro 76970/11190/+104, 99606/14050/+102, 127086/17690/+127; System 105764/14909/+102, 103340/14570/+109, 141262/19364/+87; audibly worse unknown (no audio-monitoring tool); yes, all AAC durations exceed 50 ms and encoder-delay/padding remux metadata was not preserved, deltas unchanged. Both WAV and AAC groups played indices 0,1,2 through the unchanged engine.
-Step 2: where prepared audio lives on disk; manifest fields; does any file name or manifest contain sentence text or a title (yes/no): filesDir/tts-prepared/<hashed-server+book>/<hashed-href>/<same-cache-key>.wav and manifest.json; formatVersion, bookId, serverId, chapterHref, voiceId, modelVersion, rate, pitch, createdTimeMs, ordered sentences(key,durationMs,bytes), complete,totalBytes,lastUsedTimeMs; no. Host implementation green.
-Step 3: lookup order as built; how a live request overtakes preparation, and the test that shows it; was TtsReadAloudEngine changed (yes/no, why): prepared, ordinary cache, synthesis; one permit with separate live/background FIFO queues, release picks live first after current native sentence; TtsPreparedGeneratorTest real generator serves live before queued preparation after native work finishes, plus TtsSynthesisPriorityGateTest twenty queued sentences; no engine change, existing injected source plays WAV/M4A on Samsung.
-Step 4: what happens on a second request while one runs; what survives an app kill; analytics events and parameters added, and the sanitizer test: not built.
-Step 5: new TtsController members; does iPhone behave exactly as before (yes/no) and how I know: not built; no new members; yes, iPhone stub/source unchanged and 324/324 iOS tests green after shared Play fix (319 original + 5 added).
-Step 6: every state of the row that was built (list); every new string key (list); settings row built (yes/no): not built; none; no.
-Tests from the bug-fix runs edited (name + why), or "none": none.
-Per module: reader ui Android host 469/469, reader ui iOS 324/324, settings ui 22/22, home ui 84/84, composeApp 62/62, analytics 75/75
-Does a test resolve the new classes from the real Koin graph (yes/no, name): yes, PreparedAudioWiringTest, PreparedStoreWiringTest, PreparedGeneratorWiringTest; only platform boundaries replaced. First two failed before their bindings.
-App build results (Android assemble, iOS framework): both succeeded on final step-3 source (9478844e).
-Device used (model + serial), any command sent to another device (yes/no): Samsung SM-S921B (Android 16) RFCWC0SSVDM; no.
-Kokoro chapter: sentences, time to prepare, size on disk, notification showed progress (yes/no): not built.
-Playing the prepared chapter: any synthesize line for it (yes/no); pause, resume, skip, double-tap (result of each): not built.
-Live playback while another chapter prepares: time to first audio, kept going (yes/no): not built.
-Force-stop and Continue: sentences already there, sentences synthesised after (numbers): not built.
-Speed change and back: what the row showed each time: not built.
-Delete from the row, settings total, Delete all (result of each): not built.
-System voice chapter prepared and played (yes/no): no; not built.
-States of the row seen on the phone (list), and states not reached: none; all not built.
-State the phone was left in (voice, rate, screen, prepared audio deleted yes/no): System voice, rate 1.0, Library; yes, probe audio removed and files/tts-prepared absent by run-as; tiny instrumentation-only APK retained (no uninstall allowed).
-Why the run ended where it did (finished / out of time / blocked, and on what): out of time after committed green step 3, full six-module verification, both final builds and Samsung normal-playback regression smoke (one attempted/succeeded, 889 ms); step 4 not started.
-Done this run: brief committed, comparison worktree removed, Play regression failed then fixed and Samsung confirmed; real native encoder, measured WAV fallback, atomic resumable prepared store, prepared-first playback, live-priority synthesis, three real Koin graph tests; steps 1-3 committed green.
-Not done or partly done, and why: subjective join assessment unavailable; numeric duration gate sufficient for WAV fallback; steps 4-8 not built, so no end-user preparation button or job yet.
-Tests skipped, ignored or weakened (file + name + reason), or "none": none.
-Places the brief was ambiguous and what I chose: ordered manifest includes pending entries (null duration, zero bytes) to retain resumable total; duplicate keys count positions but bytes once; total store/limit include manifests; private synthesis before successful encoding preserves live-owned WAVs, existing valid cache is not deleted on background failure; WAV fallback selected on numeric gate without pretending subjective joins were assessed.
-Files changed outside feature/reader/ui, feature/settings/ui, lib/analytics, translations, androidApp/src/main/AndroidManifest.xml, composeApp tests and docs: none.
-Known problems I am leaving: feature not user-visible until steps 4-6; WAV uses more storage; AAC adds 87-127 ms in the second phone probe; no subjective acoustic judgment; limit may remain exceeded while all chapters are protected; no checksum/fsync guarantees. Tiny instrumentation test APK remains installed (no uninstall allowed).
+  77d1c689 docs(tts): prepared audio is AAC; withdraw the duration fallback rule
+  <format switch commit>
+Steps complete this run, and steps complete in total (1-8): this run: step 1 re-decided as AAC. In total: 1, 2, 3.
+Step 1: format chosen; six-sentence measurements (WAV bytes, compressed bytes, duration difference per sentence in ms); joins audibly worse than WAV (yes/no); fell back to WAV (yes/no, why): AAC-LC mono ~48 kbit/s in .m4a, final. Samsung probe: Kokoro 76,970/11,190 +104; 99,606/14,050 +102; 127,086/17,690 +127. System 105,764/14,909 +102; 103,340/14,570 +109; 141,262/19,364 +87. Joins: not assessed (no audio monitoring available to the agent; not claimed). Fell back to WAV: no - the fallback rule is withdrawn and the WAV-copying binding is deleted.
+Step 2: where prepared audio lives on disk; manifest fields; does any file name or manifest contain sentence text or a title (yes/no): filesDir/tts-prepared/<sha256(server-id-length:server-id+book-id)>/<sha256(chapter-href)>/ with manifest.json and <sentence-cache-key>.m4a. Manifest v2: formatVersion, bookId, serverId, chapterHref, voiceId, modelVersion, rate, pitch, createdTimeMs, ordered sentences(key, durationMs, bytes), complete, totalBytes, lastUsedTimeMs. Text or title: no.
+Step 3: lookup order as built; how a live request overtakes preparation, and the test that shows it; was TtsReadAloudEngine changed (yes/no, why): prepared store -> sentence cache -> synthesis. TtsSynthesisPriorityGate holds one permit with separate FIFO live/background queues; release prefers a live waiter and never interrupts native work in flight. Test: TtsPreparedGeneratorTest "real generator serves live before queued preparation after native work finishes" (order first, live, second). TtsReadAloudEngine changed: no.
+Step 4: what happens on a second request while one runs; what survives an app kill; analytics events and parameters added, and the sanitizer test: not built
+Step 5: new TtsController members; does iPhone behave exactly as before (yes/no) and how I know: not built
+Step 6: every state of the row that was built (list); every new string key (list); settings row built (yes/no): not built
+Tests from the bug-fix runs edited (name + why), or "none": none
+Per module: reader ui Android host 472/472, reader ui iOS 324/324, settings ui 22/22, home ui 84/84, composeApp 62/62, analytics 75/75
+Does a test resolve the new classes from the real Koin graph (yes/no, name): yes - PreparedAudioWiringTest, PreparedStoreWiringTest, PreparedGeneratorWiringTest
+App build results (Android assemble, iOS framework): not run since the format switch
+Device used (model + serial), any command sent to another device (yes/no): none this run so far; no
+Kokoro chapter: sentences, time to prepare, size on disk, notification showed progress (yes/no): not built
+Playing the prepared chapter: any synthesize line for it (yes/no); pause, resume, skip, double-tap (result of each): not built
+Live playback while another chapter prepares: time to first audio, kept going (yes/no): not built
+Force-stop and Continue: sentences already there, sentences synthesised after (numbers): not built
+Speed change and back: what the row showed each time: not built
+Delete from the row, settings total, Delete all (result of each): not built
+System voice chapter prepared and played (yes/no): not built
+States of the row seen on the phone (list), and states not reached: not built
+State the phone was left in (voice, rate, screen, prepared audio deleted yes/no): untouched this run so far
+Why the run ended where it did (finished / out of time / blocked, and on what): in progress
+Done this run: the format switch to AAC (.m4a, manifest version 2, native encoder as the production binding).
+Not done or partly done, and why: steps 4-8 not started yet in this run.
+Tests skipped, ignored or weakened (file + name + reason), or "none": none
+Places the brief was ambiguous and what I chose: the brief says no other existing test should need editing; the extension and manifest version are asserted literally in TtsPreparedStoreTest and the production class name in PreparedAudioWiringTest, so those two needed mechanical edits, reported above.
+Files changed outside feature/reader/ui, feature/settings/ui, lib/analytics, translations, androidApp/src/main/AndroidManifest.xml, composeApp tests and docs: none
+Known problems I am leaving: the AAC encoder itself can only be exercised on a device; host tests pin the no-fallback failure path, not the codec output. Audible join quality remains unassessed.
 --- END REPORT ---

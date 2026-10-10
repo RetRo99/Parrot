@@ -83,7 +83,7 @@ internal class TtsAudioGeneratorCore(
             if (generated.result.status != TtsSynthesisStatus.SUCCESS || wav == null) return@withContext PreparedAudioEncoding.Failure
             var temporary: File? = null
             try {
-                val output = File.createTempFile("prepared-encode-", ".wav", wav.parentFile)
+                val output = File.createTempFile("prepared-encode-", ".$PREPARED_AUDIO_EXTENSION", wav.parentFile)
                 temporary = output
                 check(output.delete()) // The atomic encoder never overwrites an existing destination.
                 when (val encoded = encoder.encode(wav, output)) {

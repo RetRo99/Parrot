@@ -9,6 +9,10 @@ import kotlinx.serialization.Required
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
+/** Prepared audio is AAC in an MPEG-4 container; version 2 manifests describe `.m4a` files. */
+internal const val PREPARED_AUDIO_EXTENSION = "m4a"
+internal const val PREPARED_MANIFEST_VERSION = 2
+
 @Serializable
 internal data class PreparedChapterId(val bookId: String, val serverId: String?, val chapterHref: String)
 
@@ -20,7 +24,7 @@ internal data class PreparedSentenceEntry(val key: String, val durationMs: Long?
 
 @Serializable
 internal data class PreparedChapterManifest(
-    @Required val formatVersion: Int = 1,
+    @Required val formatVersion: Int = PREPARED_MANIFEST_VERSION,
     val bookId: String,
     val serverId: String?,
     val chapterHref: String,
@@ -97,7 +101,7 @@ internal class TtsPreparedStore(
         val manifest = read(folder) ?: return null
         val sentence = manifest.sentences.firstOrNull { it.key == key && it.durationMs != null } ?: return null
         if (markUsed) write(folder, manifest.copy(lastUsedTimeMs = now()))
-        return PreparedSentenceAudio(File(folder, "$key.wav"), checkNotNull(sentence.durationMs))
+        return PreparedSentenceAudio(File(folder, "$key.$PREPARED_AUDIO_EXTENSION"), checkNotNull(sentence.durationMs))
     }
 
     @Synchronized
@@ -106,7 +110,7 @@ internal class TtsPreparedStore(
         for ((folder, manifest) in chapters()) {
             val sentence = manifest.sentences.firstOrNull { it.key == key && it.durationMs != null } ?: continue
             if (markUsed) write(folder, manifest.copy(lastUsedTimeMs = now()))
-            return PreparedSentenceAudio(File(folder, "$key.wav"), checkNotNull(sentence.durationMs))
+            return PreparedSentenceAudio(File(folder, "$key.$PREPARED_AUDIO_EXTENSION"), checkNotNull(sentence.durationMs))
         }
         return null
     }
@@ -124,7 +128,7 @@ internal class TtsPreparedStore(
             Files.copy(audio.toPath(), staging.toPath(), StandardCopyOption.REPLACE_EXISTING)
             val size = staging.length()
             check(size > 0)
-            publish(staging, File(folder, "$key.wav"))
+            publish(staging, File(folder, "$key.$PREPARED_AUDIO_EXTENSION"))
             val entries = manifest.sentences.map { if (it.key == key) PreparedSentenceEntry(key, durationMs, size) else it }
             write(folder, manifest.copy(sentences = entries, complete = false, totalBytes = payloadBytes(entries)))
         } finally { staging.delete() }
@@ -182,7 +186,7 @@ internal class TtsPreparedStore(
         val manifest = try {
             require(!Files.isSymbolicLink(file.toPath()) && file.isFile && file.length() in 1..8_388_608)
             val parsed = json.decodeFromString<PreparedChapterManifest>(file.readText())
-            require(parsed.formatVersion == 1 && parsed.sentences.isNotEmpty())
+            require(parsed.formatVersion == PREPARED_MANIFEST_VERSION && parsed.sentences.isNotEmpty())
             require(parsed.rate.isFinite() && parsed.pitch.isFinite() && parsed.rate > 0 && parsed.pitch > 0)
             require(parsed.totalBytes >= 0 && parsed.sentences.all {
                 validKey(it.key) && (it.durationMs == null && it.bytes == 0L || it.durationMs != null && it.durationMs > 0 && it.bytes > 0)
@@ -196,11 +200,11 @@ internal class TtsPreparedStore(
             return null
         }
         val entries = manifest.sentences.map { entry ->
-            val audio = File(folder, "${entry.key}.wav")
+            val audio = File(folder, "${entry.key}.$PREPARED_AUDIO_EXTENSION")
             if (entry.durationMs != null && !Files.isSymbolicLink(audio.toPath()) && audio.isFile && audio.length() == entry.bytes) entry
             else PreparedSentenceEntry(entry.key)
         }
-        val listed = entries.filter { it.durationMs != null }.map { "${it.key}.wav" }.toSet() + "manifest.json"
+        val listed = entries.filter { it.durationMs != null }.map { "${it.key}.$PREPARED_AUDIO_EXTENSION" }.toSet() + "manifest.json"
         folder.listFiles()?.filter { it.name !in listed }?.forEach(::remove)
         val reconciled = manifest.copy(
             sentences = entries, complete = manifest.complete && entries.all { it.durationMs != null }, totalBytes = payloadBytes(entries),

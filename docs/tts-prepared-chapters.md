@@ -60,13 +60,13 @@ host boundary (wrapper's store is lazy). Unit tests use actual temporary files.
 Layout for the selected format:
 `filesDir/tts-prepared/<sha256(server-id-length:server-id + book-id)>/<sha256(chapter-href)>/`.
 Null server id uses length -1, distinct from an empty server id. Each folder
-holds `manifest.json` and `<existing-sentence-cache-key>.wav`. Keys are supplied
+holds `manifest.json` and `<existing-sentence-cache-key>.m4a`. Keys are supplied
 using `TtsAudioCacheStore.key`, unchanged (voice, model version, hundredth rate
 and pitch, text). Neither folder/file names nor manifests store sentence text
 or book/chapter titles. Book id, server id and chapter href are identifiers
 required in the manifest; they never become path components directly.
 
-Manifest version 1 fields: `formatVersion` (required, even with default 1),
+Manifest version 2 fields (version 1 was the withdrawn WAV layout; it is rejected): `formatVersion` (required, even with default 1),
 `bookId`, nullable `serverId`, `chapterHref`, nullable `voiceId`, nullable
 `modelVersion`, `rate`, `pitch`, `createdTimeMs`, ordered `sentences` entries
 (`key`, nullable `durationMs`, `bytes`), `complete`, `totalBytes`, nullable
@@ -107,18 +107,39 @@ audio, hostile paths and symlinks, oldest-first eviction with protections,
 deletion/size including manifests, and repeated keys/completion safety. Step 1
 is committed green (`0b19d065`) before starting these tests.
 
-**Current format decision: WAV fallback.** The native AAC candidate is built
-and tested on Samsung but fails the duration gate. The production interface
-binding `AndroidTtsPreparedAudioEncoder` now atomically copies the WAV, with
-its exact PCM duration; `AndroidTtsPreparedAacEncoder` retains the native codec
-candidate for a future reevaluation. All later storage/playback logic remains
-behind `TtsPreparedAudioEncoder`. Output files for the selected format use `.wav`.
-The format regression failed before fallback (expected Success, received Failure
-on the host's unavailable native codec); then passed unedited. Step 1 green
-checkpoint: reader Android 444/444, iOS 324/324, settings 22/22, home 84/84,
-composeApp 60/60, analytics 75/75, zero failures/errors/skips. The measured
-duration failure selects the brief's WAV fallback; subjective assessment remains
-unavailable, explicitly not claimed. Step 1 is complete under that fallback.
+**Current format decision: AAC (final, owner-revised 2026-10-10).** The earlier
+50 ms duration gate, and the WAV fallback it selected, are withdrawn in the
+brief. Prepared audio is AAC-LC, mono, about 48 kbit/s, at the WAV's sample rate,
+in an `.m4a` file. The measured 87 to 127 ms per sentence (table below) is the
+encoder's own silent padding and is accepted: the files are about seven times
+smaller, which the later 200 MB-per-account cloud backup needs. The manifest
+records the duration the encoder measured from the finished container
+(`MediaExtractor`), never the PCM duration, so the chapter timeline stays right.
+No padding trimming and no player change. A sentence that cannot be encoded
+fails; there is no silent fallback to WAV inside a chapter, so a chapter is all
+one format.
+
+`AndroidTtsPreparedAacEncoder` is the production `@Single` binding of
+`TtsPreparedAudioEncoder` (file `AndroidTtsPreparedAacEncoder.kt`); the WAV-copying
+`AndroidTtsPreparedAudioEncoder` is deleted. Prepared files are
+`<sentence-cache-key>.m4a` and the manifest format version is 2
+(`PREPARED_AUDIO_EXTENSION`, `PREPARED_MANIFEST_VERSION`). The version bump makes
+any version-1 chapter a previous build left behind read as "not prepared" and
+cleaned up, rather than played or crashed on; there was none on the phone.
+
+Format-switch tests, written first: three of four new `PreparedAudioFormatTest`
+cases failed before the change (the `.m4a` name with the encoder-measured
+duration, the version-1 WAV chapter being discarded, and the current manifest
+version), and `PreparedAudioWiringTest` failed on the real graph because the
+interface resolved to the WAV copier. The fourth case passed before and after:
+the production encoder, given a valid WAV on a host with no MediaCodec, returns
+`Failure`, publishes nothing and leaves the input untouched — the no-fallback
+rule. Two existing tests were edited for the switch, both mechanically:
+`TtsPreparedStoreTest` (prepared file names `.wav` → `.m4a`, and the stripped
+required-version literal 1 → 2) and `PreparedAudioWiringTest` (the production
+class name). Green after the switch: reader Android 472/472, iOS 324/324,
+settings 22/22, home 84/84, composeApp 62/62, analytics 75/75; zero
+failures/errors/skips.
 
 ### Step 1: Samsung measurements and format gate
 
@@ -338,8 +359,7 @@ settings, orderedKeys)`, per-chapter `lookup(id,key)` without playback touch,
 and deletion. Generate keys with the existing cache key/model version and
 effective rate. Freeze those settings and loaded sentence order for the job.
 The manifest holds ids and keys, not sentence text; the running job must hold
-texts in memory and receive them again to resume after app kill. Current encoder
-binding is WAV, not AAC. Every new `@Single` needs a real-graph resolution test.
+texts in memory and receive them again to resume after app kill. Current encoder binding is AAC (`.m4a`). Every new `@Single` needs a real-graph resolution test.
 Cloud packaging guidance above reflects the implemented store, but Step 7's
 final UI/strings/state/limits documentation remains unfinished until the feature
 exists. No previously built bug-fix test was changed or weakened.
@@ -363,7 +383,7 @@ is claimed; acoustic comparison remains explicitly unassessed.
 
 Host-testable folders now exist; the app does not yet expose preparation UI/jobs.
 Package one hashed chapter folder, its version-1 `manifest.json`, and exactly the
-distinct `.wav` files for entries with nonnull duration. Preserve ordered entry
+distinct `.m4a` files for entries with nonnull duration. Preserve ordered entry
 positions (duplicate keys share one audio file), voice/model/rate/pitch, identifiers
 and complete/partial status. Missing entries have null duration and zero bytes.
 Never package `.part` files, cache synthesis/encode staging files, or the ordinary
@@ -372,8 +392,9 @@ while a writer is active. Cloud restore must validate version, keys, file length
 identifiers and paths and rebuild hashed folders safely; cloud conflict/account
 isolation policy is not implemented. The manifest contains required ids/href but
 no text/title fields; do not add book metadata to telemetry. Model version and
-sentence keys remain unchanged. Current payload format is WAV; the later run must
-not assume compressed AAC. No upload/download/cloud code exists in this feature.
+sentence keys remain unchanged. Payload format is AAC-LC mono in `.m4a` at manifest
+format version 2; each file carries 87 to 127 ms of encoder padding and the
+manifest duration is the container's measured duration. No upload/download/cloud code exists in this feature.
 
 ## Previous run: resume instructions (superseded by continuation checkpoint)
 

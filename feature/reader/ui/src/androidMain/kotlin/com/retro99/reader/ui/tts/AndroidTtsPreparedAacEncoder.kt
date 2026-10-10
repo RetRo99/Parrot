@@ -7,25 +7,17 @@ import android.media.MediaFormat
 import android.media.MediaMuxer
 import java.io.File
 import java.nio.ByteBuffer
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
 
-/** Phone-gated WAV fallback: AAC exceeded 50 ms even after a padding-metadata trial. */
-@Single(binds = [AndroidTtsPreparedAudioEncoder::class, TtsPreparedAudioEncoder::class])
-class AndroidTtsPreparedAudioEncoder : TtsPreparedAudioEncoder {
-    private val core = TtsPreparedAudioEncoderCore { wav, pcm, staging ->
-        Files.copy(wav.toPath(), staging.toPath(), StandardCopyOption.REPLACE_EXISTING)
-        pcm.durationMs
-    }
-
-    override suspend fun encode(wav: File, output: File): PreparedAudioEncoding =
-        withContext(Dispatchers.IO) { core.encode(wav, output) }
-}
-
-/** Candidate retained for future phone checks; not the production interface binding. */
+/**
+ * The production encoder. Prepared audio is AAC-LC mono at about 48 kbit/s in an `.m4a`
+ * file: roughly seven times smaller than the WAV, with 87 to 127 ms of the encoder's own
+ * padding per sentence, which the owner accepted. A sentence that cannot be encoded fails;
+ * there is no fallback to a copied WAV, so a chapter is all one format.
+ */
+@Single(binds = [AndroidTtsPreparedAacEncoder::class, TtsPreparedAudioEncoder::class])
 class AndroidTtsPreparedAacEncoder : TtsPreparedAudioEncoder {
     private val core = TtsPreparedAudioEncoderCore { wav, pcm, staging ->
         TtsPreparedAacPump().encode(wav, pcm, AndroidPreparedAacCodec(staging, pcm.sampleRate))

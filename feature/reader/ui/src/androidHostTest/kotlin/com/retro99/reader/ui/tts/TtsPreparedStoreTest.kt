@@ -40,7 +40,7 @@ class TtsPreparedStoreTest {
         val manifest = File(resumed.chapterDirectory(id), "manifest.json").readText()
         assertFalse(manifest.contains("A sentence."))
         assertFalse(manifest.contains("Another sentence."))
-        assertTrue(root.walkTopDown().filter { it.isFile }.all { it.name == "manifest.json" || it.name.matches(Regex("[a-f0-9]{64}\\.wav")) })
+        assertTrue(root.walkTopDown().filter { it.isFile }.all { it.name == "manifest.json" || it.name.matches(Regex("[a-f0-9]{64}\\.m4a")) })
     }
 
     @Test fun `voice model rate and pitch changes show the old settings without destroying audio`() {
@@ -67,7 +67,7 @@ class TtsPreparedStoreTest {
         for (content in listOf("not JSON", Json.encodeToString(manifest().copy(formatVersion = 999)))) {
             val directory = store.chapterDirectory(id).apply { mkdirs() }
             File(directory, "manifest.json").writeText(content)
-            File(directory, "$key.wav").writeBytes(byteArrayOf(1))
+            File(directory, "$key.m4a").writeBytes(byteArrayOf(1))
             assertEquals(PreparedChapterState.NotPrepared, store.state(id, settings))
             assertFalse(directory.exists())
         }
@@ -76,7 +76,7 @@ class TtsPreparedStoreTest {
     @Test fun `a manifest missing its required version is rejected rather than assumed current`() {
         val directory = store.chapterDirectory(id).apply { mkdirs() }
         val json = Json { encodeDefaults = true }.encodeToString(manifest())
-        File(directory, "manifest.json").writeText(json.replace("\"formatVersion\":1,", ""))
+        File(directory, "manifest.json").writeText(json.replace("\"formatVersion\":2,", ""))
         assertEquals(PreparedChapterState.NotPrepared, store.state(id, settings))
         assertFalse(directory.exists())
     }
@@ -84,15 +84,15 @@ class TtsPreparedStoreTest {
     @Test fun `unlisted and staging files are removed but partial entries survive restart`() {
         store.begin(id, settings, listOf(key, second)); store.add(id, key, source, 500)
         val directory = store.chapterDirectory(id)
-        File(directory, "unlisted.wav").writeText("orphan")
+        File(directory, "unlisted.m4a").writeText("orphan")
         File(directory, "interrupted.part").writeText("half")
         assertEquals(PreparedChapterState.Partial(1, 2), TtsPreparedStore(root).state(id, settings))
-        assertEquals(setOf("manifest.json", "$key.wav"), directory.list()!!.toSet())
+        assertEquals(setOf("manifest.json", "$key.m4a"), directory.list()!!.toSet())
     }
 
     @Test fun `missing or truncated listed audio cannot be served or remain complete`() {
         store.begin(id, settings, listOf(key)); store.add(id, key, source, 500); store.markComplete(id)
-        File(store.chapterDirectory(id), "$key.wav").writeText("short")
+        File(store.chapterDirectory(id), "$key.m4a").writeText("short")
         assertNull(store.lookup(key))
         assertEquals(PreparedChapterState.Partial(0, 1), store.state(id, settings))
     }
