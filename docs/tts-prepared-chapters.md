@@ -40,9 +40,16 @@ composeApp 59/59; analytics 75/75. No bug-fix-run test has been edited.
 
 ## What was built
 
-Documentation only so far. No production code, storage, manifest, UI state,
-screen text, string resource, foreground service or analytics event has been
-added. No encoding measurements have been made.
+Step 1 red phase: added the small Android-source-set `TtsPreparedAudioEncoder`
+interface, a result type, and intentionally unimplemented PCM/encode seams.
+`TtsPreparedAudioEncoderTest` specifies mono PCM16 WAV parsing (including RIFF
+chunks and padding), rejection of unsupported/truncated input, atomic output,
+failure/cancellation cleanup, measured duration and source/output preservation.
+The focused red run failed as intended: 12 tests, four failures (valid mono
+PCM, odd chunk padding, successful publication, cancellation propagation).
+The other rejection/safety cases pass against the fail-closed stub.
+No prepared store, manifest, UI state, screen text, resource, foreground service
+or analytics event has been added. No encoding measurements have been made.
 
 ## Storage and manifest (required, not implemented)
 
