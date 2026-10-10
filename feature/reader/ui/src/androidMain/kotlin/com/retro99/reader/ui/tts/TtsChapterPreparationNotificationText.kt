@@ -30,7 +30,13 @@ internal fun chapterPreparationNotificationText(
     }
     val counts = listOf<Any>(running?.done ?: 0, running?.total ?: 0)
     return when (val left = preparedTimeLeftLabel(running?.remainingMs)) {
-        null -> TtsChapterPreparationNotificationText(TtsChapterPreparationNotificationLine.COUNT, counts)
+        // The same promise the row makes, in the same place. With nothing running there is
+        // no run to promise anything about, so the bare counts stay.
+        null -> if (running == null) {
+            TtsChapterPreparationNotificationText(TtsChapterPreparationNotificationLine.COUNT, counts)
+        } else {
+            TtsChapterPreparationNotificationText(TtsChapterPreparationNotificationLine.WAITING, counts)
+        }
         PreparedTimeLeftLabel.UnderMinute ->
             TtsChapterPreparationNotificationText(TtsChapterPreparationNotificationLine.TIME_LEFT_SHORT, counts)
         is PreparedTimeLeftLabel.Minutes ->

@@ -24,10 +24,10 @@ import resources.translations.reader_tts_prepared_chapter_other_speed
 import resources.translations.reader_tts_prepared_chapter_partly
 import resources.translations.reader_tts_prepared_chapter_prepare
 import resources.translations.reader_tts_prepared_chapter_prepare_again
-import resources.translations.reader_tts_prepared_chapter_progress
 import resources.translations.reader_tts_prepared_chapter_progress_left
 import resources.translations.reader_tts_prepared_chapter_progress_left_hours
 import resources.translations.reader_tts_prepared_chapter_progress_left_short
+import resources.translations.reader_tts_prepared_chapter_progress_waiting
 import resources.translations.reader_tts_prepared_chapter_ready
 import resources.translations.reader_tts_prepared_chapter_voice_pack
 import resources.translations.reader_tts_prepared_chapter_voices
@@ -193,7 +193,9 @@ private fun notPreparedArgs(estimate: PreparedChapterEstimate?): List<Any> {
 
 private fun preparingStatus(state: PreparedChapterRowState.Preparing): StringResource =
     when (preparedTimeLeftLabel(state.remainingMs)) {
-        null -> StringRes.reader_tts_prepared_chapter_progress
+        // No time left yet: say one is coming, in the place it will appear, rather than
+        // leaving the counts alone and looking as though time were never going to be said.
+        null -> StringRes.reader_tts_prepared_chapter_progress_waiting
         PreparedTimeLeftLabel.UnderMinute -> StringRes.reader_tts_prepared_chapter_progress_left_short
         is PreparedTimeLeftLabel.Minutes -> StringRes.reader_tts_prepared_chapter_progress_left
         is PreparedTimeLeftLabel.Hours -> StringRes.reader_tts_prepared_chapter_progress_left_hours
