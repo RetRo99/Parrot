@@ -11,6 +11,32 @@ All three fail against the unimplemented pump; the initial test-only
 ByteBuffer return-type compile error was corrected before the red run.
 Native MediaCodec adapter and six-sentence measurement remain pending.
 
+Native adapter implementation now exists as `AndroidTtsPreparedAudioEncoder`:
+MediaCodec AAC-LC, mono, 48 kbit/s at the WAV sample rate, MediaMuxer M4A.
+The host-tested pump feeds bounded PCM buffers, derives timestamps from sample
+counts, queues a separate EOS, drains through output EOS, and bounds a stall
+at ten seconds without progress. Cancellation propagates and releases the codec.
+The adapter excludes codec-config buffers, starts the muxer on output format,
+and measures the finished container with MediaExtractor (never substitutes the
+WAV duration). The existing atomic core publishes only successful output and
+cleans staging on failure. No cache WAV is changed. Native resources are released
+on constructor failure, normal completion, encode failure and cancellation.
+
+`PreparedAudioWiringTest` failed with `NoDefinitionFoundException` before the
+`@Single` interface binding was added; it resolves the real app graph, not a
+manually built encoder. No iOS source changed. Six-sentence phone gate pending;
+no format decision or prepared storage/playback feature is claimed yet.
+
+Native-adapter checkpoint verification: Android reader 443/443, iOS reader
+324/324, settings 22/22, home 84/84, composeApp 60/60, analytics 75/75;
+zero failures/errors/skips. Android assemble and iOS framework succeeded.
+The dated evidence folder includes a standalone platform Instrumentation probe
+and build script (no new libraries or app/Gradle configuration changes). It
+can synthesize three short Gutenberg sentences with Heart and a system voice,
+measure WAV/M4A and play each group through the unchanged read-aloud engine
+with a file-serving source. It cannot make an audible-quality judgment; that
+must remain explicit. Probe device execution is next.
+
 Owner brief committed first as `542736b3`. The clean nested comparison
 worktree was removed with `git worktree remove` after an empty `git status --short`.
 All commands continue in the primary `tts-investigation` worktree.

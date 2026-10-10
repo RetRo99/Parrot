@@ -5,16 +5,16 @@ Dead Play: which guard stopped the press (file and line); test failed before the
 Was the cause what the prompt suggested (yes/no), and if not, what it was: yes.
 Commits this run (hash + subject, oldest first): 542736b3 docs: commit prepared chapters owner brief; 8fe3cfdc test(reader): pin empty-chapter Play regression (intentionally red); 071d8867 fix(reader): let Play search ahead from an empty chapter; phone evidence checkpoint being committed.
 Steps complete this run, and steps complete in total (1-8): none; none (step 1 partial from previous run).
-Step 1: format chosen; six-sentence measurements (WAV bytes, compressed bytes, duration difference per sentence in ms); joins audibly worse than WAV (yes/no); fell back to WAV (yes/no, why): candidate AAC-LC M4A, not chosen; not measured; unknown; no decision yet.
+Step 1: format chosen; six-sentence measurements (WAV bytes, compressed bytes, duration difference per sentence in ms); joins audibly worse than WAV (yes/no); fell back to WAV (yes/no, why): real AAC-LC mono 48 kbit/s MediaCodec/MediaMuxer adapter built; candidate M4A, not chosen; not measured; unknown; no decision yet.
 Step 2: where prepared audio lives on disk; manifest fields; does any file name or manifest contain sentence text or a title (yes/no): not built.
 Step 3: lookup order as built; how a live request overtakes preparation, and the test that shows it; was TtsReadAloudEngine changed (yes/no, why): not built; no.
 Step 4: what happens on a second request while one runs; what survives an app kill; analytics events and parameters added, and the sanitizer test: not built.
 Step 5: new TtsController members; does iPhone behave exactly as before (yes/no) and how I know: none; iPhone controller untouched, final verification pending.
 Step 6: every state of the row that was built (list); every new string key (list); settings row built (yes/no): not built; none; no.
 Tests from the bug-fix runs edited (name + why), or "none": none.
-Per module: reader ui Android host 440/440, reader ui iOS 324/324, settings ui 22/22, home ui 84/84, composeApp 59/59, analytics 75/75
-Does a test resolve the new classes from the real Koin graph (yes/no, name): no new Koin classes yet.
-App build results (Android assemble, iOS framework): both succeeded after Play fix.
+Per module: reader ui Android host 443/443, reader ui iOS 324/324, settings ui 22/22, home ui 84/84, composeApp 60/60, analytics 75/75
+Does a test resolve the new classes from the real Koin graph (yes/no, name): yes, PreparedAudioWiringTest; failed before binding, now green.
+App build results (Android assemble, iOS framework): both succeeded after native encoder implementation.
 Device used (model + serial), any command sent to another device (yes/no): Samsung SM-S921B (Android 16) RFCWC0SSVDM; no.
 Kokoro chapter: sentences, time to prepare, size on disk, notification showed progress (yes/no): not built.
 Playing the prepared chapter: any synthesize line for it (yes/no); pause, resume, skip, double-tap (result of each): not built.
@@ -25,11 +25,11 @@ Delete from the row, settings total, Delete all (result of each): not built.
 System voice chapter prepared and played (yes/no): no; not built.
 States of the row seen on the phone (list), and states not reached: none; all not built.
 State the phone was left in (voice, rate, screen, prepared audio deleted yes/no): System voice, 1x, Listening sheet in first text chapter, paused; no prepared audio created.
-Why the run ended where it did (finished / out of time / blocked, and on what): ongoing; step 1 native pump red checkpoint, three tests intentionally failing before implementation.
+Why the run ended where it did (finished / out of time / blocked, and on what): ongoing; step 1 native adapter green checkpoint before six-sentence device measurement.
 Done this run: brief committed, comparison worktree removed, Play path extracted, regression failed for the expected reason and fixed unedited; six-module tests and both builds green; phone confirmed Play fix.
-Not done or partly done, and why: native encoder pending; steps 2-8 not started.
+Not done or partly done, and why: native encoder built and host tests green; six-sentence device format gate pending; steps 2-8 not started.
 Tests skipped, ignored or weakened (file + name + reason), or "none": none.
 Places the brief was ambiguous and what I chose: none so far.
 Files changed outside feature/reader/ui, feature/settings/ui, lib/analytics, translations, androidApp/src/main/AndroidManifest.xml, composeApp tests and docs: none.
-Known problems I am leaving: native pump deliberately unimplemented at the red checkpoint (3/3 fail); native adapter and measurement next.
+Known problems I am leaving: six-sentence format gate pending; native codec cannot be validated on the host, pump/core tests alone are not compression-quality evidence.
 --- END REPORT ---

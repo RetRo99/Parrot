@@ -7,11 +7,11 @@ import java.nio.file.StandardCopyOption
 import kotlinx.coroutines.CancellationException
 
 /** WAV in, prepared audio out. Callers can supply a host fake. */
-internal fun interface TtsPreparedAudioEncoder {
+fun interface TtsPreparedAudioEncoder {
     suspend fun encode(wav: File, output: File): PreparedAudioEncoding
 }
 
-internal sealed interface PreparedAudioEncoding {
+sealed interface PreparedAudioEncoding {
     data class Success(val file: File, val durationMs: Long) : PreparedAudioEncoding
     data object Failure : PreparedAudioEncoding
 }
