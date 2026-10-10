@@ -4,6 +4,7 @@ import com.retro99.reader.ui.tts.NeuralVoicePackage
 import com.retro99.reader.ui.tts.SpeakWordFailure
 import com.retro99.reader.ui.tts.TtsChapterPreparationRequest
 import com.retro99.reader.ui.tts.TtsChapterPreparationState
+import com.retro99.reader.ui.reader.PreparedChapterCloudInputs
 import com.retro99.reader.ui.tts.TtsPreparedChapterAudio
 import com.retro99.reader.ui.tts.SpeakWordState
 import com.retro99.reader.ui.tts.TtsPreparationProgress
@@ -148,6 +149,17 @@ interface TtsController : NarrationController {
     /** Prepared audio for [chapterHref] with the voice, speed and pitch selected now. */
     fun preparedChapterAudio(chapterHref: String): Flow<TtsPreparedChapterAudio> =
         flowOf(TtsPreparedChapterAudio.NotPrepared)
+
+    /**
+     * What Parrot Cloud holds for [chapterHref] and what backing it up or
+     * fetching it is doing. The default is the answer on a platform without
+     * prepared audio at all: nothing, which the row then says nothing about.
+     */
+    fun preparedChapterCloud(chapterHref: String): Flow<PreparedChapterCloudInputs> =
+        flowOf(PreparedChapterCloudInputs())
+
+    /** The user pressed Download on the row. Never automatic. */
+    suspend fun downloadPreparedChapter(chapterHref: String) = Unit
 
     /**
      * Prepares the chapter the reader has loaded, using its sentences as they are at the

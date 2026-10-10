@@ -14,13 +14,16 @@ import org.koin.core.annotation.Single
  * looking for a Wi-Fi transport. An unmetered Ethernet or an unmetered tether
  * therefore counts, and a Wi-Fi network the user has marked as metered does
  * not, which is what they asked for in settings.
+ *
+ * Public only so the reader-scoped controller's constructor can name the backup
+ * that holds it; nothing outside this module calls it.
  */
-internal interface PreparedBackupNetwork {
+interface PreparedBackupNetwork {
     fun onUnmeteredNetwork(): Boolean
 }
 
 @Single(binds = [PreparedBackupNetwork::class])
-internal class AndroidPreparedBackupNetwork(
+class AndroidPreparedBackupNetwork(
     @Provided private val context: Context,
 ) : PreparedBackupNetwork {
 

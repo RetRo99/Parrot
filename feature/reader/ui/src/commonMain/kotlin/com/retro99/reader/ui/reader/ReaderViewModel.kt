@@ -155,6 +155,7 @@ class ReaderViewModel(
     @InjectedParam private val isLastBookOnLaunch: Boolean,
     @InjectedParam private val onClose: (ReaderCloseSource) -> Unit,
     @InjectedParam private val onSettingsClick: () -> Unit,
+    @InjectedParam private val onManageCloudStorage: () -> Unit,
     @InjectedParam private val readerOpenEntryPoint: String?,
     @InjectedParam private val readerOpenCorrelationId: String?,
     @InjectedParam private val linkedResumeResolved: Boolean,
@@ -552,6 +553,8 @@ class ReaderViewModel(
             ReaderIntent.PrepareChapter -> prepareChapter()
             ReaderIntent.CancelChapterPreparation -> ttsController.cancelChapterPreparation()
             ReaderIntent.DeletePreparedChapter -> deletePreparedChapter()
+            ReaderIntent.DownloadPreparedChapter -> downloadPreparedChapter()
+            ReaderIntent.ManageCloudStorage -> onManageCloudStorage()
             is ReaderIntent.AcceptSupertonicTermsAndSelect -> {
                 supertonicTermsStore.acceptCurrentTerms()
                 updateState { state -> state.copy(hasAcceptedSupertonicTerms = true) }
@@ -1672,6 +1675,12 @@ class ReaderViewModel(
             .flatMapLatest { href -> ttsController.preparedChapterAudio(href) }
             .onEach { audio -> updateState { state -> state.copy(preparedChapterAudio = audio) } }
             .launchIn(viewModelScope)
+        bookController.currentLocator
+            .map { locator -> locator.href }
+            .distinctUntilChanged()
+            .flatMapLatest { href -> ttsController.preparedChapterCloud(href) }
+            .onEach { cloud -> updateState { state -> state.copy(preparedChapterCloud = cloud) } }
+            .launchIn(viewModelScope)
     }
 
     private fun prepareChapter() {
@@ -1689,6 +1698,12 @@ class ReaderViewModel(
     private fun deletePreparedChapter() {
         viewModelScope.launch {
             ttsController.deletePreparedChapter(bookController.currentLocator.first().href)
+        }
+    }
+
+    private fun downloadPreparedChapter() {
+        viewModelScope.launch {
+            ttsController.downloadPreparedChapter(bookController.currentLocator.first().href)
         }
     }
 

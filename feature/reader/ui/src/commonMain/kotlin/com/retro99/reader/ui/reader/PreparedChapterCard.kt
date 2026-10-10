@@ -32,6 +32,7 @@ import org.jetbrains.compose.resources.stringResource
 import resources.translations.general_cancel
 import resources.translations.reader_tts_delete
 import resources.translations.reader_tts_prepared_chapter_delete_message
+import resources.translations.reader_tts_prepared_chapter_delete_message_cloud
 import resources.translations.reader_tts_prepared_chapter_delete_title
 import resources.translations.reader_tts_prepared_chapter_title
 
@@ -41,6 +42,15 @@ internal data class PreparedChapterActions(
     val onCancel: () -> Unit,
     val onDelete: () -> Unit,
     val onOpenVoices: () -> Unit,
+    /** Fetch a chapter another device prepared. Only ever on request. */
+    val onDownload: () -> Unit = {},
+    /**
+     * To the cloud account screen, which shows the allowance and its
+     * breakdown. **This is also where a "get more storage" action will be
+     * attached when paid storage is built**: see
+     * `CloudAccountScreen.kt`'s `GetMoreStorageSlot`.
+     */
+    val onManageStorage: () -> Unit = {},
 )
 
 /**
@@ -56,10 +66,12 @@ internal fun PreparedChapterCard(
     isEink: Boolean,
     actions: PreparedChapterActions,
     modifier: Modifier = Modifier,
+    cloud: PreparedChapterCloudInputs = PreparedChapterCloudInputs(),
 ) {
     val colors = Ember.colors
     val shape = RoundedCornerShape(20.dp)
     val ui = preparedChapterRowUi(state, voiceLabel)
+    val cloudUi = preparedChapterCloudUi(cloud)
     val title = stringResource(StringRes.reader_tts_prepared_chapter_title)
     val status = stringResource(ui.status, *ui.statusArgs.toTypedArray())
     var confirmingDelete by remember { mutableStateOf(false) }
@@ -95,7 +107,15 @@ internal fun PreparedChapterCard(
                 fontWeight = if (state is PreparedChapterRowState.Ready) FontWeight.Bold else FontWeight.Normal,
             )
         }
-        if (ui.actions.isNotEmpty()) {
+        // One line of status under the existing content, never a second card.
+        cloudUi?.let { line ->
+            Text(
+                stringResource(line.status, *line.statusArgs.toTypedArray()),
+                color = colors.ink2,
+                fontSize = 13.sp,
+            )
+        }
+        if (ui.actions.isNotEmpty() || cloudUi?.action != null) {
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -117,11 +137,31 @@ internal fun PreparedChapterCard(
                         )
                         PreparedChapterAction.OPEN_VOICES ->
                             PillButton(label, isEink, actions.onOpenVoices)
+                        PreparedChapterAction.DOWNLOAD ->
+                            PillButton(label, isEink, actions.onDownload)
+                        PreparedChapterAction.MANAGE_STORAGE -> OutlineButton(
+                            text = label,
+                            color = colors.ink,
+                            isEink = isEink,
+                            onClick = actions.onManageStorage,
+                        )
                         PreparedChapterAction.PREPARE,
                         PreparedChapterAction.PREPARE_AGAIN,
                         PreparedChapterAction.CONTINUE,
                         PreparedChapterAction.RETRY,
                         -> PillButton(label, isEink, actions.onPrepare)
+                    }
+                }
+                cloudUi?.action?.let { action ->
+                    val label = stringResource(action.label)
+                    when (action) {
+                        PreparedChapterAction.MANAGE_STORAGE -> OutlineButton(
+                            text = label,
+                            color = colors.ink,
+                            isEink = isEink,
+                            onClick = actions.onManageStorage,
+                        )
+                        else -> PillButton(label, isEink, actions.onDownload)
                     }
                 }
             }
@@ -149,7 +189,13 @@ internal fun PreparedChapterCard(
             ),
             content = {
                 Text(
-                    stringResource(StringRes.reader_tts_prepared_chapter_delete_message),
+                    stringResource(
+                        if (preparedChapterDeleteRemovesCloudCopy(cloud)) {
+                            StringRes.reader_tts_prepared_chapter_delete_message_cloud
+                        } else {
+                            StringRes.reader_tts_prepared_chapter_delete_message
+                        },
+                    ),
                     color = Ember.colors.ink2,
                     fontSize = 14.sp,
                 )

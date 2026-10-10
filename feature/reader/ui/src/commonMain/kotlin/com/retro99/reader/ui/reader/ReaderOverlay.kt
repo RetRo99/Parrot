@@ -768,6 +768,7 @@ internal fun ReaderOverlayContent(
                     ?.let { other ->
                         viewState.ttsVoices.firstOrNull { voice -> voice.id == other.voiceId }?.name
                     },
+                preparedChapterCloud = viewState.preparedChapterCloud,
             ),
             hasNarration = viewState.isReadAloud,
             canSwitchSource = viewState.canSwitchListenSource,
@@ -803,6 +804,8 @@ internal fun ReaderOverlayContent(
                 onPrepareChapter = { intentDispatcher(ReaderIntent.PrepareChapter) },
                 onCancelChapterPreparation = { intentDispatcher(ReaderIntent.CancelChapterPreparation) },
                 onDeletePreparedChapter = { intentDispatcher(ReaderIntent.DeletePreparedChapter) },
+                onDownloadPreparedChapter = { intentDispatcher(ReaderIntent.DownloadPreparedChapter) },
+                onManageCloudStorage = { intentDispatcher(ReaderIntent.ManageCloudStorage) },
                 onSelectSource = { narration ->
                     intentDispatcher(
                         ReaderIntent.SwitchListenSource(

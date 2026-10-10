@@ -21,6 +21,8 @@ import resources.translations.reader_tts_prepared_chapter_progress
 import resources.translations.reader_tts_prepared_chapter_ready
 import resources.translations.reader_tts_prepared_chapter_voice_pack
 import resources.translations.reader_tts_prepared_chapter_voices
+import resources.translations.reader_tts_prepared_cloud_download
+import resources.translations.reader_tts_prepared_cloud_manage_storage
 import resources.translations.reader_tts_prepared_chapter_voice_terms
 import kotlin.math.roundToInt
 
@@ -33,6 +35,12 @@ internal enum class PreparedChapterAction(val label: StringResource, val isDestr
     DELETE(StringRes.reader_tts_delete, isDestructive = true),
     RETRY(StringRes.general_retry),
     OPEN_VOICES(StringRes.reader_tts_prepared_chapter_voices),
+
+    /** Fetch a chapter another device prepared. Only ever on request. */
+    DOWNLOAD(StringRes.reader_tts_prepared_cloud_download),
+
+    /** To the cloud account screen, where the allowance and its breakdown are. */
+    MANAGE_STORAGE(StringRes.reader_tts_prepared_cloud_manage_storage),
 }
 
 /**

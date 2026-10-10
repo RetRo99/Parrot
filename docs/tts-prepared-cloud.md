@@ -14,7 +14,7 @@ from the server side.
 
 Step 1 is written but **its SQL has NOT been run** — see below; nothing could be
 executed on this machine, and that is still true: there is still no container runtime
-here. Steps 2, 3 and 4 are complete. Steps 5 to 7 are not built.
+here. Steps 2, 3, 4 and 5 are complete. Steps 6 and 7 are not built.
 
 ### Can the local Supabase stack run here?
 
@@ -845,6 +845,134 @@ staging folder and not being fetched again; a broken archive aimed at a chapter 
 already installed leaving the installed audio byte-for-byte unchanged; no network; a file
 gone from the cloud; a device with no room; and a stale inbox archive being discarded.
 
-## Steps 5 to 7
+## Step 5: the screens
+
+**Complete.**
+
+### One line, never a second card
+
+`preparedChapterCloudUi` (`feature/reader/ui/.../reader/PreparedChapterCloudUi.kt`) is
+the whole of what Parrot Cloud adds to the prepared-chapter row: **one status line** and
+**at most one button**. It returns a single `StringResource`, at most one argument and a
+nullable action, so there is no shape in which it could become a second card, and a test
+walks all 12 x 9 combinations of backup and download state to assert that.
+
+`PreparedChapterCard` renders it under the existing status, above the buttons, and the
+one cloud button joins the existing `FlowRow`. The card itself still only renders.
+
+| Row state | What it says | Button |
+| --- | --- | --- |
+| backed up | "Backed up to Parrot Cloud" | |
+| waiting to back up | "Waiting to back up" / "Will back up on Wi-Fi" / "Will back up once this book is backed up" / "Will back up after your books" | |
+| backing up | "Backing up to Parrot Cloud…" | |
+| storage full | "Parrot Cloud storage is full, so this is not backed up." | **Manage storage** |
+| will retry / failed / not allowed | "Backup didn't finish. It will try again." / "This couldn't be backed up." / "Backup isn't available for this account yet." | |
+| available in the cloud | "In Parrot Cloud, plays instantly · 2.1 MB" | **Download** |
+| available, other settings | "In Parrot Cloud, made for other settings · 2.1 MB" | **Download** |
+| downloading | "Downloading from Parrot Cloud…" | |
+| installing | "Checking the download…" | |
+| download failed | one line per reason: network, device full, refused archive, gone from the cloud | **Download** for the network one only |
+| backup off, no account | nothing at all | |
+
+Two orderings are decided here and tested. What the cloud **holds** beats what the
+backup is **doing**, because audio this device does not have is the most useful thing the
+row can say. And `BackupOff` and `NotApplicable` say nothing: the user turned backup off,
+or there is no account, and neither is news about this chapter.
+
+`StorageFull` is the only backup state with a button, and a test asserts that by
+filtering all 12 rather than by naming it.
+
+### The delete confirmation
+
+`preparedChapterDeleteRemovesCloudCopy` decides it, and the card picks
+`reader_tts_prepared_chapter_delete_message_cloud` — "This removes the prepared audio
+from this device and from Parrot Cloud." — when the backup state is `BackedUp`,
+`Uploading` or `Queued`, i.e. when there is a copy there or one on its way. Every other
+state keeps the original message, because promising to remove something from the cloud
+that was never sent there would be untrue. A test walks all 12 states.
+
+`AndroidTtsController.deletePreparedChapter` now also calls
+`TtsPreparedChapterBackup.remove`, which cancels a pending upload and deletes the cloud
+file. The local copy is deleted first and unconditionally: that is what was asked for,
+and a cloud failure must not leave it behind.
+
+### How the row gets the facts
+
+`TtsController` gained two defaulted members, in the pattern of `preparedChapterAudio`:
+`preparedChapterCloud(chapterHref): Flow<PreparedChapterCloudInputs>` and
+`suspend fun downloadPreparedChapter(chapterHref)`. The defaults are the answer on a
+platform without prepared audio — nothing, which the row says nothing about — so
+**iPhone is unchanged by construction**.
+
+`AndroidTtsController` implements them from `TtsPreparedChapterBackup`, on the same
+`chapterPreparationJob.state` + `preparedAudioRevision` trigger the local state already
+uses, so the cloud line refreshes when the local one does. Any failure reading it becomes
+`PreparedChapterCloudInputs()`, i.e. silence: reading aloud is a local feature and an
+unreachable cloud is not an error the reader reports.
+
+From there: `ReaderViewState.preparedChapterCloud` → `ReaderAudioUi.preparedChapterCloud`
+→ the card; and `ReaderIntent.DownloadPreparedChapter` / `ReaderIntent.ManageCloudStorage`
+→ `ReaderAudioActions` → the two buttons.
+
+`ManageCloudStorage` is a new `@InjectedParam` callback, `onManageCloudStorage`, on
+`ReaderViewModel`, threaded through `ReaderScreen` and supplied by `HomeNavigation` as
+`NavigateTo(HomeDestination.SyncAndBackup)` — the destination that hosts
+`CloudAccountScreen`. It is defaulted to `{}` on `ReaderScreen`, so no other caller of
+that screen had to change.
+
+### The cloud account screen
+
+`CloudStorageUsage` gained `booksBytes` and `preparedAudioBytes`, both **nullable and
+defaulted to null**, and `StorageUsageResponse` decodes them with defaults. A server
+without the prepared-audio migration applied does not send them, and against such a
+server the screen looks exactly as it did before this work — which is the state every
+device is in today.
+
+`cloudStorageBreakdown` (pure, 5 tests) returns the two rows under the total, and returns
+**nothing** when the server sent no breakdown or when the account holds no prepared audio
+at all, because "Prepared audio 0.0 KB" is noise. When only the audio figure arrives,
+books falls back to the remainder, which is what the server derives it from anyway.
+
+### Where "get more storage" will go
+
+`GetMoreStorageSlot()` in `CloudAccountScreen.kt`, at the bottom of the storage card,
+under the allowance and its breakdown. **It renders nothing today** — the brief forbids
+showing a button that does nothing — and its only job is to be the one named place the
+paid-storage project changes. It is also where "Manage storage" from the row lands.
+
+### Every new string key
+
+In `translations/src/commonMain/composeResources/values/strings.xml`:
+
+| Key |
+| --- |
+| `reader_tts_prepared_chapter_delete_message_cloud` |
+| `reader_tts_prepared_cloud_backed_up` |
+| `reader_tts_prepared_cloud_queued` |
+| `reader_tts_prepared_cloud_uploading` |
+| `reader_tts_prepared_cloud_waiting_wifi` |
+| `reader_tts_prepared_cloud_waiting_book` |
+| `reader_tts_prepared_cloud_waiting_books` |
+| `reader_tts_prepared_cloud_storage_full` |
+| `reader_tts_prepared_cloud_retrying` |
+| `reader_tts_prepared_cloud_failed` |
+| `reader_tts_prepared_cloud_not_allowed` |
+| `reader_tts_prepared_cloud_manage_storage` |
+| `reader_tts_prepared_cloud_available` |
+| `reader_tts_prepared_cloud_available_other` |
+| `reader_tts_prepared_cloud_download` |
+| `reader_tts_prepared_cloud_downloading` |
+| `reader_tts_prepared_cloud_installing` |
+| `reader_tts_prepared_cloud_download_failed_network` |
+| `reader_tts_prepared_cloud_download_failed_space` |
+| `reader_tts_prepared_cloud_download_failed_rejected` |
+| `reader_tts_prepared_cloud_download_failed_gone` |
+| `parrot_cloud_storage_books` |
+| `parrot_cloud_storage_prepared_audio` |
+
+23 keys, all in the form of the existing `reader_tts_prepared_` entries, all with
+`tools:ignore="MissingTranslation"` as the surrounding block has.
+
+## Steps 6 and 7
 
 Not built.

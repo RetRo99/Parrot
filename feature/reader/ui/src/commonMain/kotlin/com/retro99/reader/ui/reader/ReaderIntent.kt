@@ -181,6 +181,12 @@ sealed interface ReaderIntent : BaseIntent {
 
     data object DeletePreparedChapter : ReaderIntent
 
+    /** Fetch a chapter another device prepared. Only ever from a press. */
+    data object DownloadPreparedChapter : ReaderIntent
+
+    /** To the cloud account screen, where the allowance and its breakdown are. */
+    data object ManageCloudStorage : ReaderIntent
+
     /** Accepts the Supertonic terms, then downloads and selects the given voice. */
     data class AcceptSupertonicTermsAndSelect(val voiceId: String) : ReaderIntent
 

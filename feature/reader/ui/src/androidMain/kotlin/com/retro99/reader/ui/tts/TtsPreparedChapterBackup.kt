@@ -25,7 +25,7 @@ import org.koin.core.annotation.Single
  * the reader screen it outlives.
  */
 @Single(binds = [AppInitializer::class, TtsPreparedChapterBackup::class])
-internal class TtsPreparedChapterBackup(
+class TtsPreparedChapterBackup(
     @Provided private val context: Context,
     private val prepared: TtsPreparedAudioStore,
     private val preparation: TtsChapterPreparationJob,
@@ -78,32 +78,32 @@ internal class TtsPreparedChapterBackup(
     }
 
     /** What the cloud holds for this chapter, and what fetching it is doing. */
-    suspend fun downloadStateOf(
+    internal suspend fun downloadStateOf(
         id: PreparedChapterId,
         settings: PreparedVoiceSettings,
     ): PreparedChapterDownloadState = downloads.stateOf(id, settings)
 
-    suspend fun cloudAudioFor(
+    internal suspend fun cloudAudioFor(
         id: PreparedChapterId,
         settings: PreparedVoiceSettings,
     ): PreparedChapterCloudAudio? = downloads.cloudAudioFor(id, settings)
 
     /** The user pressed Download on the row. */
-    suspend fun download(
+    internal suspend fun download(
         id: PreparedChapterId,
         settings: PreparedVoiceSettings,
     ): PreparedChapterDownloadState = downloads.download(id, settings)
 
     /** Right after a chapter finishes preparing. */
-    fun backUpWhenPrepared(id: PreparedChapterId, settings: PreparedVoiceSettings) {
+    internal fun backUpWhenPrepared(id: PreparedChapterId, settings: PreparedVoiceSettings) {
         scope.launch { queue.backUp(id, settings) }
     }
 
-    suspend fun stateOf(id: PreparedChapterId, settings: PreparedVoiceSettings): PreparedChapterBackupState =
+    internal suspend fun stateOf(id: PreparedChapterId, settings: PreparedVoiceSettings): PreparedChapterBackupState =
         queue.stateOf(id, settings)
 
     /** The chapter is being deleted from the row: its cloud copy goes too. */
-    suspend fun remove(id: PreparedChapterId, settings: PreparedVoiceSettings) =
+    internal suspend fun remove(id: PreparedChapterId, settings: PreparedVoiceSettings) =
         queue.remove(id, settings)
 
     private companion object {

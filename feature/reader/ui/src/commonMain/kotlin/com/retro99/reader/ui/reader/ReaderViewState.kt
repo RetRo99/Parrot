@@ -105,6 +105,8 @@ data class ReaderViewState(
     val ttsSentenceCount: Int = 0,
     /** Prepared audio of the chapter on screen, for the current voice, speed and pitch. */
     val preparedChapterAudio: TtsPreparedChapterAudio = TtsPreparedChapterAudio.NotPrepared,
+    /** What Parrot Cloud holds for that chapter and what it is doing about it. */
+    val preparedChapterCloud: PreparedChapterCloudInputs = PreparedChapterCloudInputs(),
     /** The one chapter preparation, whichever chapter it belongs to. */
     val chapterPreparation: TtsChapterPreparationState = TtsChapterPreparationState.Idle,
     val isListenSheetVisible: Boolean = false,

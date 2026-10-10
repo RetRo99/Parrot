@@ -22,6 +22,8 @@ class SupabaseCloudStorageUsageRepository(
             reservedBytes = result.reservedBytes,
             quotaBytes = result.quotaBytes,
             availableBytes = result.availableBytes,
+            booksBytes = result.booksBytes,
+            preparedAudioBytes = result.preparedAudioBytes,
         )
     }
 }
@@ -32,4 +34,8 @@ private data class StorageUsageResponse(
     @SerialName("reserved_bytes") val reservedBytes: Long,
     @SerialName("quota_bytes") val quotaBytes: Long,
     @SerialName("available_bytes") val availableBytes: Long,
+    // Added by the prepared-audio migration. Defaulted, so this still decodes
+    // against a server where that migration has not been applied.
+    @SerialName("books_bytes") val booksBytes: Long? = null,
+    @SerialName("prepared_audio_bytes") val preparedAudioBytes: Long? = null,
 )

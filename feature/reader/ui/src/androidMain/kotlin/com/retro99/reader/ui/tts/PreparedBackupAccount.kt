@@ -15,12 +15,12 @@ import org.koin.core.annotation.Single
  * The account facts a prepared-chapter backup needs, and nothing else. A port,
  * so the queue can be tested without four repositories and a user registry.
  */
-internal interface PreparedBackupAccount {
+interface PreparedBackupAccount {
     /** Null when there is no cloud account this device may upload for. */
     suspend fun snapshot(): PreparedBackupAccountSnapshot?
 }
 
-internal data class PreparedBackupAccountSnapshot(
+data class PreparedBackupAccountSnapshot(
     val localProfileId: String,
     val autoBackupEnabled: Boolean,
     /**
@@ -32,7 +32,7 @@ internal data class PreparedBackupAccountSnapshot(
 )
 
 @Single(binds = [PreparedBackupAccount::class])
-internal class CloudPreparedBackupAccount(
+class CloudPreparedBackupAccount(
     @Provided private val users: UserRegistry,
     @Provided private val profileLinks: CloudProfileLinkRepository,
     @Provided private val accounts: CloudAccountRepository,
