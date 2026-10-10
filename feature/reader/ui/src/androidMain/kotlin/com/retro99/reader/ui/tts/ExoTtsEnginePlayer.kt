@@ -124,6 +124,10 @@ internal class ExoTtsEnginePlayer(private val player: ExoPlayer) : TtsEnginePlay
                 listener.onIsPlayingChanged(isPlaying)
             }
 
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                listener.onPlayWhenReadyChanged(playWhenReady)
+            }
+
             override fun onPlaybackStateChanged(playbackState: Int) {
                 when (playbackState) {
                     Player.STATE_ENDED -> listener.onEnded()

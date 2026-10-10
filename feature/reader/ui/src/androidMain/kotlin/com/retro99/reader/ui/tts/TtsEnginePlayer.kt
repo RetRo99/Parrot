@@ -69,6 +69,9 @@ interface TtsEnginePlayerListener {
 
     fun onIsPlayingChanged(isPlaying: Boolean)
 
+    /** Playing intent changes even when no audio is audible (buffering or synthesis). */
+    fun onPlayWhenReadyChanged(playWhenReady: Boolean) = Unit
+
     /** The last queued item played out. */
     fun onEnded()
 

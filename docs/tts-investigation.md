@@ -443,6 +443,8 @@ effect on a user, not on the code.
 - **Confidence:** low for ordinary devices, medium for slow ones.
 - **Severity for a user:** silent failure (a start that looks broken).
 - **How a test could catch it:** `AndroidTtsControllerTest` with a fake engine that never becomes active, asserting `Failed(START_TIMEOUT)` after the virtual 30 s; manual: measure the cold first start from `logcat -s SherpaOnnxTts` timestamps.
+- **Fixed (run 5c):** `69695a39` — `TtsPlaybackAttempts.prepareStart` loads the selected downloaded neural model under its own 60 s deadline, then arms the existing 30 s synthesis/player deadline; fresh starts, tracked resumes and settings-change restarts share it. Five tests committed failing in `8c3701ba`; system timing, cancellation and pending-state cases were already green.
+- **Samsung check (run 5c):** cold-process start succeeded, but book-open warm-up had already loaded Kokoro 37.291 s before Play; the first player isPlaying signal followed Play by 0.784 s. Cold loading after Play and independent acoustic onset remain unmeasured. Host virtual-time tests, not this device check, establish the separate 60 s/30 s deadlines.
 
 ### TTS-F16 — `chapterCompleted` reports whatever chapter is current, not the one that finished
 
@@ -708,7 +710,10 @@ Three findings came out of step 3 rather than the source read. They keep the sam
 - **Confidence:** high that the guard is missing; medium that the callback is deliverable after the stop.
 - **Severity for a user:** wrong audio (a chapter read from its start unasked).
 - **How a test could catch it:** the test above, once the fake only reports `ENDED` while it has items; the product guard is `if (currentIndex < 0) return` in `onSentenceCompleted`.
-- **Status:** not fixed — found by run 2b's TTS-F16 test, outside that run's scope. Candidate for run 5.
+- **Historical status:** found by run 2b's TTS-F16 test, outside that run's scope; subsequently fixed below.
+- **Fixed (run 5c):** `c10784fb` — completion requires a running session; stopped-player ready, transition, error and playing callbacks cannot revive it, and paused auto-transition cannot advance. Nine failures committed in `94a7e080`, including the explicitly authorized correction to the earlier locator-abandonment assertion; ordinary running completion was already green.
+- **Guard follow-up:** `d71e85f2` retains session ownership through ordinary buffering after audio has played; the new guards otherwise rejected subsequent ready/playing callbacks. New regression committed failing in `4998760d`; no earlier test edited.
+- **Samsung check (run 5c):** five valid Kokoro ENDED-triggered Stops on each build produced zero spontaneous restarts, including the final ownership-fix build (ENDED → IDLE: 86, 83, 87, 74, 77 ms). This stress check does not prove a real posted ENDED arrived after Stop; that ordering is covered by the host fake. Exact timings and build identities are in `manual-qa-evidence/2026-10-10/tts-run5c/`.
 
 ### TTS-F26 — A slow voice's gap between sentences reads as "not playing", and narration can die in it
 
@@ -736,7 +741,34 @@ Three findings came out of step 3 rather than the source read. They keep the sam
 - **Fixed:** `e4597018` (run 2c) — `settings_change` added to `SAFE_TTS_ACTIONS`, which now lists every `TtsPlaybackAction.analyticsValue`.
 - **Device check 2026-10-09 (run 2c):** passed — every settings-change event of the run carries the action, e.g. `{tts_action=settings_change, tts_outcome=attempted}` at 21:19:36.864 and `{tts_action=settings_change, tts_outcome=succeeded, duration_ms=14484}` at 21:19:51.348 (`docs/manual-qa-evidence/2026-10-09/tts-run2c/`).
 
+### TTS-F28 — Arrival in the narrated chapter stops read-aloud as if the user left it
+
+- **Where:** `AndroidTtsController.kt`, `currentLocator` collector: every href change clears the controller's sentences, stops the engine and reloads the displayed chapter.
+- **Trigger:** Narration crosses a chapter boundary, or its highlight brings the displayed page into the chapter whose sentences are already being narrated.
+- **Expected:** Arrival in the narrated chapter leaves playback and its sentence list alone. Navigation to a different chapter still stops and reloads, as does a chapter change with no narration.
+- **Actual:** The locator collector stops the narration it just caught up with; on the phone it stopped 390 ms after a successful settings-change restart.
+- **Evidence:** REPRODUCED — run 2c, 21:19:51.345 playback start, 21:19:51.735 IDLE/service destruction, `docs/manual-qa-evidence/2026-10-09/tts-run2c/NOTES.md` §"Recorded, not investigated". Four host failures committed in `67249314`.
+- **Confidence:** high.
+- **Severity for a user:** narration stops silently during a chapter.
+- **How a test could catch it:** `TtsChapterChangeTest` tests the extracted decision with previous, arriving and narrated hrefs, including delayed arrival after hand-off and skip-ahead.
+- **Fixed:** `790eb981` — `shouldReloadTtsChapter` exempts arrival in the engine's loaded, current chapter. Ordinary navigation and idle changes passed before the fix; the earlier skip-ahead tests pass unedited.
+- **Samsung check (run 5c):** initial System boundary FAIL preserved (IDLE 11:03:25.428, no chapter operation); final ownership-fix build retest PASS, chapter attempted 11:23:44.269 / succeeded 11:23:45.436 (1167 ms), continued through sentence 31/120 until explicit Stop. Initial Kokoro boundary PASS, chapter attempted 11:06:32.435 / succeeded 11:06:32.630 (197 ms), continued through 15/120; deliberate backward chapter swipe stopped it. See `manual-qa-evidence/2026-10-10/tts-run5c/`; the successful retest does not erase the historical failure.
+
 ---
+
+### TTS-F29 — An outside pause retains running intent after audio has played
+
+- **Where:** `TtsReadAloudEngine.updateSessionRunning`, run 5c's `hasPlayedInSession` term (`d71e85f2`); controller toggle, settings, word and preview decisions consume that state.
+- **Trigger:** Notification, lock-screen, headset or focus-driven pause changes player play-when-ready to false without calling engine `pause()`.
+- **Expected:** Outside pause behaves like engine pause, including during synthesis; buffering retains callback ownership. Outside play restores the session.
+- **Actual:** After audible playback the session remains running: one toggle pauses again, settings restart audio, interruption decisions resume it, late ENDED advances, and gap synthesis plays unasked.
+- **Evidence:** Six host failures committed in `ff2f9295`, after the behavior-neutral listener seam `ed82a7e3`. Direct resume, outside resume/advance, late READY and buffering already passed before the fix and were retained unchanged.
+- **Expectations:** Two presses confirmed by the controller-equivalent attempt test; settings restart confirmed; word/preview confirmed at their shared running-state decision (not full Android controller integration).
+- **Confidence:** high for engine and attempts behavior; controller interruption integration inferred from the inspected decision paths, not exercised end-to-end.
+- **Severity for a user:** unsolicited narration after a pause; Play requires an extra press.
+- **How a test could catch it:** `TtsOutsidePauseTest` drives play-when-ready independently of audibility, including a deferred synthesis gap.
+- **Fixed:** `08f0809b` — use player playing intent instead of past audibility; play-when-ready changes set the same pause latch as engine pause, and external resume clears it. `hasPlayedInSession` remains for loading. Paused READY remains allowed through `acceptsPlayerCallbacks`, while ENDED/auto-transition still require running. Existing ownership, late-callback and synthesis-gap tests pass unedited.
+- **Device/build status:** full tests 545/545 reader Android, 357/357 reader iOS, 64/64 composeApp; both app builds passed. Samsung natural System and Kokoro chapter boundaries passed. Outside-pause device checks BLOCKED: dispatch and session-monitor pause had no effect, including one dispatch inside a verified Kokoro synthesis gap. No accepted outside pause was established. See `tts-outside-pause-report.txt` and `manual-qa-evidence/2026-10-10/tts-outside-pause/`; host results are not device evidence.
 
 ## 5. Emulator and device checks
 

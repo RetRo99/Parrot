@@ -579,6 +579,31 @@
     <string name="reader_tts_delete_dialog_title" tools:ignore="MissingTranslation">Delete neural voice pack?</string>
     <string name="reader_tts_delete_dialog_message" tools:ignore="MissingTranslation">This removes the shared neural voice pack and makes all neural voices unavailable until you download it again. System voices remain available.</string>
     <string name="reader_tts_delete" tools:ignore="MissingTranslation">Delete</string>
+    <!-- Prepared chapters -->
+    <string name="reader_tts_prepared_chapter_title" tools:ignore="MissingTranslation">This chapter</string>
+    <string name="reader_tts_prepared_chapter_hint" tools:ignore="MissingTranslation">Preparing takes a while. Afterwards this chapter plays instantly.</string>
+    <string name="reader_tts_prepared_chapter_prepare" tools:ignore="MissingTranslation">Prepare this chapter</string>
+    <string name="reader_tts_prepared_chapter_progress" tools:ignore="MissingTranslation">%1$d of %2$d sentences</string>
+    <string name="reader_tts_prepared_chapter_other_busy" tools:ignore="MissingTranslation">Another chapter is being prepared.</string>
+    <string name="reader_tts_prepared_chapter_ready" tools:ignore="MissingTranslation">Ready, plays instantly · %1$s</string>
+    <string name="reader_tts_prepared_chapter_partly" tools:ignore="MissingTranslation">%1$d of %2$d sentences prepared</string>
+    <string name="reader_tts_prepared_chapter_continue" tools:ignore="MissingTranslation">Continue</string>
+    <string name="reader_tts_prepared_chapter_other_settings" tools:ignore="MissingTranslation">Made for %1$s at %2$s×</string>
+    <string name="reader_tts_prepared_chapter_other_speed" tools:ignore="MissingTranslation">Made for another voice at %1$s×</string>
+    <string name="reader_tts_prepared_chapter_prepare_again" tools:ignore="MissingTranslation">Prepare again</string>
+    <string name="reader_tts_prepared_chapter_failed" tools:ignore="MissingTranslation">Couldn\'t prepare this chapter.</string>
+    <string name="reader_tts_prepared_chapter_failed_space" tools:ignore="MissingTranslation">Not enough free space to prepare this chapter.</string>
+    <string name="reader_tts_prepared_chapter_voice_pack" tools:ignore="MissingTranslation">Download this voice to prepare chapters.</string>
+    <string name="reader_tts_prepared_chapter_voice_terms" tools:ignore="MissingTranslation">Review the voice terms to prepare chapters.</string>
+    <string name="reader_tts_prepared_chapter_voices" tools:ignore="MissingTranslation">Go to voices</string>
+    <string name="reader_tts_prepared_chapter_delete_title" tools:ignore="MissingTranslation">Delete prepared audio?</string>
+    <string name="reader_tts_prepared_chapter_delete_message" tools:ignore="MissingTranslation">This chapter will have to be prepared again before it plays instantly.</string>
+    <string name="reader_tts_prepared_audio" tools:ignore="MissingTranslation">Prepared audio</string>
+    <string name="reader_tts_prepared_audio_total" tools:ignore="MissingTranslation">%1$s on this device</string>
+    <string name="reader_tts_prepared_audio_empty" tools:ignore="MissingTranslation">Nothing prepared yet</string>
+    <string name="reader_tts_prepared_audio_delete_all" tools:ignore="MissingTranslation">Delete all</string>
+    <string name="reader_tts_prepared_audio_delete_all_title" tools:ignore="MissingTranslation">Delete all prepared audio?</string>
+    <string name="reader_tts_prepared_audio_delete_all_message" tools:ignore="MissingTranslation">Every prepared chapter will have to be prepared again.</string>
     <string name="reader_tts_deleting_voices" tools:ignore="MissingTranslation">Deleting neural voice pack…</string>
     <string name="reader_tts_delete_failed" tools:ignore="MissingTranslation">Couldn’t delete the neural voice pack. Try again.</string>
     <string name="reader_tts_neural_voice_pack" tools:ignore="MissingTranslation">Shared neural voice pack</string>

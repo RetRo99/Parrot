@@ -84,4 +84,7 @@ sealed interface SettingsIntent : BaseIntent {
 
     // Enable on-device text-to-speech read-aloud
     data class OnTtsEnabledChanged(val enabled: Boolean) : SettingsIntent
+
+    /** Deletes every prepared chapter's audio, after the confirmation. */
+    data object OnDeleteAllPreparedAudio : SettingsIntent
 }

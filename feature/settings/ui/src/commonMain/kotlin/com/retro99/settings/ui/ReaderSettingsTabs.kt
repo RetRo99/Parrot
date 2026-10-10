@@ -22,7 +22,12 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -35,6 +40,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.compose.Ember
+import com.retro99.base.ui.compose.EmberDialog
+import com.retro99.base.ui.compose.EmberDialogAction
+import com.retro99.base.ui.compose.EmberDialogActionStyle
 import com.retro99.base.ui.compose.EmberSwitchRow
 import com.retro99.reader.domain.model.ChapterProgressDisplayMode
 import com.retro99.reader.domain.model.HighlightStyle
@@ -93,6 +101,13 @@ import resources.translations.reader_tap_to_turn
 import resources.translations.reader_tap_to_turn_sub
 import resources.translations.reader_text_size
 import resources.translations.reader_tts
+import resources.translations.general_cancel
+import resources.translations.reader_tts_prepared_audio
+import resources.translations.reader_tts_prepared_audio_delete_all
+import resources.translations.reader_tts_prepared_audio_delete_all_message
+import resources.translations.reader_tts_prepared_audio_delete_all_title
+import resources.translations.reader_tts_prepared_audio_empty
+import resources.translations.reader_tts_prepared_audio_total
 import resources.translations.reader_tts_sub
 import resources.translations.reader_vertical_margins
 import resources.translations.reader_volume_mapping
@@ -207,6 +222,74 @@ private fun SwitchRow(
         enabled = enabled,
         modifier = Modifier.padding(horizontal = 8.dp),
     )
+}
+
+
+/** Prepared chapter audio: how much there is, and one way to remove all of it. */
+@Composable
+private fun PreparedAudioRow(bytes: Long, onDeleteAll: () -> Unit) {
+    var confirming by remember { mutableStateOf(false) }
+    val content = preparedAudioRowContent(bytes)
+    Padded {
+        ReaderSectionLabel(stringResource(StringRes.reader_tts_prepared_audio))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = content.sizeLabel?.let { label ->
+                    stringResource(StringRes.reader_tts_prepared_audio_total, label)
+                } ?: stringResource(StringRes.reader_tts_prepared_audio_empty),
+                style = Ember.type.meta,
+                color = Ember.colors.ink2,
+                modifier = Modifier.weight(1f),
+            )
+            if (content.canDeleteAll) {
+                Box(
+                    Modifier
+                        .heightIn(min = 48.dp)
+                        .clip(CircleShape)
+                        .clickable(role = Role.Button) { confirming = true }
+                        .padding(horizontal = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        stringResource(StringRes.reader_tts_prepared_audio_delete_all) + "…",
+                        style = Ember.type.meta,
+                        color = Ember.colors.destructive,
+                    )
+                }
+            }
+        }
+    }
+    if (confirming) {
+        EmberDialog(
+            onDismissRequest = { confirming = false },
+            title = stringResource(StringRes.reader_tts_prepared_audio_delete_all_title),
+            actions = listOf(
+                EmberDialogAction(
+                    label = stringResource(StringRes.reader_tts_prepared_audio_delete_all),
+                    style = EmberDialogActionStyle.Destructive,
+                    onClick = {
+                        confirming = false
+                        onDeleteAll()
+                    },
+                ),
+                EmberDialogAction(
+                    label = stringResource(StringRes.general_cancel),
+                    style = EmberDialogActionStyle.Neutral,
+                    onClick = { confirming = false },
+                ),
+            ),
+            content = {
+                Text(
+                    stringResource(StringRes.reader_tts_prepared_audio_delete_all_message),
+                    style = Ember.type.meta,
+                    color = Ember.colors.ink2,
+                )
+            },
+        )
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -855,6 +938,13 @@ internal fun ReadAloudTab(
                     onColorSelected = { intentDispatcher(SettingsIntent.OnUnderlineColorChanged(it)) },
                 )
             }
+        }
+
+        if (isTtsSupported) {
+            PreparedAudioRow(
+                bytes = viewState.preparedAudioBytes,
+                onDeleteAll = { intentDispatcher(SettingsIntent.OnDeleteAllPreparedAudio) },
+            )
         }
 
         Padded {

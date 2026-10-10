@@ -142,6 +142,10 @@ internal data class AudioSheetUi(
     val sleepRemainingMs: Long?,
     val isAudioOnly: Boolean,
     val isEink: Boolean,
+    /** Null hides the prepared-chapter row: narration, no read-aloud or no chapter. */
+    val preparedChapter: PreparedChapterRowState? = null,
+    /** Name of the voice prepared audio was made for, when that voice is still installed. */
+    val preparedChapterVoiceLabel: String? = null,
 ) {
     /** Estimated time to the end of the chapter; real for narration, sentence-based otherwise. */
     val remainingInChapterMs: Long
@@ -177,6 +181,9 @@ internal data class AudioSheetActions(
     val onSelectSource: (Boolean) -> Unit,
     /** Bookmarks the sentence being read. */
     val onBookmark: () -> Unit = {},
+    val onPrepareChapter: () -> Unit = {},
+    val onCancelChapterPreparation: () -> Unit = {},
+    val onDeletePreparedChapter: () -> Unit = {},
 )
 
 @Composable
@@ -449,6 +456,20 @@ private fun DeviceVoiceBody(ui: AudioSheetUi, hasNarration: Boolean, actions: Au
     )
     Spacer(Modifier.height(16.dp))
     VoiceCard(ui, actions.onChangeVoice)
+    ui.preparedChapter?.let { preparedChapter ->
+        Spacer(Modifier.height(12.dp))
+        PreparedChapterCard(
+            state = preparedChapter,
+            voiceLabel = ui.preparedChapterVoiceLabel,
+            isEink = ui.isEink,
+            actions = PreparedChapterActions(
+                onPrepare = actions.onPrepareChapter,
+                onCancel = actions.onCancelChapterPreparation,
+                onDelete = actions.onDeletePreparedChapter,
+                onOpenVoices = actions.onChangeVoice,
+            ),
+        )
+    }
     Spacer(Modifier.height(12.dp))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Stepper(

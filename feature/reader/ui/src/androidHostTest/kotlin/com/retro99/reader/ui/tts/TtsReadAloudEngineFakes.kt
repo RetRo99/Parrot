@@ -153,6 +153,16 @@ internal class FakeTtsEnginePlayer : TtsEnginePlayer {
         forEach { it.onIsPlayingChanged(isPlaying) }
     }
 
+    fun reportOutsidePause() {
+        forEach { it.onPlayWhenReadyChanged(false) }
+        reportPlaying(false)
+    }
+
+    fun reportOutsideResume() {
+        forEach { it.onPlayWhenReadyChanged(true) }
+        reportPlaying(true)
+    }
+
     fun reportSeeked(positionMs: Long) {
         forEach { it.onSeeked(positionMs) }
     }

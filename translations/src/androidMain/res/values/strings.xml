@@ -8,4 +8,9 @@
     <string name="tts_voice_preparation_notification_preparing" tools:ignore="MissingTranslation">Preparing %1$d%% · %2$d of %3$d MB</string>
     <string name="tts_voice_preparation_notification_finalizing" tools:ignore="MissingTranslation">Finishing neural voice setup…</string>
     <string name="tts_voice_preparation_notification_cancel" tools:ignore="MissingTranslation">Cancel</string>
+    <string name="tts_chapter_preparation_channel_name" tools:ignore="MissingTranslation">Chapter audio preparation</string>
+    <string name="tts_chapter_preparation_channel_description" tools:ignore="MissingTranslation">Shows the progress of preparing a chapter for instant listening</string>
+    <string name="tts_chapter_preparation_notification_title" tools:ignore="MissingTranslation">Preparing chapter audio</string>
+    <string name="tts_chapter_preparation_notification_progress" tools:ignore="MissingTranslation">%1$d of %2$d sentences</string>
+    <string name="tts_chapter_preparation_notification_cancel" tools:ignore="MissingTranslation">Cancel</string>
 </resources>

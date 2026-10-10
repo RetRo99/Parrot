@@ -103,10 +103,8 @@ class TtsReadAloudEngineChapterCompletionTest {
         runCurrent()
 
         assertEquals(emptyList(), completions)
-        // What that late callback does instead, today: with no current sentence it treats
-        // sentence 0 of the chapter just loaded as the next one and starts narration
-        // nobody asked for. Recorded as TTS-F25; not fixed in run 2b.
-        assertEquals(0, engine.currentSentenceIndex)
+        // A callback queued before the stop cannot start the newly loaded chapter.
+        assertEquals(-1, engine.currentSentenceIndex)
         assertTrue(uncaught.isEmpty())
     }
 

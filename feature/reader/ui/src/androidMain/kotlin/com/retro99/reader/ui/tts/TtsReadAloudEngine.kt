@@ -115,6 +115,9 @@ class TtsReadAloudEngine(
     /** Audio has already been audible in this session, so a wait is a gap, not a start. */
     private var hasPlayedInSession = false
 
+    /** Player intent survives buffering, but not a pause from any control surface. */
+    private var playerPlayWhenReady = false
+
     /**
      * The player ran out of audio. It does not leave that state for a play call, and an
      * item appended behind it does not undo it either, so the engine has to start the
@@ -137,6 +140,7 @@ class TtsReadAloudEngine(
 
     private val playerListener = object : TtsEnginePlayerListener {
         override fun onItemTransition(mediaId: String?, isAutoAdvance: Boolean) {
+            if (!acceptsPlayerCallbacks || (isAutoAdvance && !isSessionRunning.value)) return
             if (mediaId != null && !mediaId.startsWith(TTS_MEDIA_ID_PREFIX)) {
                 detachForExternalPlayback()
                 return
@@ -154,12 +158,22 @@ class TtsReadAloudEngine(
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (!acceptsPlayerCallbacks) return
             _isPlaying.value = isPlaying
             // Audio is audible: the start this session was waiting for has landed.
             if (isPlaying) {
                 isStartingSentence = false
                 hasPlayedInSession = true
+                playerPlayWhenReady = true
             }
+            updateSessionRunning()
+        }
+
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean) {
+            if (currentIndex < 0 || !acceptsPlayerCallbacks) return
+            playerPlayWhenReady = playWhenReady
+            isPauseRequested = !playWhenReady
+            if (!playWhenReady) _isPlaying.value = false
             updateSessionRunning()
         }
 
@@ -169,6 +183,7 @@ class TtsReadAloudEngine(
         }
 
         override fun onReady() {
+            if (!acceptsPlayerCallbacks) return
             val mediaItemIndex = player?.currentMediaId?.let(::sentenceIndexForMediaId)
             if (mediaItemIndex != null && mediaItemIndex != currentIndex) {
                 onSentenceStarted(mediaItemIndex)
@@ -186,6 +201,7 @@ class TtsReadAloudEngine(
         }
 
         override fun onError(error: Throwable) {
+            if (!acceptsPlayerCallbacks) return
             _playbackFailures.tryEmit(
                 PlaybackFailure(
                     correlationId = playbackOperationCorrelationId,
@@ -327,6 +343,9 @@ class TtsReadAloudEngine(
             launchEngineStart { startSentence(currentIndex) }
             return
         }
+        // The explicit resume owns the next playing callback, before audio is audible.
+        isStartingSentence = true
+        updateSessionRunning()
         playbackPlayer.play()
     }
 
@@ -684,6 +703,9 @@ class TtsReadAloudEngine(
      * [readyFiles], and [buildPlaylist] re-queues it and everything ready after it.
      */
     private fun onSentenceCompleted() {
+        // Player callbacks already posted before a stop or pause may still arrive.
+        // The session, not just its index, owns permission to advance (TTS-F25).
+        if (!isSessionRunning.value) return
         heard.onEnded()?.let(::emitFinished)
         // A seek or skip target is being prepared; it starts on its own.
         if (pendingStartToken != null) return
@@ -789,13 +811,18 @@ class TtsReadAloudEngine(
         isStartingSentence = false
         playerReachedEndOfQueue = false
         hasPlayedInSession = false
+        playerPlayWhenReady = false
         updateSessionRunning()
     }
 
     private fun updateSessionRunning() {
         _isSessionRunning.value =
-            !isPauseRequested && (_isPlaying.value || isStartingSentence)
+            !isPauseRequested && (_isPlaying.value || isStartingSentence || playerPlayWhenReady)
     }
+
+    // A paused playlist may still become ready; a stopped one has no owner at all.
+    private val acceptsPlayerCallbacks: Boolean
+        get() = isSessionRunning.value || isPauseRequested
 
     private fun emitFinished(index: Int) {
         sentences.getOrNull(index)?.let(_finishedSentences::tryEmit)
