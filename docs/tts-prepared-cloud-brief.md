@@ -33,6 +33,39 @@ are uploaded, restored, deleted and taken down), `supabase/SECURITY_ROLLOUT.md`,
 - Android only. iPhone must not change in behaviour and must not break when the cloud
   holds prepared audio.
 
+### Added by the owner on 2026-10-11
+
+1. Anyone with a Parrot Cloud account may upload. The `uploads` entry of the feature
+   allow-list is opened to every signed-in account. The recap feature's allow-list is
+   not touched. This replaces the fifth design answer of Step 0 ("uploads are allow-list
+   only today; prepared audio follows the same gate").
+2. The saved-words migration `20261009000000_parrot_cloud_saved_words.sql` may be applied
+   to the development project together with this work's migration. The rule "stop if any
+   migration other than this work's is pending" now means: stop if anything other than
+   those two is pending.
+3. The linked Supabase project is a development project with mock data only; no released
+   app uses it. It may be used for the server tests and for this work's migrations,
+   within the limits already listed above (no reset, no ops scripts, no edits to applied
+   migrations, no secrets in the repository).
+4. A container runtime now exists on this machine: OrbStack. Use it with
+   `export DOCKER_HOST=unix://$HOME/.orbstack/run/docker.sock` and
+   `export PATH="/Applications/OrbStack.app/Contents/MacOS/xbin:$PATH"`. If it is not
+   running, start it with `orbctl start`. This removes the "this machine has no Docker"
+   limitation above: `supabase test db --linked` can run.
+5. Two test devices may be used, and no others: the Samsung, serial `RFCWC0SSVDM`, and
+   the Pixel 10 Pro XL emulator, serial `emulator-5554` (AVD `Pixel_10_Pro_XL`). A Xiaomi
+   is also attached: never send it a command. Pass `-s <serial>` on every adb call. On
+   both test devices an agent may reinstall the app, clear its data, switch Wi-Fi and
+   mobile data, delete voice packs and accept the Supertonic terms.
+6. Signing in to Parrot Cloud is allowed with Google, by choosing the account already
+   present on each device. Never type a password or a verification code. If the sign-in
+   asks for one, stop that part and report it.
+7. The "Prepare this chapter" button shows an estimate of time and size before the user
+   starts, for example "About 12 minutes · about 9 MB".
+8. Prepared chapters must stay usable by an iPhone app later, although nothing is built
+   for iPhone now.
+9. Paid storage is planned in a document only. No screen, no button.
+
 ## The intended design, to be checked before anything is built
 
 `cloud_book_files` already allows several files per book: it is unique on
