@@ -1,0 +1,221 @@
+--- REPORT ---
+Branch: tts/prepared-cloud (from origin/main ae1c40f8), in worktree
+.claude/worktrees/tts-investigation
+Commits this run (hash + subject, oldest first):
+  1f06dae0 docs(tts): the brief for prepared chapters in Parrot Cloud
+  44fc66c5 docs(tts): step 0, the design answers and the baseline
+Steps complete this run, and steps complete in total (0-7): Step 0 only this
+run; 1 of 8 in total (Step 0). Steps 1-7 not built.
+Step 0: can prepared audio be one more cloud_book_files row (yes/no, what had to
+change); what an older Android app and the iPhone app do with an unknown media
+type (file and line), and how that risk is handled:
+  YES. cloud_book_files is already unique on (cloud_book_id, media_type,
+  relative_path) (20260922000000_parrot_cloud.sql:45) and cloud_book_uploads has
+  a matching per-slot reservation index (:72-74). There is NO media-type
+  allow-list anywhere today: reserve only checks media_type is non-blank
+  (20260922000001_parrot_cloud_rpcs.sql:471) and <=64 chars
+  (20261003000000_parrot_cloud_security_hardening.sql:306); finalize, download,
+  delete, takedown and the orphan GC all address a file by id and never branch on
+  media type. Storage paths are media-type-free
+  (20260922000001_parrot_cloud_rpcs.sql:626) and all storage policies match on
+  path plus owner.
+  What has to change: (a) a per-media-type 64 MiB cap, because reserve and the
+  bucket both allow 2 GiB (20261003000000...:313 and :70) - additive; (b) a
+  positive named allow-list for the new type, so it gets its own rules instead of
+  inheriting the ebook's - additive. What does NOT have to change: the bucket's
+  MIME types, because application/octet-stream is already allowed
+  (20261003000000...:80) and TusUploadMetadata.contentType() already falls through
+  to it for an unmapped media type and an unmapped extension
+  (lib/cloud/implementation/.../transfer/TusUploadPolicies.kt:18 and :30-41; zip
+  is not mapped); and the rights attestation, which still applies unchanged
+  (20260922000001_parrot_cloud_rpcs.sql:485-493).
+  Unknown media type, current apps: the same commonMain code runs on Android and
+  iPhone. ParrotCloudBookFileChangeApplier.apply
+  (lib/server-parrot-cloud/.../ParrotCloudBookFileChangeApplier.kt:25-61) is
+  media-type agnostic, parses with ignoreUnknownKeys (:23) and writes the row into
+  the local mirror keyed by (libraryBookId, mediaType, relativePath) (:46-60): no
+  crash, no overwrite of the ebook's row. The dangerous consumer is
+  LocalBooksRepository.toLibraryServerBook
+  (lib/server-local/.../LocalBooksRepository.kt:77-137), which builds the
+  MediaResource list the whole library and book-detail UI reads from - and it
+  filters on an empty relative path first:
+  parrotFiles.filter { file -> file.relativePath.isEmpty() } (:83). A row with a
+  non-empty relative path therefore never becomes a MediaResource and is invisible
+  to every consumer. With an EMPTY relative path there would be three real
+  misbehaviours: LocalBooksRepository.kt:104-107 (a book with no ebook backup
+  starts appearing in the library as a cloud book), CloudBackupSelection.kt:26 (a
+  book whose ebook is NOT backed up is silently dropped from the backup banner and
+  sheet), BookDetailViewModel.kt:641-643 ("Remove from Parrot Cloud" passes the
+  unknown type into the removal use case). Two things are safe regardless:
+  downloading prepared audio as a book is impossible even deliberately, because
+  BookFileTransferEngine.enqueueDownloadLocked opens with
+  require(mediaType == EBOOK || READALOUD)
+  (feature/books/data/.../transfer/BookFileTransferEngine.kt:110-112), and
+  BookDetailViewModel.kt:621-623 drops a resource whose media type is not a
+  BookType.
+  How the risk is handled: the prepared-audio relative_path is never empty, and
+  that is enforced ON THE SERVER by a CHECK constraint on cloud_book_files plus a
+  reserve rejection for the new media type, not by client convention - so no client
+  version can produce a row an older app would misread. Because that holds, the
+  existing sync payload is safe to keep carrying prepared audio and the brief's
+  fallback of a separate call is not needed; keeping it in the existing feed also
+  keeps invalidateCloudFile (ParrotCloudBookFileChangeApplier.kt:32-36)
+  propagating deletion and takedown to devices for free.
+  iPhone: nothing changes and nothing can break - same commonMain applier, same
+  :83 gate, no prepared store, no TTS preparation; the only iOS-specific transfer
+  code is IosBookFileTransferFileStore.kt, never reached for a media type nothing
+  enqueues.
+Step 0: how a book is identified across devices and mapped to the local prepared
+store:
+  cloud_books.id IS the client's library book id - a random UUID the client
+  chooses, with the server default removed
+  (20261001000000_parrot_cloud_client_book_ids.sql:1-3 and :32-33); the source
+  content hash is only a duplicate hint (:26-31). The change applier states the
+  same mapping and looks the book up by it
+  (ParrotCloudBookFileChangeApplier.kt:37-39), so after a second device syncs both
+  devices hold the SAME libraryBookId for the same book. The prepared store hashes
+  that id with the server id:
+  File(root, hash("${serverId?.length ?: -1}:$serverId$bookId")) then
+  hash(chapterHref) (feature/reader/ui/.../tts/TtsPreparedStore.kt:61-63), fed in
+  production from epubPublication.bookUuid and epubPublication.serverId
+  (.../navigator/AndroidTtsController.kt:823-827), where for a library book
+  bookUuid is the libraryBookId and serverId is LOCAL_SERVER_ID = "local"
+  (base/.../server/ServerType.kt:7). So the chapter folder is the identical path
+  on both devices, sha256("5:local" + libraryBookId)/sha256(chapterHref), which is
+  what makes a cloud download installable on the second device with no remapping.
+Step 1: migration file name; what it changes (list); pgTAP tests added (count);
+was the SQL actually run locally (yes/no, and if no, why): not built. No migration
+and no pgTAP test was written this run. NO SQL HAS BEEN RUN: there is no container
+runtime on this machine at all (docker absent from PATH, /Applications/Docker.app,
+~/.docker/bin, colima, podman and orbstack all absent), so the local Supabase
+stack cannot be started. scripts/supabase/test.sh was run once before any change
+and failed with DbConnectError ECONNREFUSED 127.0.0.1:54322.
+Step 1: cascade on book backup delete, takedown, block-list and account deletion
+(tested yes/no each): not built, none tested. Step 0 established what each does
+today: book backup delete acts on one row only
+(20260924000002_parrot_cloud_delete_incomplete_backup.sql:1-162) - cascade needed;
+takedown acts on one row only
+(20260925000006_parrot_cloud_drop_unified_library_residue.sql:92-207) - cascade
+needed; admin_block_content_hash deletes nothing and every block check matches on
+the blocked hash, which prepared audio does not share
+(20260922000001_parrot_cloud_rpcs.sql:1393-1443, :503-509, :803-843, :1066-1072,
+20260922000002_parrot_cloud_storage.sql:58-63) - cascade needed; account deletion
+is ALREADY correct via the FK on delete cascade
+(20260922000000_parrot_cloud.sql:29) plus the same users/<uid>/ storage prefix -
+nothing needed. The orphan GC needs nothing: it selects from cloud_book_files
+without reference to media type
+(20260924000000_parrot_cloud_orphan_gc.sql:309-549).
+Step 1: existing server tests edited (name + why), or "none": none.
+Step 2: archive format; checks on unpack (list); what a rejected archive leaves
+behind: not built.
+Step 3: when a chapter is queued; states built (list); was the existing transfer
+engine reused (yes/no, how): not built.
+Step 4: how a device learns what the cloud holds; download states built (list):
+not built.
+Step 5: row states added (list); new string keys (list); where the "get more
+storage" hook is (file and function): not built.
+Does iPhone behave exactly as before (yes/no) and how I know: yes - no source file
+of any kind was changed this run, only two documents were added. Step 0 also
+established by reading that prepared-audio rows would be inert on iPhone once
+built, because iOS runs the same commonMain applier and the same
+LocalBooksRepository.kt:83 relative-path gate.
+Existing app tests edited (name + why), or "none": none.
+Per module, before and after: <module> <passed>/<total> -> <passed>/<total> (one
+line each):
+  feature/reader/ui testAndroidHostTest 545/545 -> 545/545
+  feature/reader/ui iosSimulatorArm64Test 357/357 -> 357/357
+  feature/books/data testAndroidHostTest 121/121 -> 121/121
+  feature/cloud-account/ui testAndroidHostTest 23/23 -> 23/23
+  feature/settings/ui testAndroidHostTest 24/24 -> 24/24
+  lib/server-parrot-cloud testAndroidHostTest 62/62 -> 62/62
+  lib/analytics/implementation testAndroidHostTest 77/77 -> 77/77
+  composeApp testAndroidHostTest 64/64 -> 64/64
+  (Counts read from build/test-results XML, zero failures/errors/skips. Before and
+  after are identical because no code was changed this run.)
+Does a test resolve the new classes from the real Koin graph (yes/no, name): no -
+no new class was added this run.
+App build results (Android assemble, iOS framework): not run this run. No source
+file was changed, so both builds are unaffected; the baseline test suite over all
+eight modules compiled and passed green.
+Server test suite result (passed/total, or "not run"): not run - no container
+runtime on this machine, see Step 1 above.
+Device used (model + serial), any command sent to another device (yes/no): no
+device was used this run. No adb command was sent to any device, so no command was
+sent to another device.
+On the phone with nothing deployed: prepare and play still work (yes/no); what the
+row showed about backup; any crash, loop or unasked-for error (yes/no): not checked
+this run - Step 7 not reached and no code was changed that could affect the phone.
+What the owner must do before the end-to-end check (list):
+  1. Nothing yet - there is no migration to apply. The gate passed, but Step 1 was
+     not reached, so no SQL exists.
+  2. When a migration does exist: run it against a local Supabase stack first. This
+     machine has no container runtime, so no agent run from here can run SQL; an
+     agent-written migration must be run by the owner or on a machine with Docker
+     before it is applied anywhere.
+State the phone was left in (voice, rate, screen, prepared audio deleted yes/no):
+unchanged - the phone was never touched this run. Nothing was installed, no
+setting was altered, and no prepared audio was created, so none needed deleting.
+Why the run ended where it did (finished / out of time / blocked, and on what):
+Finished Step 0 and stopped there, on the brief's own first requirement that Step 0
+is a gate to be written down and committed before any code. The gate PASSED, so
+this is not a blocked run - Step 1 is open for the next one. It ended here rather
+than continuing because the remaining budget was better spent getting the design
+answers right and verified line by line than on starting a migration that could not
+be run on this machine anyway.
+Done this run:
+  - Created branch tts/prepared-cloud from origin/main ae1c40f8 in the supplied
+    worktree, and committed the brief as the first commit.
+  - Ran scripts/supabase/test.sh once before changing anything and established that
+    the local server tests CANNOT run here, with the reason: no container runtime is
+    installed, not merely a stopped daemon.
+  - Recorded the baseline test count of all eight modules from the result XML, all
+    green.
+  - Read the migrations and the client for Step 0 and answered all five questions
+    with file and line, verified by re-reading each cited line.
+  - Found the single choke point that makes the compatibility risk preventable from
+    the server side (LocalBooksRepository.kt:83) and the three concrete
+    misbehaviours it guards against, and decided to enforce a never-empty
+    relative_path with a server CHECK rather than by client convention.
+  - Wrote docs/tts-prepared-cloud.md and this report, and committed both.
+Not done or partly done, and why: Steps 1 to 7 are entirely not built. Step 0 is a
+gate the brief requires to be committed before any code, and this run did that and
+stopped; nothing of Step 1 was begun, so nothing is half-built.
+Tests skipped, ignored or weakened (file + name + reason), or "none": none.
+Places the brief was ambiguous and what I chose:
+  1. The brief says to stop after Step 0 if "takedown is tied to a single file".
+     Takedown IS tied to a single file
+     (20260925000006_parrot_cloud_drop_unified_library_residue.sql:92-207), but I
+     did NOT treat that as the blocker. The brief's own stop conditions are narrower
+     and explicit - "if answer 1 is no, or answer 3 shows an older app would
+     misbehave and it cannot be prevented" - and Step 1 separately commissions
+     exactly this cascade as additive work. A per-file takedown is a cascade to add
+     in a new migration, not a parallel upload system, so the intended design holds.
+     I am flagging the judgement because it is the one place a reasonable reader
+     could have stopped the run.
+  2. Step 1 offers to pull prepared audio out of the existing sync payload and serve
+     it by a new call "if that needs". I chose NOT to: a never-empty relative_path,
+     enforced by a server constraint, already makes the existing payload safe, and
+     staying in the existing feed keeps deletion and takedown propagating to devices
+     through invalidateCloudFile for free.
+  3. The brief's verify command names test tasks that "may not exist under exactly
+     those names". All eight exist as written; none had to be substituted.
+Files changed outside supabase, scripts/supabase, lib/server-parrot-cloud,
+feature/books, feature/reader, feature/cloud-account, feature/settings,
+lib/analytics, translations, composeApp tests and docs: none. The only files added
+are docs/tts-prepared-cloud-brief.md, docs/tts-prepared-cloud.md and
+docs/tts-prepared-cloud-report.txt. No existing file of any kind was modified.
+Known problems I am leaving:
+  1. No SQL can be run from this machine. Until that is solved, every migration an
+     agent writes here is unrun and must not be applied by the owner, per the brief.
+  2. The three cascades (book backup delete, takedown, block-list) are real gaps
+     that exist the moment the first prepared chapter is uploaded: audio would
+     outlive its book. They must be in the same migration as the new media type,
+     never a later one.
+  3. admin_block_content_hash deletes nothing today, so blocking a book's hash will
+     not reach its prepared audio by any existing mechanism - the cascade has to be
+     attached to the block path itself, not inferred from the hash.
+  4. The never-empty relative_path rule is the single thing protecting older apps.
+     If a future change ever relaxes it, or removes the relativePath.isEmpty()
+     filter at LocalBooksRepository.kt:83, older installs break in the three ways
+     listed above. Both places should be commented to say so when Step 1 lands.
+--- END REPORT ---
