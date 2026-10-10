@@ -5,4 +5,4 @@ internal fun shouldReloadTtsChapter(
     previousHref: String?,
     newHref: String,
     narratedHref: String?,
-): Boolean = previousHref != null && previousHref != newHref
+): Boolean = previousHref != null && previousHref != newHref && newHref != narratedHref
