@@ -10,7 +10,8 @@ e75a7b9b feat(tts): the size estimate is the audio's length at the encoder's bit
 (docs commit: the final report after step 2)
 397a54a9 test(tts): a transfer that finishes should tell the row to read again (W2)
 f188e8f0 fix(tts): a transfer that finishes now tells the row to read again (W2)
-Steps complete (0-4): 0, 1, 2 and 3. Step 4 is the build and install.
+(docs commit: the final report after step 3, before the build)
+Steps complete (0-4): all of 0, 1, 2, 3 and 4.
 Step 0: merged (yes/no, conflicts); per module after the merge, <module> <passed>/<total>, one line each:
 Yes, merged with no conflicts; only documents and evidence differed.
 feature/reader/ui testAndroidHostTest 767/767
@@ -87,7 +88,14 @@ by the existing PreparedChapterDownloadQueueTest "a downloaded chapter is verifi
 installed and plays instantly" (stateOf is Installed after the settle) and by the new
 backup-queue end tests.
 Step 4: installed on the Xiaomi (yes/no, its address, commit installed); any command sent to any device beyond devices, getprop and that install (yes/no):
-Not started. No command has been sent to any device in this run.
+Yes. 10.41.65.3:5555, confirmed by ro.product.model 2602BPC18G before anything was
+installed. The APK is the one built at f188e8f0 (the Step 3 fix, the last code commit; the
+report commit after it changes no code), at
+androidApp/build/outputs/apk/debug/androidApp-debug.apk, installed with
+adb -s 10.41.65.3:5555 install -r, which answered "Success".
+No. Three commands to any device in the whole run: adb devices, one getprop on the Xiaomi,
+and that install. The Samsung RFCWC0SSVDM and emulator-5554 were listed by adb devices and
+never addressed.
 What the owner should try on the phone, as a short list of steps and what each should show:
 1 Open a book, Listening sheet. The "Prepare this chapter" row should now give a larger
   size than before - for a 9-sentence chapter about 220 kB, not 130 kB - and an audio
@@ -128,11 +136,14 @@ composeApp testAndroidHostTest 66/66
 Zero failures, errors or skips, read from build/test-results XML. iOS was not re-run at the
 owner's instruction, so feature/reader/ui iosSimulatorArm64Test stands at its Step 0
 479/479 and does not include this run's new commonTest cases.
-App build result: not attempted yet.
+App build result: :androidApp:assembleDebug BUILD SUCCESSFUL, 766 tasks, 78 executed.
 Any machine-wide process kill used (must be no): no.
 Not done or partly done, and why:
-Step 4 (build and install) is next. iOS tests were not re-run, the owner having said they
-need not be. Nothing else in steps 0-3 is partial.
+Nothing in steps 0-4 is partial. iOS tests were not re-run, the owner having said they need
+not be, so the iOS count below is from Step 0 and predates this run's new commonTest cases.
+Everything the brief put outside this run was left alone: no device was driven, the
+remaining cloud checks were not made, and no server, supabase, purchasing, iPhone, voice
+engine, read-aloud engine or manifest-format file was touched.
 Tests skipped, ignored or weakened (file + name + reason), or "none": none.
 Places the prompt was ambiguous and what I chose:
 Step 1: the notification text function also answers for "nothing running at all" (0 of 0
