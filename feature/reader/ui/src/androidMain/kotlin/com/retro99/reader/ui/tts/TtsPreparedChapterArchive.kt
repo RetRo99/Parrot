@@ -59,7 +59,16 @@ internal class TtsPreparedChapterArchive(
 
     /** Hashes only: the chapter href, then the settings that decide the audio. */
     fun relativePath(chapterHref: String, settings: PreparedVoiceSettings): String =
-        "tts-prepared/${hash(chapterHref)}/${hash(settingsKey(settings))}.zip"
+        "${chapterPathPrefix(chapterHref)}${hash(settingsKey(settings))}.zip"
+
+    /**
+     * Everything the cloud holds for one chapter, whatever settings it was made
+     * for, is under this prefix. A device cannot read the settings back out of
+     * the path -- they are a hash -- so the prefix is how it finds a chapter's
+     * audio at all, and full-path equality is how it tells whether that audio
+     * matches the settings now selected.
+     */
+    fun chapterPathPrefix(chapterHref: String): String = "tts-prepared/${hash(chapterHref)}/"
 
     fun pack(chapterFolder: File, destination: File): PreparedArchiveResult {
         val manifest = readManifest(File(chapterFolder, MANIFEST_NAME))

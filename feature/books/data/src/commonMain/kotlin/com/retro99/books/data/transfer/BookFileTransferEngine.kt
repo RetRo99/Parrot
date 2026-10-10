@@ -193,6 +193,92 @@ class BookFileTransferEngine(
         return transferId
     }
 
+    override suspend fun enqueueAuxiliaryDownload(
+        serverId: String,
+        libraryBookId: String,
+        mediaType: String,
+        relativePath: String,
+        destinationPath: String,
+    ): String = enqueueMutex.withLock {
+        check(supportsDownload(serverId)) { "Book restore is not enabled for this server" }
+        require(relativePath.isNotEmpty()) { "An auxiliary file needs its own relative path" }
+        require(destinationPath.isNotEmpty()) { "An auxiliary download needs somewhere to go" }
+        val file = cloudFilesDatabase.getFileStates(libraryBookId).firstOrNull { candidate ->
+            candidate.mediaType.equals(mediaType, ignoreCase = true) &&
+                candidate.relativePath == relativePath &&
+                candidate.status == FILE_STATUS_AVAILABLE
+        } ?: error("No available cloud file was found for this book")
+        require(file.sizeBytes > 0L) { "Cannot restore an empty cloud file" }
+        val fileStore = requireNotNull(fileStore) { "Cloud download storage is unavailable" }
+
+        val prior = cloudFilesDatabase.observeTransfers(serverId, libraryBookId)
+            .first()
+            .firstOrNull { candidate ->
+                candidate.direction == DIRECTION_DOWNLOAD &&
+                    candidate.mediaType.equals(mediaType, ignoreCase = true) &&
+                    candidate.relativePath == relativePath
+            }
+        prior?.let { transfer ->
+            if (transfer.state in ACTIVE_STATES) {
+                scheduleExistingTransfer(transfer)
+                return@withLock transfer.transferId
+            }
+            // Already here, byte for byte: asking twice downloads once.
+            if (transfer.state == STATE_COMPLETED &&
+                transfer.contentHash == file.contentHash &&
+                fileStore.exists(destinationPath) &&
+                fileStore.size(destinationPath) == file.sizeBytes
+            ) {
+                return@withLock transfer.transferId
+            }
+        }
+
+        val now = now()
+        val transferId = prior?.transferId ?: Uuid.random().toString()
+        val stagingPath = fileStore.stagingPath(transferId)
+        val stagedBytes = if (fileStore.exists(stagingPath)) fileStore.size(stagingPath) else 0L
+        if (stagedBytes > file.sizeBytes) fileStore.truncate(stagingPath)
+        val transfer = CloudFileTransferEntity(
+            transferId = transferId,
+            serverId = serverId,
+            direction = DIRECTION_DOWNLOAD,
+            libraryBookId = libraryBookId,
+            cloudBookFileId = file.cloudBookFileId,
+            mediaType = file.mediaType,
+            stagingPath = stagingPath,
+            sizeBytes = file.sizeBytes,
+            bytesTransferred = if (stagedBytes > file.sizeBytes) 0L else stagedBytes,
+            contentHash = file.contentHash,
+            contentHashAlgorithm = file.contentHashAlgorithm,
+            uploadId = null,
+            storagePath = null,
+            tusUploadUrl = null,
+            tusExpiresAt = null,
+            rightsAttestation = null,
+            relativePath = relativePath,
+            // For a download this is where the bytes are going, and it is also
+            // what tells the finalize step this is not a book.
+            sourcePath = destinationPath,
+            state = STATE_PENDING,
+            attemptCount = 0,
+            nextAttemptAt = null,
+            lastError = null,
+            createdAt = prior?.createdAt ?: now,
+            updatedAt = now,
+        )
+        cloudFilesDatabase.insertTransfer(transfer)
+        pruneSupersededTransfers(
+            serverId = serverId,
+            libraryBookId = libraryBookId,
+            direction = DIRECTION_DOWNLOAD,
+            mediaType = file.mediaType,
+            keepTransferId = transferId,
+            relativePath = relativePath,
+        )
+        schedule(transferId)
+        transferId
+    }
+
     override suspend fun removeDownload(serverId: String, libraryBookId: String, mediaType: String) {
         val fileStore = requireNotNull(fileStore) { "Cloud download storage is unavailable" }
         cloudFilesDatabase.observeTransfers(serverId, libraryBookId)
@@ -987,7 +1073,15 @@ class BookFileTransferEngine(
                 updatedAt = now(),
             )
             cloudFilesDatabase.updateTransfer(transfer)
-            transfer = downloadFinalizer.finalize(transfer, request)
+            // A file of a book that is not the book itself is verified and then
+            // left where the caller asked for it. Installing it as a device
+            // copy of the book, which is all the finalizer knows how to do,
+            // would be wrong.
+            transfer = if (transfer.relativePath.isNotEmpty()) {
+                finalizeAuxiliaryDownload(transfer, request, fileStore)
+            } else {
+                downloadFinalizer.finalize(transfer, request)
+            }
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: BookFileTransferRejectedException) {
@@ -1002,6 +1096,39 @@ class BookFileTransferEngine(
         } catch (exception: Exception) {
             scheduleRetry(transfer, exception.message ?: "Download failed")
         }
+    }
+
+    /**
+     * Verify, then move into the place the caller named. The content hash is
+     * checked exactly as it is for a book, so a tampered or truncated archive
+     * never reaches the destination at all.
+     */
+    private suspend fun finalizeAuxiliaryDownload(
+        transfer: CloudFileTransferEntity,
+        request: BookFileDownloadRequest,
+        fileStore: BookFileTransferFileStore,
+    ): CloudFileTransferEntity {
+        val stagingPath = requireNotNull(transfer.stagingPath) { "Download staging path was lost" }
+        val destinationPath = requireNotNull(transfer.sourcePath) {
+            "An auxiliary download has nowhere to go"
+        }
+        // Deliberately not on another dispatcher: the engine's queue already
+        // runs off the main thread, and hopping would take this work out of
+        // the caller's cancellation and out of a test's clock.
+        if (fileStore.contentHash(stagingPath) != request.contentHash) {
+            throw DownloadHashMismatchException()
+        }
+        fileStore.moveToImportedStore(stagingPath, destinationPath)
+        val completed = transfer.copy(
+            stagingPath = null,
+            bytesTransferred = request.sizeBytes,
+            state = STATE_COMPLETED,
+            nextAttemptAt = null,
+            lastError = null,
+            updatedAt = now(),
+        )
+        cloudFilesDatabase.updateTransfer(completed)
+        return completed
     }
 
     private suspend fun createDownloadRequest(transfer: CloudFileTransferEntity): BookFileDownloadRequest {

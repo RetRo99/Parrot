@@ -188,6 +188,24 @@ interface BookFileTransferManager {
         rightsAttestation: UploadRightsAttestation,
     ): String = throw UnsupportedOperationException("Auxiliary uploads are not supported")
 
+    /**
+     * The other direction of [enqueueAuxiliaryUpload]: one named file of a book
+     * that is not the book itself, fetched to a path the caller names. The
+     * engine resumes, retries and verifies the content hash exactly as it does
+     * for a book, and then leaves the bytes alone -- a prepared chapter archive
+     * is not a device copy of a book and must not be installed as one. What to
+     * do with the file is the caller's, after the transfer completes.
+     *
+     * Defaulted so no other implementation has to know about it.
+     */
+    suspend fun enqueueAuxiliaryDownload(
+        serverId: String,
+        libraryBookId: String,
+        mediaType: String,
+        relativePath: String,
+        destinationPath: String,
+    ): String = throw UnsupportedOperationException("Auxiliary downloads are not supported")
+
     /** Cancels a transfer still in flight for one slot, if there is one. */
     suspend fun cancelUpload(
         serverId: String,

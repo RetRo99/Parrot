@@ -5,6 +5,8 @@ import com.retro99.analytics.api.Analytics
 import com.retro99.base.AppInitializer
 import com.retro99.books.domain.BookFileTransferManager
 import com.retro99.reader.ui.reader.PreparedChapterBackupState
+import com.retro99.reader.ui.reader.PreparedChapterCloudAudio
+import com.retro99.reader.ui.reader.PreparedChapterDownloadState
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -54,10 +56,43 @@ internal class TtsPreparedChapterBackup(
         )
     }
 
+    private val downloads: PreparedChapterDownloadQueue by lazy {
+        PreparedChapterDownloadQueue(
+            store = prepared.store,
+            archive = TtsPreparedChapterArchive(),
+            inbox = File(context.filesDir, INBOX).apply { mkdirs() },
+            transfers = transfers,
+            account = account,
+            freeBytes = { context.filesDir.usableSpace },
+            scope = scope,
+        )
+    }
+
     /** At app start, for every chapter prepared earlier. */
     override fun initialize() {
-        scope.launch { queue.backUpEverythingPrepared() }
+        scope.launch {
+            // An archive that arrived but was never unpacked is not trusted.
+            downloads.discardUninstalledDownloads()
+            queue.backUpEverythingPrepared()
+        }
     }
+
+    /** What the cloud holds for this chapter, and what fetching it is doing. */
+    suspend fun downloadStateOf(
+        id: PreparedChapterId,
+        settings: PreparedVoiceSettings,
+    ): PreparedChapterDownloadState = downloads.stateOf(id, settings)
+
+    suspend fun cloudAudioFor(
+        id: PreparedChapterId,
+        settings: PreparedVoiceSettings,
+    ): PreparedChapterCloudAudio? = downloads.cloudAudioFor(id, settings)
+
+    /** The user pressed Download on the row. */
+    suspend fun download(
+        id: PreparedChapterId,
+        settings: PreparedVoiceSettings,
+    ): PreparedChapterDownloadState = downloads.download(id, settings)
 
     /** Right after a chapter finishes preparing. */
     fun backUpWhenPrepared(id: PreparedChapterId, settings: PreparedVoiceSettings) {
@@ -73,5 +108,6 @@ internal class TtsPreparedChapterBackup(
 
     private companion object {
         const val OUTBOX = "tts-prepared-outbox"
+        const val INBOX = "tts-prepared-inbox"
     }
 }

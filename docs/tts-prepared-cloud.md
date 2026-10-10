@@ -14,7 +14,7 @@ from the server side.
 
 Step 1 is written but **its SQL has NOT been run** — see below; nothing could be
 executed on this machine, and that is still true: there is still no container runtime
-here. Steps 2 and 3 are complete. Steps 4 to 7 are not built.
+here. Steps 2, 3 and 4 are complete. Steps 5 to 7 are not built.
 
 ### Can the local Supabase stack run here?
 
@@ -719,6 +719,132 @@ There is a real-graph test now: `PreparedChapterJobWiringTest`'s second case res
 `TtsPreparedChapterBackup` from the whole app's Koin graph as the single
 `AppInitializer` of that name, with every repository it needs built for real.
 
-## Steps 4 to 7
+## Step 4: download on another device
+
+**Complete.**
+
+### What a device can learn, and what it cannot
+
+A device learns what the cloud holds from the `cloud_book_files` rows it already syncs,
+which Step 0 decided to keep in the existing payload. `BookFileTransferManager.cloudFilesFor`
+(Step 3) returns them; a prepared chapter is a row with media type `tts_prepared_audio`
+and a relative path of `tts-prepared/<sha256(chapter href)>/<sha256(settings)>.zip`.
+
+So a device can find a chapter's audio by hashing the chapter href it already has and
+matching the **prefix** (`TtsPreparedChapterArchive.chapterPathPrefix`), and it can tell
+whether that audio was made for the settings now selected by comparing the **whole**
+path with `relativePath(href, settings)`.
+
+It cannot read which *other* voice or speed an archive was made for, because that part
+of the path is a hash and hashes do not run backwards. This is the one place this step
+falls short of the brief's "and for which voice and speed", and it is deliberate: the
+alternative is putting the voice id and rate in the path or in a new column, which means
+a second server change and puts a user-chosen string somewhere the migration currently
+constrains to two hashes. So the row says *"prepared audio is in the cloud, made for
+other settings"* and names the size, and says which settings only when they are the
+current ones. After the download the manifest is on disk and
+`TtsPreparedStore.state` reports `OtherSettings(settings, ...)` exactly as it already
+does for local audio — so the full answer appears the moment the chapter is here, which
+is the only moment the user can act on it.
+
+When the cloud holds more than one version of the same chapter, the one made for the
+current settings wins, because that is the one that will play instantly.
+
+### The engine, again rather than beside it
+
+`BookFileTransferManager.enqueueAuxiliaryDownload(serverId, libraryBookId, mediaType,
+relativePath, destinationPath)` is the mirror of Step 3's auxiliary upload, defaulted on
+the interface so nothing else had to change. It reuses the whole of
+`processDownloadTransfer`: resume from a partial staging file, retry with the engine's
+own backoff, and verify the cloud's content hash.
+
+One branch was added at the end of it. A transfer with a non-empty relative path is
+finalized by `finalizeAuxiliaryDownload` instead of by `DownloadFinalizer`: the hash is
+checked and the bytes are moved to the path the caller named, and that is all. The book
+finalizer's job is to make a download into a *device copy of a book* — it writes a
+`device_files` row, extracts EPUB metadata and creates a library book — and all of that
+would be wrong for a chapter archive. It also rejects any media type that is not
+`ebook` or `readaloud`, so the branch is needed, not merely tidy.
+
+The destination is carried in the transfer's `source_path` column. For an upload that
+column means "where the bytes are"; for a download it means "where they are going", and
+a non-empty `relative_path` is what tells the finalize step which of the two this is.
+
+`finalizeAuxiliaryDownload` hashes **without** hopping to `Dispatchers.Default`, unlike
+`DownloadFinalizer`. The engine's queue is already off the main thread, and hopping took
+the work out of the caller's cancellation and out of a test's clock — which is how the
+first version of this was caught: the transfer sat at `verifying` for ever.
+
+`PreparedAudioDownloadTest` (`feature/books/data`, 8 cases, all seen to fail first): the
+archive arrives at the named path; it is **not** installed as a device copy of the book
+(the book's own `device_files` row is untouched and no new one appears); the staging copy
+is gone and the transfer keeps no staging path; bytes that do not match the cloud hash
+end `failed`/`verify_failed` with nothing left at the destination; a file already gone
+from the cloud is refused before any transfer row exists; a file that goes between
+attempts ends `failed`/`cloud_file_unavailable`; asking twice downloads once; and a
+book's own download still goes through the real finalizer.
+
+### The decision, and the states
+
+`preparedChapterDownloadState` (`feature/reader/ui/.../reader/PreparedChapterDownloadState.kt`),
+pure, commonMain, 11 commonTest cases that run on Android and iOS. Nine states:
+
+| State | Meaning |
+| --- | --- |
+| `NotInCloud` | nothing there, or no account |
+| `Installed` | already on this device; nothing to fetch |
+| `AvailableInCloud` | **the Download offer**, with the size and what it was made for |
+| `Downloading` | bytes arriving |
+| `Installing` | all arrived; verifying and unpacking |
+| `FailedDeviceFull` | **storage full on the device** |
+| `FailedNoNetwork` | **no network**; pressing Download again is right |
+| `FailedArchiveRejected` | **archive rejected**; nothing was installed |
+| `FailedGoneFromCloud` | **file gone from the cloud** |
+
+The order is the same principle as the backup states: what is already true beats what
+might be, so a chapter on the device reads `Installed` whatever a stale failure says, and
+a transfer in flight beats a stale failure too. Then the things that stop a download
+before it starts, then the offer. A table-driven test builds one input set per state,
+asserts the enum has no state without a case, and pins that **exactly two** states would
+start a download — `AvailableInCloud` and `FailedNoNetwork`.
+
+`FailedDeviceFull` is decided before anything is fetched, from the free bytes and the
+archive's size times three: the unpack stages beside the target and only removes the old
+folder at the end, so for a moment the archive, the new folder and the old one all exist.
+
+### Fetching and installing
+
+`PreparedChapterDownloadQueue` (`feature/reader/ui` androidMain) does it, and only on
+request — there is no automatic download anywhere. A fetched archive lands in
+`filesDir/tts-prepared-inbox`, and **nothing is installed that has not been verified
+twice**: the engine checks the cloud's content hash before the bytes reach the inbox, and
+`TtsPreparedChapterArchive.unpack` then checks the archive against its manifest and
+against the `PreparedChapterId` it is being installed into before anything moves into the
+prepared store. The archive is deleted either way.
+
+A refused archive is remembered **in memory only**, so the row reads
+`FailedArchiveRejected` and does not fetch it again in a loop. After a restart the row
+offers Download again, which is the right offer: the cloud may hold a different file by
+then. At app start the inbox is emptied rather than trusted, because nothing records
+which chapter a left-over archive was for.
+
+Step 4 adds **no analytics**. The brief asks for an event per upload outcome and does not
+ask for one per download, and a download is user-initiated, so the user already knows the
+outcome.
+
+`PreparedChapterDownloadQueueTest` (`feature/reader/ui` androidHostTest, 17 cases) builds
+real archives in a *second* `TtsPreparedStore`, the way another device would have, and
+installs them into the first. It covers: the offer with its size for the current settings
+and for other settings; choosing the current-settings version when the cloud holds both;
+another chapter's audio never being mistaken for this one; the book's own backup not being
+prepared audio; `Installed`, no account, and a catalogue book each queueing nothing; a
+downloaded chapter installing and `state()` returning `Ready(1200)` — the chapter plays
+instantly; an other-settings download installing and the store reporting
+`OtherSettings(faster, true, 1, 1)`; a truncated archive installing nothing, leaving no
+staging folder and not being fetched again; a broken archive aimed at a chapter that is
+already installed leaving the installed audio byte-for-byte unchanged; no network; a file
+gone from the cloud; a device with no room; and a stale inbox archive being discarded.
+
+## Steps 5 to 7
 
 Not built.
