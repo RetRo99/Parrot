@@ -47,16 +47,54 @@ internal fun preparedChapterAudioMinutes(
     voiceKind: PreparedVoiceKind,
     measured: PreparedChapterMeasured? = null,
     rate: Float = 1f,
-): Int? {
+): Int? = preparedChapterAudioMs(sentenceCount, characterCount, voiceKind, measured, rate)
+    ?.let { audioMs -> roundedMinutes(audioMs) }
+
+/**
+ * How long the prepared audio will be, unrounded. The rate is applied at synthesis, so this
+ * is both how long the chapter is to listen to and how long the files really are, which is
+ * what their size follows from.
+ */
+private fun preparedChapterAudioMs(
+    sentenceCount: Int?,
+    characterCount: Int?,
+    voiceKind: PreparedVoiceKind,
+    measured: PreparedChapterMeasured?,
+    rate: Float,
+): Long? {
     if (sentenceCount == null || sentenceCount <= 0) return null
-    val measuredMs = measured?.audioMsPerCharacter?.takeIf { it > 0 }?.let { audioMsPerCharacter ->
+    // The fixed per-sentence figures are spoken lengths at normal speed, as the record is.
+    val atNormalSpeed = measuredAudioMs(characterCount, measured)
+        ?: (sentenceCount * FIXED_AUDIO_MS_PER_SENTENCE.getValue(voiceKind)).toDouble()
+    return (atNormalSpeed / rate.coerceAtLeast(MIN_AUDIO_RATE)).toLong()
+}
+
+/** This device's own audio length for the selected voice; it needs the chapter's characters. */
+private fun measuredAudioMs(characterCount: Int?, measured: PreparedChapterMeasured?): Double? =
+    measured?.audioMsPerCharacter?.takeIf { it > 0 }?.let { audioMsPerCharacter ->
         characterCount?.takeIf { it > 0 }?.let { characters -> characters * audioMsPerCharacter }
     }
-    // The fixed per-sentence figures are spoken lengths at normal speed, which is what is
-    // wanted here.
-    val atNormalSpeed = measuredMs ?: (sentenceCount * FIXED_MS_PER_SENTENCE.getValue(voiceKind)).toDouble()
-    return roundedMinutes((atNormalSpeed / rate.coerceAtLeast(MIN_AUDIO_RATE)).toLong())
-}
+
+/**
+ * Prepared audio is AAC-LC mono at a steady bit rate, so its size is its length. A count of
+ * sentences is the wrong unit: sentences vary in length, a second of audio does not.
+ */
+private fun preparedChapterBytes(sentenceCount: Int, audioMs: Long): Long =
+    audioMs * PREPARED_BITS_PER_SECOND / (MS_PER_SECOND * BITS_PER_BYTE) +
+        sentenceCount * PREPARED_CONTAINER_BYTES_PER_FILE
+
+/** `AndroidTtsPreparedAacEncoder` configures `MediaFormat.KEY_BIT_RATE` at exactly this. */
+private const val PREPARED_BITS_PER_SECOND = 48_000L
+private const val BITS_PER_BYTE = 8L
+private const val MS_PER_SECOND = 1_000L
+
+/**
+ * What the `.m4a` container costs on top of the audio itself, per file. Each row of the
+ * six-sentence Samsung table in `docs/tts-prepared-chapters.md` ("Step 1: Samsung
+ * measurements and format gate"), less its measured duration at 48 kbit/s, leaves 954 to
+ * 1,190 bytes of container, mean 1,046.
+ */
+private const val PREPARED_CONTAINER_BYTES_PER_FILE = 1_050L
 
 private const val MIN_AUDIO_RATE = 0.1f
 
@@ -76,10 +114,19 @@ private val FIXED_MS_PER_SENTENCE = mapOf(
     PreparedVoiceKind.SUPERTONIC to 2_200L,
 )
 
-private val FIXED_BYTES_PER_SENTENCE = mapOf(
-    PreparedVoiceKind.SYSTEM to 16_000L,
-    PreparedVoiceKind.KOKORO to 14_000L,
-    PreparedVoiceKind.SUPERTONIC to 14_000L,
+/**
+ * Spoken length of one sentence at normal speed, where the device has no record of its own.
+ * The six-sentence probe above cannot give this: its three short Gutenberg sentences averaged
+ * 2.2 s, and real chapter prose is longer. The one real chapter measured on a device (the
+ * Samsung's nine Kokoro sentences, 219 kB of AAC on disk, which at 48 kbit/s less the
+ * container is about 35 s of audio) averages 3.9 s a sentence, and its playback on the
+ * emulator — sentence 7 of 9 within 25 s — agrees. A system voice keeps the probe's
+ * system-to-Kokoro ratio of 1.14.
+ */
+private val FIXED_AUDIO_MS_PER_SENTENCE = mapOf(
+    PreparedVoiceKind.SYSTEM to 4_400L,
+    PreparedVoiceKind.KOKORO to 3_900L,
+    PreparedVoiceKind.SUPERTONIC to 3_900L,
 )
 
 /**
@@ -91,6 +138,7 @@ internal fun preparedChapterEstimate(
     voiceKind: PreparedVoiceKind,
     measured: PreparedChapterMeasured? = null,
     characterCount: Int? = null,
+    rate: Float = 1f,
 ): PreparedChapterEstimate? {
     if (sentenceCount == null || sentenceCount <= 0) return null
     val msPerSentence = measured?.msPerSentence?.takeIf { it > 0 }
@@ -100,11 +148,15 @@ internal fun preparedChapterEstimate(
     val measuredMs = measured?.msPerCharacter?.takeIf { it > 0 }?.let { msPerCharacter ->
         characterCount?.takeIf { it > 0 }?.let { characters -> (characters * msPerCharacter).toLong() }
     }
-    val bytesPerSentence = measured?.bytesPerSentence?.takeIf { it > 0 }
-        ?: FIXED_BYTES_PER_SENTENCE.getValue(voiceKind)
+    // A flat bytes-a-sentence this device measured is kept, but only where it has no audio
+    // length of its own: that length knows this chapter's text, where an average cannot.
+    val perSentence = measured?.bytesPerSentence?.takeIf { it > 0 }
+        ?.takeIf { measuredAudioMs(characterCount, measured) == null }
+    val audioMs = preparedChapterAudioMs(sentenceCount, characterCount, voiceKind, measured, rate)
     return PreparedChapterEstimate(
         minutes = roundedMinutes(measuredMs ?: (sentenceCount * msPerSentence)),
-        bytes = sentenceCount * bytesPerSentence,
+        bytes = perSentence?.let { sentenceCount * it }
+            ?: preparedChapterBytes(sentenceCount, audioMs ?: 0L),
     )
 }
 

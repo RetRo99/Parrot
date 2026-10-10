@@ -20,7 +20,7 @@ class PreparedChapterTextTest {
     @Test fun `the not prepared row shows the estimate once the count is known`() {
         val ui = row("c1.xhtml", PreparedChapterText("c1.xhtml", sentences = 369, characters = 30_000))
         assertEquals(StringRes.reader_tts_prepared_chapter_estimate, ui.status)
-        assertEquals(listOf(15, "5 MB"), ui.statusArgs)
+        assertEquals(listOf(15, "9 MB"), ui.statusArgs)
         assertEquals(listOf(PreparedChapterAction.PREPARE), ui.actions)
     }
 
@@ -32,7 +32,7 @@ class PreparedChapterTextTest {
 
         val fresh = row("c2.xhtml", PreparedChapterText("c2.xhtml", sentences = 100, characters = 8_000))
         assertEquals(StringRes.reader_tts_prepared_chapter_estimate, fresh.status)
-        assertEquals(listOf(4, "1 MB"), fresh.statusArgs)
+        assertEquals(listOf(4, "2 MB"), fresh.statusArgs)
     }
 
     @Test fun `a chapter with no readable sentences shows no estimate and no number`() {

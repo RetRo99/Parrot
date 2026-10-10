@@ -58,7 +58,7 @@ internal fun preparedChapterRowEstimate(
     rate: Float = 1f,
 ): PreparedChapterEstimate? {
     if (chapterHref == null || text == null || text.chapterHref != chapterHref) return null
-    return preparedChapterEstimate(text.sentences, voiceKind, measured, text.characters)?.copy(
+    return preparedChapterEstimate(text.sentences, voiceKind, measured, text.characters, rate)?.copy(
         audioMinutes = preparedChapterAudioMinutes(text.sentences, text.characters, voiceKind, measured, rate),
     )
 }
