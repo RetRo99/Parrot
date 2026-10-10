@@ -15,7 +15,14 @@ The extracted `ReaderListeningStart` initially preserves the silent
 uses an ebook on an empty chapter with loaded voices and availability false:
 expected exactly one controller request, actual zero. Focused run: 4/5 pass,
 one intended assertion failure. Recorded narration and an unconfigured book
-are pinned separately; no existing test was edited. Fix and phone retest pending.
+are pinned separately; no existing test was edited. Red checkpoint: `8fe3cfdc`.
+The fix allows the request when page availability is false but voices have
+loaded. Availability itself still waits for readable text; the controller owns
+empty-chapter skipping and playback outcomes. Six-module verification is green:
+reader Android 440/440, iOS 324/324, settings 22/22, home 84/84,
+composeApp 59/59, analytics 75/75; zero failures/errors/skips from XML.
+Phone baseline rechecked: the empty opening page offers System voice at 1×,
+Play produces no operation. Fixed-build retest pending; builds in progress.
 
 Branch `tts/prepared-chapters`, based on `e8ed4319`. The supplied worktree was
 detached at that commit. All work and Gradle commands run from that worktree;

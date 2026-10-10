@@ -18,7 +18,7 @@ internal class ReaderListeningStart(
         when (source) {
             ListenSource.NARRATION -> if (!hasNarration) return
             ListenSource.DEVICE_VOICE -> {
-                if (!readAloudAvailable) return
+                if (!readAloudAvailable && !voicesLoaded) return
                 if (!hasNarration && !readAloudEnabled) enableReadAloud()
             }
         }
