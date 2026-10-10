@@ -13,7 +13,8 @@ Step 0 is complete and the gate is **passed**: a prepared chapter can be one mor
 from the server side.
 
 Step 1 is written but **its SQL has NOT been run** — see below; nothing could be
-executed on this machine. Steps 2 to 7 are not built.
+executed on this machine, and that is still true: there is still no container runtime
+here. Steps 2 and 3 are complete. Steps 4 to 7 are not built.
 
 ### Can the local Supabase stack run here?
 
@@ -446,9 +447,9 @@ chapter has to be playable by the store on the other device, not merely present.
 
 ## Step 3: upload
 
-**Partly built.** The upload path, its states and its analytics are built and tested;
-the two device-side triggers that would start it by themselves are not. See "What is
-missing" at the end of this section — the feature is not reachable by a user yet.
+**Complete.** The upload path, its states and its analytics were built first; the two
+device-side triggers, the unmetered-network signal and the thing that actually calls the
+engine are there now too, so a prepared chapter is backed up without anyone asking.
 
 ### No second uploader
 
@@ -590,23 +591,133 @@ and a negative size, an over-bound size, a size sent as text and a size sent as 
 are each dropped. Two of the three failed before the allow-list entry existed (checked
 by removing it again); the third passes fail-closed, which is the point of it.
 
-### What is missing from Step 3
+### The two triggers, and the thing that calls the engine
 
-Honestly: the two triggers. **Nothing calls `enqueueAuxiliaryUpload` yet.**
+`PreparedChapterBackupQueue`
+(`feature/reader/ui/src/androidMain/.../tts/PreparedChapterBackupQueue.kt`) is the one
+place in the app that hands a prepared chapter to the transfer engine. It uploads
+nothing itself: it gathers the facts, asks the pure `preparedChapterBackupState`
+decision, and **only** when that answers `Queued` does it pack the chapter (Step 2) and
+call `enqueueAuxiliaryUpload`. Every other state is returned to the caller and nothing
+happens, which is what makes "storage full" one message and not a retry loop.
 
-- After a chapter finishes preparing, and at app start for chapters prepared earlier,
-  something has to read the gates, pack the archive (Step 2), and enqueue it. That
-  needs the Wi-Fi/unmetered signal, which **does not exist anywhere in the codebase
-  today** — there is no connectivity monitor to read `onUnmeteredNetwork` from, so one
-  has to be added. It is an input to the pure decision precisely so that the decision
-  could be built and tested before the platform plumbing.
-- `TtsPreparedChapterArchive` therefore still has no caller and no Koin binding, and
-  there is still no new `@Single` to resolve from the real graph.
-- Deleting the chapter from the row cancels the upload and deletes the cloud file at
-  the *engine* level, tested, but the row is not wired to it — that is Step 5.
+`TtsPreparedChapterBackup` is its app-wide `@Single` home, and the two triggers are:
 
-So a user cannot yet cause a prepared chapter to be uploaded. Everything that would
-carry it once something does is built and green.
+- **after a chapter finishes preparing.** `TtsChapterPreparationCore` now calls one more
+  seam, `TtsPreparationChapterStore.prepared(id, settings)`, right after `markComplete`
+  and `enforceLimit`. The member is **defaulted to doing nothing**, so every existing
+  host test of preparation is unaffected and preparation behaves exactly as before when
+  backup does not exist. `TtsChapterPreparationJob` forwards it to an internal
+  `onPrepared` callback which `TtsPreparedChapterBackup` sets on itself in its `init`.
+  The dependency runs backup to preparation and not the other way, so there is no cycle
+  and the preparation job still knows nothing about the cloud.
+- **at app start, for chapters prepared earlier.** `TtsPreparedChapterBackup` is bound
+  as an `AppInitializer`, and `initialize()` runs `backUpEverythingPrepared()`. A
+  chapter prepared on mobile data, or before the account was linked, is picked up here
+  and nowhere else.
+
+#### Where the Wi-Fi signal came from
+
+There was no unmetered-network signal in the codebase; the only connectivity code was
+`rememberIsOnMobileData` in `feature/books/ui`, which is a composable and cannot be
+injected. `PreparedBackupNetwork` (same folder as the queue) is the new one, and
+`AndroidPreparedBackupNetwork` reads
+`NET_CAPABILITY_NOT_METERED && NET_CAPABILITY_INTERNET` off the active network.
+
+It reads the system's **metered** flag rather than looking for a Wi-Fi transport,
+because what the user means by "Wi-Fi only" is "not out of my data allowance": an
+unmetered Ethernet or tether counts, and a Wi-Fi network the user has marked metered in
+Android's own settings does not. `ACCESS_NETWORK_STATE` is already held
+(`androidApp/src/main/AndroidManifest.xml:5`), so no permission was added.
+
+#### How the chapter learns the facts
+
+The decision needs cloud facts the reader module has no business reading from the
+database. `BookFileTransferManager` gained three **defaulted** members, implemented by
+the engine from the databases it already holds, so no other implementation and no
+existing fake had to change:
+
+| Member | Answers |
+| --- | --- |
+| `cloudFilesFor(libraryBookId)` | is the book backed up; is this chapter's archive already up |
+| `transfersFor(serverId, libraryBookId)` | what this chapter's own transfer is doing |
+| `pendingBookUploadCount(serverId)` | books still waiting, because books go first |
+
+`BookFileTransfer` gained `relativePath` and `willRetry`, both defaulted. Without the
+relative path two chapters of one book are indistinguishable in the transfer list.
+
+`enqueueAuxiliaryUpload`'s `contentHash` and `contentHashAlgorithm` are now **nullable
+and defaulted**: the engine hashes the file itself with `fileStore.contentHash` and its
+own `CONTENT_HASH_ALGORITHM` when they are absent. The hash scheme is
+`feature/books/data`'s to define, and the reader side now never has to know it.
+
+Account facts come through one small port, `PreparedBackupAccount`, implemented by
+`CloudPreparedBackupAccount` over `UserRegistry`, `CloudProfileLinkRepository`,
+`CloudAccountRepository` and `UploadRightsAttestationRepository`. It returns null when
+there is no usable cloud account, and swallows every failure to null: reading aloud is a
+local feature, so an unreachable cloud identity means "no backup for now" and never an
+error the reader reports. `feature/reader/ui` gained `feature/cloudAccount/domain` and
+`lib/user/api` as androidMain dependencies for this.
+
+#### Two judgements inside the gate
+
+- **Re-attestation is not asked for.** If `requiresReattestation` is true the snapshot
+  carries no attestation, `uploadsAllowed` is false and the chapter reads `NotAllowed`.
+  Prepared audio will not put a rights dialog in front of someone who only asked for a
+  chapter to be read aloud; the next book backup will ask, and the chapter goes up after.
+- **Only a book of this device's own library is backed up.** A prepared chapter whose
+  `PreparedChapterId.serverId` is not `local` belongs to a catalogue book whose id means
+  nothing to Parrot Cloud, so it is `NotApplicable` and never packed.
+
+#### The outbox, and deleting
+
+A packed archive waits in `filesDir/tts-prepared-outbox`, not the cache, so the system
+cannot evict it from under a running upload. It is deleted when the upload completes,
+when the engine refuses the enqueue, when the chapter is deleted, and by the app-start
+sweep for any archive whose chapter no longer exists.
+
+`remove(id, settings)` cancels a pending upload and deletes the cloud file, and asks the
+server for nothing at all when there is no cloud account. This is what the Step 5
+confirmation calls.
+
+#### Analytics, at the end rather than at the intention
+
+The queue does not log when it decides; it logs when the engine is **finished** with the
+transfer. `watchOutcome` collects `observeForBook` until the chapter's own transfer
+reaches `completed`, `failed` or `cancelled` and logs one
+`TtsPreparedAudioBackupEnded(outcome, sizeBytes)`, carrying the server's reason when
+there is one. Two further outcomes are logged without waiting, because there is nothing
+to wait for: `refused` when the engine rejects the enqueue outright, and `pack_rejected`
+when the archive could not be built. States that queue nothing -- waiting for Wi-Fi,
+auto-backup off, books first -- log nothing at all; they are not upload outcomes and
+would be noise.
+
+#### Tested
+
+`PreparedChapterBackupQueueTest` (`feature/reader/ui` androidHostTest, 20 cases) uses a
+real `TtsPreparedStore` and a real `TtsPreparedChapterArchive` on temporary files, with a
+recording transfer manager in place of the engine, which `PreparedAudioUploadTest`
+already proves. It covers: the queued path end to end, including that the archive handed
+over **round-trips into a second device's store and plays** (`state()` returns
+`Ready(1200)`); that the same settings are one cloud file and other settings another;
+each of `NotApplicable` (no account, catalogue book, unfinished chapter), `NotAllowed`
+(re-attestation due), `BackupOff`, `WaitingForWifi`, `WaitingForBookBackup`,
+`WaitingForBooks`, `BackedUp` and `StorageFull`, each asserting that **nothing** was
+handed to the engine; the app-start sweep offering every finished chapter and skipping
+the unfinished one, queueing nothing on a metered network, and discarding an archive
+whose chapter is gone; delete cancelling and removing the cloud file, and asking for
+nothing when there is no account; and the three analytics outcomes.
+
+Writing that test found two real faults in the first implementation: `remove` asked the
+server to cancel and delete for a device with no cloud account at all, and the outcome
+event carried the size of a file that had already been deleted.
+
+`PreparedAudioUploadTest` gained 4 cases for the new engine reads and the self-hashing
+enqueue; all four were seen to fail first.
+
+There is a real-graph test now: `PreparedChapterJobWiringTest`'s second case resolves
+`TtsPreparedChapterBackup` from the whole app's Koin graph as the single
+`AppInitializer` of that name, with every repository it needs built for real.
 
 ## Steps 4 to 7
 

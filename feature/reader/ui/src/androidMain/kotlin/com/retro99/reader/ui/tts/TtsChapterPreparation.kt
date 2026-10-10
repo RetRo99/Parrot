@@ -28,6 +28,12 @@ internal interface TtsPreparationChapterStore {
     fun isPrepared(id: PreparedChapterId, key: String): Boolean
     fun markComplete(id: PreparedChapterId)
     fun enforceLimit(active: PreparedChapterId)
+
+    /**
+     * The chapter is finished and settled on disk. Where backup is offered it,
+     * and nothing else happens here, so a host test needs no backup at all.
+     */
+    fun prepared(id: PreparedChapterId, settings: PreparedVoiceSettings) = Unit
 }
 
 internal class TtsChapterPreparationCore(
@@ -114,6 +120,7 @@ internal class TtsChapterPreparationCore(
             }
             chapters.markComplete(input.id)
             chapters.enforceLimit(input.id)
+            chapters.prepared(input.id, input.settings)
             outcome = OUTCOME_COMPLETED
             mutableState.value = TtsChapterPreparationState.Completed(input.id.chapterHref)
         } catch (cancelled: CancellationException) {

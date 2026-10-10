@@ -48,6 +48,19 @@ internal sealed interface PreparedChapterState {
 
 internal data class PreparedSentenceAudio(val file: File, val durationMs: Long)
 
+/**
+ * One finished chapter as the backup sweep needs it. The folder names are
+ * hashes and cannot be read backwards, but every manifest carries the book id,
+ * server id, chapter href and settings it was made for, so the sweep recovers
+ * the full identity from the store itself rather than from anything on screen.
+ */
+internal data class PreparedChapterSummary(
+    val id: PreparedChapterId,
+    val settings: PreparedVoiceSettings,
+    val folder: File,
+    val totalBytes: Long,
+)
+
 /** Context-free store. Planned keys retain sentence order and resumable total, never text. */
 internal class TtsPreparedStore(
     private val root: File,
@@ -147,6 +160,23 @@ internal class TtsPreparedStore(
 
     @Synchronized
     fun deleteAll() { root.listFiles()?.forEach(::remove) }
+
+    /**
+     * Every chapter that finished preparing, newest last. Only complete ones:
+     * a partly prepared chapter is never packed or uploaded.
+     */
+    @Synchronized
+    fun completeChapters(): List<PreparedChapterSummary> = chapters()
+        .filter { (_, manifest) -> manifest.complete }
+        .sortedBy { (_, manifest) -> manifest.createdTimeMs }
+        .map { (folder, manifest) ->
+            PreparedChapterSummary(
+                id = PreparedChapterId(manifest.bookId, manifest.serverId, manifest.chapterHref),
+                settings = manifest.settings(),
+                folder = folder,
+                totalBytes = manifest.totalBytes,
+            )
+        }
 
     /** Includes manifests, not just the payload total in each manifest. */
     @Synchronized

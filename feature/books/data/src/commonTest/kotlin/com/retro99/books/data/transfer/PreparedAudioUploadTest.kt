@@ -265,6 +265,112 @@ class PreparedAudioUploadTest {
         )
     }
 
+    @Test
+    fun aCallerThatDoesNotKnowTheHashSchemeNeedNotSupplyOne() = runTest {
+        val fixture = fixture()
+
+        val transferId = fixture.engine.enqueueAuxiliaryUpload(
+            serverId = SERVER_ID,
+            libraryBookId = LIBRARY_BOOK_ID,
+            mediaType = MEDIA_TYPE,
+            relativePath = PREPARED_PATH,
+            sourcePath = ARCHIVE_PATH,
+            sizeBytes = ARCHIVE.size.toLong(),
+            rightsAttestation = ATTESTATION,
+        )
+        fixture.scheduler.advanceUntilIdle()
+
+        val transfer = assertNotNull(fixture.files.getTransfer(transferId))
+        assertEquals("completed", transfer.state)
+        // The engine hashed the file in its own scheme, so the reader side
+        // never has to know what that scheme is.
+        assertEquals(fixture.store.contentHash(ARCHIVE_PATH), transfer.contentHash)
+        assertEquals(CONTENT_HASH_ALGORITHM, transfer.contentHashAlgorithm)
+    }
+
+    // -----------------------------------------------------------------------
+    // The facts the queueing decision reads
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun theCloudFilesOfABookAreReadableWithoutTouchingTheDatabase() = runTest {
+        val fixture = fixture()
+        fixture.enqueue()
+
+        val files = fixture.engine.cloudFilesFor(LIBRARY_BOOK_ID)
+
+        val book = assertNotNull(files.firstOrNull { it.relativePath.isEmpty() })
+        assertEquals("ebook", book.mediaType)
+        assertEquals("available", book.status)
+        val chapter = assertNotNull(files.firstOrNull { it.relativePath == PREPARED_PATH })
+        assertEquals(MEDIA_TYPE, chapter.mediaType)
+        assertEquals("available", chapter.status)
+        assertEquals(ARCHIVE.size.toLong(), chapter.sizeBytes)
+    }
+
+    @Test
+    fun aChaptersOwnTransferIsFoundByItsRelativePath() = runTest {
+        val fixture = fixture()
+        val otherPath = "tts-prepared/${"a".repeat(64)}/${"c".repeat(64)}.zip"
+        fixture.store.files[OTHER_ARCHIVE_PATH] = ARCHIVE
+        fixture.enqueue()
+        fixture.enqueue(relativePath = otherPath, sourcePath = OTHER_ARCHIVE_PATH)
+
+        val transfers = fixture.engine.transfersFor(SERVER_ID, LIBRARY_BOOK_ID)
+
+        // Without the relative path the two chapters are indistinguishable.
+        assertEquals(
+            setOf(PREPARED_PATH, otherPath),
+            transfers.filter { it.mediaType == MEDIA_TYPE }.map { it.relativePath }.toSet(),
+        )
+        val mine = assertNotNull(transfers.firstOrNull { it.relativePath == PREPARED_PATH })
+        assertEquals("completed", mine.state)
+        assertEquals("upload", mine.direction)
+    }
+
+    @Test
+    fun aTransferWaitingForAnotherAttemptSaysSo() = runTest {
+        val fixture = fixture(
+            transport = PreparedAudioTransport(
+                reserveResult = UploadReservationResult.Rejected(
+                    reason = "too_many_pending_uploads",
+                    retryAfterMillis = 60_000,
+                ),
+            ),
+        )
+        fixture.enqueueOnce()
+
+        val transfer = assertNotNull(
+            fixture.engine.transfersFor(SERVER_ID, LIBRARY_BOOK_ID)
+                .firstOrNull { it.relativePath == PREPARED_PATH },
+        )
+
+        assertEquals("pending", transfer.state)
+        assertTrue(transfer.willRetry, "a scheduled next attempt is what willRetry means")
+    }
+
+    @Test
+    fun booksGoFirstSoTheirPendingUploadsAreCounted() = runTest {
+        val fixture = fixture()
+
+        assertEquals(0, fixture.engine.pendingBookUploadCount(SERVER_ID))
+
+        // A book's own upload, left waiting to retry.
+        fixture.files.insertTransfer(
+            pendingUpload(transferId = "book-upload", mediaType = "ebook", relativePath = ""),
+        )
+        // The chapter's own upload must not count itself as a book.
+        fixture.files.insertTransfer(
+            pendingUpload(
+                transferId = "chapter-upload",
+                mediaType = MEDIA_TYPE,
+                relativePath = PREPARED_PATH,
+            ),
+        )
+
+        assertEquals(1, fixture.engine.pendingBookUploadCount(SERVER_ID))
+    }
+
     // -----------------------------------------------------------------------
     // Guards
     // -----------------------------------------------------------------------
@@ -485,6 +591,37 @@ class PreparedAudioUploadTest {
             attestedAt = "2026-10-10T00:00:00Z",
             tosVersion = "test",
             attestationVersion = "test",
+        )
+
+        fun pendingUpload(
+            transferId: String,
+            mediaType: String,
+            relativePath: String,
+        ) = CloudFileTransferEntity(
+            transferId = transferId,
+            serverId = SERVER_ID,
+            direction = "upload",
+            libraryBookId = LIBRARY_BOOK_ID,
+            cloudBookFileId = null,
+            mediaType = mediaType,
+            stagingPath = null,
+            sizeBytes = 10,
+            bytesTransferred = 0,
+            contentHash = null,
+            contentHashAlgorithm = null,
+            uploadId = null,
+            storagePath = null,
+            tusUploadUrl = null,
+            tusExpiresAt = null,
+            rightsAttestation = null,
+            relativePath = relativePath,
+            sourcePath = null,
+            state = "pending",
+            attemptCount = 0,
+            nextAttemptAt = null,
+            lastError = null,
+            createdAt = "a",
+            updatedAt = "a",
         )
 
         fun uploadedRecord(relativePath: String = PREPARED_PATH) = CloudBookFileRecord(

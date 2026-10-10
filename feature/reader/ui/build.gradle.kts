@@ -85,6 +85,10 @@ kotlin {
             implementation(libs.androidx.lifecycle.process)
             implementation(projects.feature.reader.data)
             implementation(projects.lib.server.api)
+            // Prepared-chapter backup reads the cloud account's own switches
+            // and attestation; the upload itself goes through books.domain.
+            implementation(projects.feature.cloudAccount.domain)
+            implementation(projects.lib.user.api)
             implementation(files("libs/sherpa-onnx-1.13.8.aar"))
         }
 

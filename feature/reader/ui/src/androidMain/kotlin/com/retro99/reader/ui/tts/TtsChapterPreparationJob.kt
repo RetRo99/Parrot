@@ -24,9 +24,16 @@ class TtsChapterPreparationJob(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    /**
+     * Where a finished chapter is offered for backup. Set by
+     * `TtsPreparedChapterBackup`, which is created at app start; nothing else
+     * reads it, and preparation works exactly as before when it is null.
+     */
+    internal var onPrepared: ((PreparedChapterId, PreparedVoiceSettings) -> Unit)? = null
+
     private val core = TtsChapterPreparationCore(
         sentences = GeneratorSentences(generator),
-        chapters = StoreChapters(prepared),
+        chapters = StoreChapters(prepared) { id, settings -> onPrepared?.invoke(id, settings) },
         scope = scope,
         analytics = AnalyticsLog(analytics),
         usableBytes = { context.filesDir.usableSpace },
@@ -55,7 +62,10 @@ private class GeneratorSentences(private val generator: TtsAudioGenerator) : Tts
         generator.prepareSentence(id, text, settings.voiceId, settings.rate, settings.pitch)
 }
 
-private class StoreChapters(private val prepared: TtsPreparedAudioStore) : TtsPreparationChapterStore {
+private class StoreChapters(
+    private val prepared: TtsPreparedAudioStore,
+    private val onPrepared: (PreparedChapterId, PreparedVoiceSettings) -> Unit,
+) : TtsPreparationChapterStore {
     override fun begin(id: PreparedChapterId, settings: PreparedVoiceSettings, keys: List<String>) {
         prepared.store.begin(id, settings, keys)
     }
@@ -66,6 +76,9 @@ private class StoreChapters(private val prepared: TtsPreparedAudioStore) : TtsPr
     override fun markComplete(id: PreparedChapterId) = prepared.store.markComplete(id)
 
     override fun enforceLimit(active: PreparedChapterId) = prepared.store.enforceLimit(active)
+
+    override fun prepared(id: PreparedChapterId, settings: PreparedVoiceSettings) =
+        onPrepared(id, settings)
 }
 
 /** Two events per preparation, with no text, no titles and no identifiers. */

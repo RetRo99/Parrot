@@ -20,6 +20,7 @@ import com.retro99.books.domain.BookFileTransferSessionExpiredException
 import com.retro99.books.domain.BookFileTransferDownloadIncompleteException
 import com.retro99.books.domain.BackupAllResult
 import com.retro99.books.domain.CloudBookFileRecord
+import com.retro99.books.domain.PREPARED_AUDIO_MEDIA_TYPE
 import com.retro99.books.domain.UploadReservation
 import com.retro99.books.domain.UploadReservationResult
 import com.retro99.books.domain.UploadRightsAttestation
@@ -370,8 +371,8 @@ class BookFileTransferEngine(
         relativePath: String,
         sourcePath: String,
         sizeBytes: Long,
-        contentHash: String,
-        contentHashAlgorithm: String,
+        contentHash: String?,
+        contentHashAlgorithm: String?,
         rightsAttestation: UploadRightsAttestation,
     ): String = enqueueMutex.withLock {
         val transport = transport(serverId)
@@ -382,6 +383,12 @@ class BookFileTransferEngine(
         require(fileStore.exists(sourcePath) && fileStore.size(sourcePath) == sizeBytes) {
             "Upload source does not match the declared size"
         }
+        // A caller that holds the bytes but not this module's hash scheme can
+        // leave both to the engine, which already knows how to hash a file.
+        @Suppress("NAME_SHADOWING")
+        val contentHash = contentHash ?: fileStore.contentHash(sourcePath)
+        @Suppress("NAME_SHADOWING")
+        val contentHashAlgorithm = contentHashAlgorithm ?: CONTENT_HASH_ALGORITHM
         // The server only accepts files for a book it already knows.
         val libraryBook = libraryBooksDatabase.getLibraryBookById(libraryBookId)
             ?: error("Book was not found")
@@ -601,6 +608,28 @@ class BookFileTransferEngine(
     ): Flow<List<BookFileTransfer>> = cloudFilesDatabase
         .observeTransfers(serverId, libraryBookId)
         .map { transfers -> transfers.map { transfer -> transfer.toDomain() } }
+
+    override suspend fun cloudFilesFor(libraryBookId: String): List<CloudBookFileRecord> =
+        cloudFilesDatabase.getFileStates(libraryBookId).map { file -> file.toRecord() }
+
+    override suspend fun transfersFor(
+        serverId: String,
+        libraryBookId: String,
+    ): List<BookFileTransfer> = cloudFilesDatabase
+        .observeTransfers(serverId, libraryBookId)
+        .first()
+        .map { transfer -> transfer.toDomain() }
+
+    /**
+     * Only the book's own files count: a prepared chapter waiting its turn must
+     * not be the reason it is waiting.
+     */
+    override suspend fun pendingBookUploadCount(serverId: String): Int = cloudFilesDatabase
+        .getTransfers(serverId, ACTIVE_STATES.toList())
+        .count { transfer ->
+            transfer.direction == DIRECTION_UPLOAD &&
+                !transfer.mediaType.equals(PREPARED_AUDIO_MEDIA_TYPE, ignoreCase = true)
+        }
 
     override fun observe(): Flow<FileTransferStatus?> = cloudFilesDatabase
         .observeAllTransfers()
@@ -1195,6 +1224,20 @@ class BookFileTransferEngine(
         totalBytes = sizeBytes,
         attemptCount = attemptCount,
         lastError = lastError,
+        relativePath = relativePath,
+        willRetry = state == STATE_PENDING && nextAttemptAt != null,
+    )
+
+    private fun CloudBookFileEntity.toRecord() = CloudBookFileRecord(
+        cloudBookFileId = cloudBookFileId,
+        mediaType = mediaType,
+        relativePath = relativePath,
+        fileName = fileName,
+        status = status,
+        sizeBytes = sizeBytes,
+        contentHash = contentHash,
+        contentHashAlgorithm = contentHashAlgorithm,
+        remoteRevision = remoteRevision,
     )
 
     private fun List<CloudFileTransferEntity>.toAggregateStatus(): FileTransferStatus? {

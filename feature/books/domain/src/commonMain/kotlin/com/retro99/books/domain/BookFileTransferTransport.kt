@@ -4,6 +4,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/**
+ * A prepared chapter's archive is one more file of its book, told apart from the
+ * book itself by this media type and by a relative path that is never empty.
+ */
+const val PREPARED_AUDIO_MEDIA_TYPE = "tts_prepared_audio"
+
 /** Backend-neutral upload contract. The engine owns persistence and retry policy. */
 interface BookFileTransferTransport {
     val serverId: String
@@ -176,8 +182,9 @@ interface BookFileTransferManager {
         relativePath: String,
         sourcePath: String,
         sizeBytes: Long,
-        contentHash: String,
-        contentHashAlgorithm: String,
+        /** Null lets the engine hash the file itself, in its own scheme. */
+        contentHash: String? = null,
+        contentHashAlgorithm: String? = null,
         rightsAttestation: UploadRightsAttestation,
     ): String = throw UnsupportedOperationException("Auxiliary uploads are not supported")
 
@@ -221,6 +228,24 @@ interface BookFileTransferManager {
     suspend fun retry(transferId: String)
 
     fun observeForBook(serverId: String, libraryBookId: String): Flow<List<BookFileTransfer>>
+
+    /**
+     * What the cloud is known to hold for one book. The decision whether to back
+     * a prepared chapter up needs this -- is the book itself backed up, is this
+     * chapter's archive already there -- and asking here keeps the caller out of
+     * the database. Defaulted so no other implementation has to know about it.
+     */
+    suspend fun cloudFilesFor(libraryBookId: String): List<CloudBookFileRecord> = emptyList()
+
+    /** Transfers persisted for one book, whatever their state. */
+    suspend fun transfersFor(serverId: String, libraryBookId: String): List<BookFileTransfer> =
+        emptyList()
+
+    /**
+     * Uploads of books themselves still waiting or in flight on this server.
+     * Books are backed up before audio, so audio waits while this is not zero.
+     */
+    suspend fun pendingBookUploadCount(serverId: String): Int = 0
 }
 
 data class BookFileTransfer(
@@ -234,6 +259,10 @@ data class BookFileTransfer(
     val totalBytes: Long,
     val attemptCount: Int,
     val lastError: String?,
+    /** "" for the book's own file; a prepared chapter is told apart by this. */
+    val relativePath: String = "",
+    /** A failed transfer the engine has scheduled another attempt for. */
+    val willRetry: Boolean = false,
 )
 
 data class BackupAllResult(

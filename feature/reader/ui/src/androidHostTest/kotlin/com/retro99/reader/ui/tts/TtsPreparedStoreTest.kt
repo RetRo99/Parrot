@@ -163,6 +163,38 @@ class TtsPreparedStoreTest {
         assertEquals(PreparedChapterState.Ready(4_000), store.state(id, settings))
     }
 
+    @Test fun `complete chapters are listed with the identity and settings the sweep needs`() {
+        // Given: one finished chapter, and one still being prepared.
+        store.begin(id, settings, listOf(key, second))
+        store.add(id, key, source, 500)
+        store.add(id, second, source, 750)
+        store.markComplete(id)
+        clock += 1_000
+        val other = PreparedChapterId("other-book", null, "two.xhtml")
+        val otherSettings = PreparedVoiceSettings("other-voice", "v2", 1.25f, 0.9f)
+        store.begin(other, otherSettings, listOf(key))
+        store.add(other, key, source, 500)
+        store.markComplete(other)
+        val unfinished = PreparedChapterId("book", "server", "three.xhtml")
+        store.begin(unfinished, settings, listOf(key, second))
+        store.add(unfinished, key, source, 500)
+
+        // When
+        val listed = store.completeChapters()
+
+        // Then: the hashed folder names cannot be read backwards, so the
+        // identity has to come out of the manifests, and it does.
+        assertEquals(listOf(id, other), listed.map { it.id })
+        assertEquals(listOf(settings, otherSettings), listed.map { it.settings })
+        assertEquals(store.chapterDirectory(id), listed.first().folder)
+        assertEquals(4_000L, listed.first().totalBytes)
+        assertTrue(listed.none { it.id == unfinished }, "a partly prepared chapter is never listed")
+    }
+
+    @Test fun `nothing prepared lists nothing`() {
+        assertEquals(emptyList(), store.completeChapters())
+    }
+
     private fun manifest() = PreparedChapterManifest(bookId = id.bookId, serverId = id.serverId,
         chapterHref = id.chapterHref, voiceId = settings.voiceId, modelVersion = null, rate = 1f,
         pitch = 1f, createdTimeMs = clock, sentences = listOf(PreparedSentenceEntry(key)))
