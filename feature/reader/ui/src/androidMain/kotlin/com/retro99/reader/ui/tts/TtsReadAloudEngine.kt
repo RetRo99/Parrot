@@ -804,7 +804,7 @@ class TtsReadAloudEngine(
 
     private fun updateSessionRunning() {
         _isSessionRunning.value =
-            !isPauseRequested && (_isPlaying.value || isStartingSentence)
+            !isPauseRequested && (_isPlaying.value || isStartingSentence || hasPlayedInSession)
     }
 
     // A paused playlist may still become ready; a stopped one has no owner at all.
