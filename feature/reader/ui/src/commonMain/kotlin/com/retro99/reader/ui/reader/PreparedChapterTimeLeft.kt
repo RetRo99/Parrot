@@ -8,5 +8,14 @@ internal sealed interface PreparedTimeLeftLabel {
 }
 
 /** Null when there is no estimate yet, and then nothing about time is said. */
-@Suppress("UnusedParameter", "FunctionOnlyReturningConstant")
-internal fun preparedTimeLeftLabel(remainingMs: Long?): PreparedTimeLeftLabel? = null
+internal fun preparedTimeLeftLabel(remainingMs: Long?): PreparedTimeLeftLabel? {
+    if (remainingMs == null) return null
+    val minutes = roundedMinutes(remainingMs.coerceAtLeast(0L))
+    return when {
+        minutes == 0 -> PreparedTimeLeftLabel.UnderMinute
+        minutes >= MINUTES_PER_HOUR -> PreparedTimeLeftLabel.Hours(minutes / MINUTES_PER_HOUR, minutes % MINUTES_PER_HOUR)
+        else -> PreparedTimeLeftLabel.Minutes(minutes)
+    }
+}
+
+private const val MINUTES_PER_HOUR = 60

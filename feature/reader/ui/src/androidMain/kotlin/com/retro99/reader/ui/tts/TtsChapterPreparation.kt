@@ -108,6 +108,13 @@ internal class TtsChapterPreparationCore(
         try {
             val keys = input.texts.map { text -> sentences.key(text, input.settings) }
             chapters.begin(input.id, input.settings, keys)
+            // Only what this run still has to generate counts towards the time left.
+            val pending = keys.map { key -> !chapters.isPrepared(input.id, key) }
+            var remainingCharacters = input.texts.indices.sumOf { index ->
+                if (pending[index]) input.texts[index].length else 0
+            }
+            val runSamples = mutableListOf<TtsPreparationSample>()
+            var timeLeft: TtsPreparationTimeLeft? = null
             var done = 0
             for ((index, text) in input.texts.withIndex()) {
                 if (cancelRequested) {
@@ -129,11 +136,23 @@ internal class TtsChapterPreparationCore(
                         )
                         return
                     }
-                    measured(input, text, work)
+                    measured(input, text, work)?.let { sample -> runSamples += sample }
                 }
+                if (pending[index]) remainingCharacters -= text.length
                 done++
-                mutableState.value =
-                    TtsChapterPreparationState.Running(input.id.chapterHref, done, input.texts.size)
+                // Worked out only when a sentence finishes: while preparation waits for the
+                // synthesis turn nothing finishes, so the time left stands still.
+                timeLeft = nextPreparationTimeLeft(
+                    shown = timeLeft,
+                    estimateMs = preparationRemainingMs(runSamples, remainingCharacters),
+                    nowMs = now(),
+                )
+                mutableState.value = TtsChapterPreparationState.Running(
+                    chapterHref = input.id.chapterHref,
+                    done = done,
+                    total = input.texts.size,
+                    remainingMs = timeLeft?.remainingMs,
+                )
             }
             chapters.markComplete(input.id)
             chapters.enforceLimit(input.id)
@@ -163,9 +182,13 @@ internal class TtsChapterPreparationCore(
     }
 
     /** Only a sentence this run generated is a measurement; a failed record is never fatal. */
-    private fun measured(input: TtsChapterPreparationInput, text: String, work: PreparedSentenceWork) {
-        val workMs = work.workMs?.takeIf { it > 0 } ?: return
-        if (text.isEmpty()) return
+    private fun measured(
+        input: TtsChapterPreparationInput,
+        text: String,
+        work: PreparedSentenceWork,
+    ): TtsPreparationSample? {
+        val workMs = work.workMs?.takeIf { it > 0 } ?: return null
+        if (text.isEmpty()) return null
         // Audio made at 1.5x is two thirds as long as the same sentence at normal speed.
         val audioMs = (work.encoding as? PreparedAudioEncoding.Success)?.durationMs ?: 0L
         val sample = TtsPreparationSample(
@@ -175,6 +198,7 @@ internal class TtsChapterPreparationCore(
         )
         runCatching { speed.record(input.settings.voiceId, sample) }
             .onFailure { error -> Log.e(TAG, "Could not record preparation speed", error) }
+        return sample
     }
 
     /** Enough room for the chapter's compressed audio and the manifest, with headroom. */

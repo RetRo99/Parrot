@@ -24,6 +24,9 @@ import resources.translations.reader_tts_prepared_chapter_partly
 import resources.translations.reader_tts_prepared_chapter_prepare
 import resources.translations.reader_tts_prepared_chapter_prepare_again
 import resources.translations.reader_tts_prepared_chapter_progress
+import resources.translations.reader_tts_prepared_chapter_progress_left
+import resources.translations.reader_tts_prepared_chapter_progress_left_hours
+import resources.translations.reader_tts_prepared_chapter_progress_left_short
 import resources.translations.reader_tts_prepared_chapter_ready
 import resources.translations.reader_tts_prepared_chapter_voice_pack
 import resources.translations.reader_tts_prepared_chapter_voices
@@ -100,8 +103,8 @@ internal fun preparedChapterRowUi(
     )
 
     is PreparedChapterRowState.Preparing -> PreparedChapterRowUi(
-        status = StringRes.reader_tts_prepared_chapter_progress,
-        statusArgs = listOf(state.done, state.total),
+        status = preparingStatus(state),
+        statusArgs = preparingArgs(state),
         progress = if (state.total > 0) state.done.toFloat() / state.total else 0f,
         actions = listOf(PreparedChapterAction.CANCEL),
     )
@@ -177,6 +180,21 @@ private fun notPreparedArgs(estimate: PreparedChapterEstimate?): List<Any> {
         else -> listOf(estimate.minutes, size)
     }
 }
+
+private fun preparingStatus(state: PreparedChapterRowState.Preparing): StringResource =
+    when (preparedTimeLeftLabel(state.remainingMs)) {
+        null -> StringRes.reader_tts_prepared_chapter_progress
+        PreparedTimeLeftLabel.UnderMinute -> StringRes.reader_tts_prepared_chapter_progress_left_short
+        is PreparedTimeLeftLabel.Minutes -> StringRes.reader_tts_prepared_chapter_progress_left
+        is PreparedTimeLeftLabel.Hours -> StringRes.reader_tts_prepared_chapter_progress_left_hours
+    }
+
+private fun preparingArgs(state: PreparedChapterRowState.Preparing): List<Any> =
+    listOf<Any>(state.done, state.total) + when (val left = preparedTimeLeftLabel(state.remainingMs)) {
+        null, PreparedTimeLeftLabel.UnderMinute -> emptyList()
+        is PreparedTimeLeftLabel.Minutes -> listOf(left.minutes)
+        is PreparedTimeLeftLabel.Hours -> listOf(left.hours, left.minutes)
+    }
 
 private fun audioLengthDetail(minutes: Int?): StringResource? = when {
     minutes == null -> null

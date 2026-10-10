@@ -56,7 +56,7 @@ internal fun derivePreparedChapterRow(
     if (!isReadAloudAvailable || isNarrationSelected || chapterHref == null) return null
     if (preparation is TtsChapterPreparationState.Running) {
         return if (preparation.chapterHref == chapterHref) {
-            PreparedChapterRowState.Preparing(preparation.done, preparation.total)
+            PreparedChapterRowState.Preparing(preparation.done, preparation.total, preparation.remainingMs)
         } else {
             PreparedChapterRowState.PreparingAnotherChapter
         }

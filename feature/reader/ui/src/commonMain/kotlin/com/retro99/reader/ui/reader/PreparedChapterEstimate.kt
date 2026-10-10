@@ -112,7 +112,7 @@ internal fun preparedChapterEstimate(
  * Rounded the way a person says a duration: under three quarters of a minute is "under a
  * minute", then whole minutes while they are few enough to matter, then fives, then tens.
  */
-private fun roundedMinutes(totalMs: Long): Int {
+internal fun roundedMinutes(totalMs: Long): Int {
     val seconds = totalMs / 1_000
     if (seconds < 45) return 0
     val minutes = ((seconds + 30) / 60).toInt().coerceAtLeast(1)
