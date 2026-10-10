@@ -9,8 +9,16 @@ sealed interface TtsChapterPreparationState {
 
     data object Idle : TtsChapterPreparationState
 
-    /** [done] of [total] sentences are prepared for [chapterHref]. */
-    data class Running(val chapterHref: String, val done: Int, val total: Int) : TtsChapterPreparationState
+    /**
+     * [done] of [total] sentences are prepared for [chapterHref]. [remainingMs] is the work
+     * still to do as this run measures it; null until it has measured enough to say.
+     */
+    data class Running(
+        val chapterHref: String,
+        val done: Int,
+        val total: Int,
+        val remainingMs: Long? = null,
+    ) : TtsChapterPreparationState
 
     data class Completed(val chapterHref: String) : TtsChapterPreparationState
 

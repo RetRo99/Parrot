@@ -12,7 +12,7 @@ internal sealed interface PreparedChapterRowState {
 
     data object NotPrepared : PreparedChapterRowState
 
-    data class Preparing(val done: Int, val total: Int) : PreparedChapterRowState
+    data class Preparing(val done: Int, val total: Int, val remainingMs: Long? = null) : PreparedChapterRowState
 
     data object PreparingAnotherChapter : PreparedChapterRowState
 
