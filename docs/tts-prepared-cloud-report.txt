@@ -3,7 +3,9 @@ Branch: tts/prepared-cloud (from origin/main ae1c40f8), in worktree
 .claude/worktrees/tts-investigation
 Commits this run (hash + subject, oldest first):
   1f06dae0 docs(tts): the brief for prepared chapters in Parrot Cloud
-  44fc66c5 docs(tts): step 0, the design answers and the baseline
+  bec5e38e docs(tts): step 0, the design answers and the baseline
+  (one further commit records this hash in the report, which could not name
+  its own parent before that parent existed)
 Steps complete this run, and steps complete in total (0-7): Step 0 only this
 run; 1 of 8 in total (Step 0). Steps 1-7 not built.
 Step 0: can prepared audio be one more cloud_book_files row (yes/no, what had to
