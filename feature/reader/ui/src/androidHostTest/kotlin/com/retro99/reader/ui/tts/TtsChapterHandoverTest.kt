@@ -85,6 +85,47 @@ class TtsChapterHandoverTest {
         assertFalse(engine.isSessionRunning.value)
     }
 
+    /**
+     * The handover is not one step. Completing the chapter moves the reader to the next
+     * one, and that locator move reaches the controller before the next chapter starts;
+     * the controller answers it with `engine.stop()`. On the phone that stop was what
+     * actually took the service down — `state=IDLE` at 21:29:01.329, `onDestroy` 19 ms
+     * later, then a background service start the system refused.
+     */
+    @Test
+    fun `the locator stop that follows a handover keeps the service player`() = runTest {
+        readToChapterEnd(completeChapterOnEnd = true)
+
+        engine.stop()
+        runCurrent()
+
+        assertEquals(
+            1, player.listenerCount,
+            "the stop that follows the handover took the service player away",
+        )
+        assertFalse(
+            player.commands.any { it == "stop" || it == "clearItems" },
+            "the stop that follows the handover emptied the player: ${player.commands}",
+        )
+    }
+
+    @Test
+    fun `stop listening during a session still lets the service player go`() = runTest {
+        engine = TtsReadAloudEngine(
+            FakeTtsSynthesizer(), source, MediaPlaybackController(),
+            FakeTtsEnginePlayerProvider(player), StandardTestDispatcher(testScheduler),
+        )
+        engine.setSentences(sentences)
+        engine.playFrom(0, "en-us", 1f, 1f, showPlaybackNotification = true)
+        runCurrent()
+        assertTrue(engine.isPlaying.value)
+
+        engine.stop()
+        runCurrent()
+
+        assertEquals(0, player.listenerCount, "Stop listening kept the service player")
+    }
+
     @Test
     fun `the next chapter reuses the player it was handed`() = runTest {
         readToChapterEnd(completeChapterOnEnd = true)
