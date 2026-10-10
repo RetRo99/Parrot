@@ -227,6 +227,75 @@ class PreparedChapterDownloadQueueTest {
     }
 
     @Test
+    fun `an installed chapter asks the row to read again, exactly once`() = runTest {
+        val packed = packOnAnotherDevice(settings)
+        val fixture = fixture(cloudFiles = listOf(bookFile(), chapterFile(packed)))
+        fixture.queue.download(id, settings)
+        packed.copyTo(File(fixture.transfers.downloads.single().destinationPath), overwrite = true)
+        testScheduler.advanceUntilIdle()
+        val before = fixture.refreshes.count
+
+        fixture.transfers.settle("completed")
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(PreparedChapterState.Ready(1_200), store.state(id, settings))
+        assertEquals(1, fixture.refreshes.count - before, "one refresh for the one install")
+        fixture.stop()
+    }
+
+    @Test
+    fun `a refused archive asks the row to read again as well`() = runTest {
+        val packed = packOnAnotherDevice(settings)
+        val fixture = fixture(cloudFiles = listOf(bookFile(), chapterFile(packed)))
+        fixture.queue.download(id, settings)
+        File(fixture.transfers.downloads.single().destinationPath)
+            .writeBytes(packed.readBytes().copyOfRange(0, 40))
+        testScheduler.advanceUntilIdle()
+        val before = fixture.refreshes.count
+
+        fixture.transfers.settle("completed")
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(
+            PreparedChapterDownloadState.FailedArchiveRejected,
+            fixture.queue.stateOf(id, settings),
+        )
+        assertEquals(1, fixture.refreshes.count - before, "the row must stop saying Downloading")
+        fixture.stop()
+    }
+
+    @Test
+    fun `a download that never arrives asks the row to read again`() = runTest {
+        val packed = packOnAnotherDevice(settings)
+        val fixture = fixture(cloudFiles = listOf(bookFile(), chapterFile(packed)))
+        fixture.queue.download(id, settings)
+        testScheduler.advanceUntilIdle()
+        val before = fixture.refreshes.count
+
+        fixture.transfers.settle("failed", lastError = "network")
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(1, fixture.refreshes.count - before)
+        fixture.stop()
+    }
+
+    @Test
+    fun `the engine moving before the end reaches the row too`() = runTest {
+        val packed = packOnAnotherDevice(settings)
+        val fixture = fixture(cloudFiles = listOf(bookFile(), chapterFile(packed)))
+        fixture.queue.download(id, settings)
+        testScheduler.advanceUntilIdle()
+        assertTrue(fixture.refreshes.count >= 1, "the queued row is news to the row")
+
+        val before = fixture.refreshes.count
+        fixture.transfers.settle("running")
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(1, fixture.refreshes.count - before, "downloading is news as well")
+        fixture.stop()
+    }
+
+    @Test
     fun `a rejected archive is not fetched again by itself`() = runTest {
         val packed = packOnAnotherDevice(settings)
         val fixture = fixture(cloudFiles = listOf(bookFile(), chapterFile(packed)))
@@ -349,6 +418,7 @@ class PreparedChapterDownloadQueueTest {
         refuseEnqueue: Boolean = false,
     ): Fixture {
         val manager = RecordingTransfers(cloudFiles, refuseEnqueue)
+        val refreshes = Refreshes()
         val scope = CoroutineScope(coroutineContext + Job())
         return Fixture(
             scope = scope,
@@ -360,15 +430,28 @@ class PreparedChapterDownloadQueueTest {
                 account = FakeAccount(snapshot),
                 freeBytes = { freeBytes },
                 scope = scope,
+                onTransferChanged = refreshes::signal,
             ),
             transfers = manager,
+            refreshes = refreshes,
         )
+    }
+
+    /** How many times the queue has asked the row to read again. */
+    private class Refreshes {
+        var count = 0
+            private set
+
+        fun signal() {
+            count += 1
+        }
     }
 
     private class Fixture(
         private val scope: CoroutineScope,
         val queue: PreparedChapterDownloadQueue,
         val transfers: RecordingTransfers,
+        val refreshes: Refreshes,
     ) {
         fun stop() = scope.cancel()
     }

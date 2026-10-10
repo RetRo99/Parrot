@@ -375,6 +375,102 @@ class PreparedChapterBackupQueueTest {
     }
 
     // -----------------------------------------------------------------------
+    // Telling the row the engine has moved
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun `an upload that reaches its end asks the row to read again, exactly once`() = runTest {
+        val fixture = fixture()
+        prepare(id, settings)
+        fixture.queue.backUp(id, settings)
+        testScheduler.advanceUntilIdle()
+        val before = fixture.refreshes.count
+
+        fixture.transfers.settle("completed")
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(1, fixture.refreshes.count - before, "one refresh for the one end")
+        fixture.stop()
+    }
+
+    @Test
+    fun `a failed upload, a full allowance and a cancelled one each ask once`() = runTest {
+        for (end in listOf("failed" to null, "failed" to "quota_exceeded", "cancelled" to null)) {
+            val fixture = fixture()
+            prepare(id, settings)
+            fixture.queue.backUp(id, settings)
+            testScheduler.advanceUntilIdle()
+            val before = fixture.refreshes.count
+
+            fixture.transfers.settle(end.first, lastError = end.second)
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(1, fixture.refreshes.count - before, "$end")
+            fixture.stop()
+            store.delete(id)
+            outbox.listFiles()?.forEach { it.delete() }
+        }
+    }
+
+    @Test
+    fun `the row is told even with no analytics at all`() = runTest {
+        val fixture = fixture(withAnalytics = false)
+        prepare(id, settings)
+        fixture.queue.backUp(id, settings)
+        testScheduler.advanceUntilIdle()
+        val before = fixture.refreshes.count
+
+        fixture.transfers.settle("completed")
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(1, fixture.refreshes.count - before, "the row does not depend on analytics")
+        assertTrue(fixture.analytics.events.isEmpty(), "and no event was invented for it")
+        fixture.stop()
+    }
+
+    @Test
+    fun `the engine moving before the end reaches the row too`() = runTest {
+        val fixture = fixture()
+        prepare(id, settings)
+        fixture.queue.backUp(id, settings)
+        testScheduler.advanceUntilIdle()
+        // The queued row the engine wrote is itself a change the row had not seen.
+        assertTrue(fixture.refreshes.count >= 1, "queued is news to the row")
+
+        val beforeRunning = fixture.refreshes.count
+        fixture.transfers.settle("running")
+        testScheduler.advanceUntilIdle()
+        assertEquals(1, fixture.refreshes.count - beforeRunning, "uploading is news as well")
+
+        fixture.transfers.settle("completed")
+        testScheduler.advanceUntilIdle()
+        assertEquals(beforeRunning + 2, fixture.refreshes.count)
+        fixture.stop()
+    }
+
+    @Test
+    fun `an account that may not upload is an end the row is told about`() = runTest {
+        val fixture = fixture(snapshot = snapshot(attestation = null))
+        prepare(id, settings)
+
+        val state = fixture.queue.backUp(id, settings)
+
+        assertEquals(PreparedChapterBackupState.NotAllowed, state)
+        assertEquals(1, fixture.refreshes.count)
+        fixture.stop()
+    }
+
+    @Test
+    fun `an engine that refuses before queueing is an end the row is told about`() = runTest {
+        val fixture = fixture(refuseEnqueue = true)
+        prepare(id, settings)
+
+        assertEquals(PreparedChapterBackupState.Failed, fixture.queue.backUp(id, settings))
+        assertEquals(1, fixture.refreshes.count)
+        fixture.stop()
+    }
+
+    // -----------------------------------------------------------------------
     // Fixture
     // -----------------------------------------------------------------------
 
@@ -391,9 +487,11 @@ class PreparedChapterBackupQueueTest {
         transfers: List<BookFileTransfer> = emptyList(),
         pendingBooks: Int = 0,
         refuseEnqueue: Boolean = false,
+        withAnalytics: Boolean = true,
     ): Fixture {
         val manager = RecordingTransfers(cloudFiles, transfers, pendingBooks, refuseEnqueue)
         val analytics = RecordingAnalytics()
+        val refreshes = Refreshes()
         // The queue's own scope, so a test can end the outcome watcher it
         // starts. Production's watcher waits for the engine, which here only
         // finishes when a test says so.
@@ -408,11 +506,23 @@ class PreparedChapterBackupQueueTest {
                 account = FakeAccount(snapshot),
                 network = FakeNetwork(unmetered),
                 scope = scope,
-                analytics = analytics,
+                analytics = analytics.takeIf { withAnalytics },
+                onTransferChanged = refreshes::signal,
             ),
             transfers = manager,
             analytics = analytics,
+            refreshes = refreshes,
         )
+    }
+
+    /** How many times the queue has asked the row to read again. */
+    private class Refreshes {
+        var count = 0
+            private set
+
+        fun signal() {
+            count += 1
+        }
     }
 
     private class Fixture(
@@ -420,6 +530,7 @@ class PreparedChapterBackupQueueTest {
         val queue: PreparedChapterBackupQueue,
         val transfers: RecordingTransfers,
         val analytics: RecordingAnalytics,
+        val refreshes: Refreshes,
     ) {
         /** Ends the outcome watcher, which otherwise waits for the engine. */
         fun stop() = scope.cancel()

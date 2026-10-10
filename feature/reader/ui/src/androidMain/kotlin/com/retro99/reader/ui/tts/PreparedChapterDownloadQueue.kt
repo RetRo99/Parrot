@@ -44,6 +44,11 @@ internal class PreparedChapterDownloadQueue(
     private val account: PreparedBackupAccount,
     private val freeBytes: () -> Long,
     private val scope: CoroutineScope,
+    /**
+     * Called whenever this chapter's download changes, the last time being when
+     * it is installed or refused. See [PreparedChapterBackupQueue].
+     */
+    private val onTransferChanged: () -> Unit = {},
     private val serverId: String = PARROT_CLOUD_SERVER_ID,
 ) {
     /**

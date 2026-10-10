@@ -37,6 +37,12 @@ internal class PreparedChapterBackupQueue(
     private val network: PreparedBackupNetwork,
     private val scope: CoroutineScope,
     private val analytics: Analytics? = null,
+    /**
+     * Called whenever this chapter's upload changes, the last time being when it
+     * reaches its end. Nothing else tells the row the transfer engine has moved,
+     * so without this the row keeps whatever it last read.
+     */
+    private val onTransferChanged: () -> Unit = {},
     private val serverId: String = PARROT_CLOUD_SERVER_ID,
 ) {
 
