@@ -18,6 +18,8 @@ sealed interface TtsChapterPreparationState {
         val done: Int,
         val total: Int,
         val remainingMs: Long? = null,
+        /** Cancel was pressed and the job has not stopped yet. Still running: nothing else may start. */
+        val isCancelling: Boolean = false,
     ) : TtsChapterPreparationState
 
     data class Completed(val chapterHref: String) : TtsChapterPreparationState

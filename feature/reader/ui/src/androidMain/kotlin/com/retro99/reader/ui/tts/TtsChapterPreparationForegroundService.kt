@@ -125,6 +125,8 @@ class TtsChapterPreparationForegroundService : Service() {
                 TranslationsR.string.tts_chapter_preparation_notification_progress_left_short
             TtsChapterPreparationNotificationLine.TIME_LEFT_HOURS ->
                 TranslationsR.string.tts_chapter_preparation_notification_progress_left_hours
+            TtsChapterPreparationNotificationLine.CANCELLING ->
+                TranslationsR.string.tts_chapter_preparation_notification_cancelling
         }
         return getString(resource, *text.args.toTypedArray())
     }

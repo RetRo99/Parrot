@@ -66,6 +66,8 @@ internal data class PreparedChapterRowUi(
     /** A second, quieter line under the status; null means none. */
     val detail: StringResource? = null,
     val detailArgs: List<Any> = emptyList(),
+    /** Actions that are shown but cannot be pressed right now. */
+    val disabled: Set<PreparedChapterAction> = emptySet(),
 )
 
 /** Bytes as the row says them; the same wording the Settings total uses. */
@@ -106,6 +108,12 @@ internal fun preparedChapterRowUi(
         status = preparingStatus(state),
         statusArgs = preparingArgs(state),
         progress = if (state.total > 0) state.done.toFloat() / state.total else 0f,
+        actions = listOf(PreparedChapterAction.CANCEL),
+    )
+
+    is PreparedChapterRowState.Cancelling -> PreparedChapterRowUi(
+        status = StringRes.reader_tts_prepared_chapter_progress,
+        statusArgs = listOf(state.done, state.total),
         actions = listOf(PreparedChapterAction.CANCEL),
     )
 

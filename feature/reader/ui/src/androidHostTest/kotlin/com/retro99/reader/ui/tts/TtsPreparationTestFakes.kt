@@ -47,6 +47,7 @@ internal class PreparationTestSource(
 ) : TtsPreparationSentenceSource {
     val attempted = mutableListOf<String>()
     val prepared = mutableListOf<String>()
+    val failing = mutableSetOf<String>()
     var onPrepare: suspend (String) -> Unit = {}
 
     override fun key(text: String, settings: PreparedVoiceSettings) = "key-$text-${settings.voiceId}"
@@ -64,6 +65,7 @@ internal class PreparationTestSource(
     ): PreparedSentenceWork {
         attempted += text
         onPrepare(text)
+        if (text in failing) return PreparedSentenceWork(PreparedAudioEncoding.Failure)
         prepared += text
         chapters.prepared += key(text, settings)
         return PreparedSentenceWork(PreparedAudioEncoding.Success(File("$text.m4a"), 1_000), workMs(text))

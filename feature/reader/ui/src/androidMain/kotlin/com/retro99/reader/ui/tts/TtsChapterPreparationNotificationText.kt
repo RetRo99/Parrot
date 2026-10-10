@@ -4,7 +4,7 @@ import com.retro99.reader.ui.reader.PreparedTimeLeftLabel
 import com.retro99.reader.ui.reader.preparedTimeLeftLabel
 
 /** Which of the notification's progress lines to show; the service maps each to its string. */
-internal enum class TtsChapterPreparationNotificationLine { COUNT, TIME_LEFT, TIME_LEFT_SHORT, TIME_LEFT_HOURS }
+internal enum class TtsChapterPreparationNotificationLine { COUNT, TIME_LEFT, TIME_LEFT_SHORT, TIME_LEFT_HOURS, CANCELLING }
 
 /** The notification's progress line and its arguments, decided here so it can be tested. */
 internal data class TtsChapterPreparationNotificationText(

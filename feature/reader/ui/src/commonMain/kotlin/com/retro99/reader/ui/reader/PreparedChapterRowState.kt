@@ -14,6 +14,9 @@ internal sealed interface PreparedChapterRowState {
 
     data class Preparing(val done: Int, val total: Int, val remainingMs: Long? = null) : PreparedChapterRowState
 
+    /** Cancel was pressed; shown until the job has really stopped. */
+    data class Cancelling(val done: Int, val total: Int) : PreparedChapterRowState
+
     data object PreparingAnotherChapter : PreparedChapterRowState
 
     data class Ready(val bytes: Long) : PreparedChapterRowState

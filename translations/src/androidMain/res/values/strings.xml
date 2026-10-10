@@ -15,5 +15,6 @@
     <string name="tts_chapter_preparation_notification_progress_left" tools:ignore="MissingTranslation">%1$d of %2$d sentences · about %3$d min left</string>
     <string name="tts_chapter_preparation_notification_progress_left_hours" tools:ignore="MissingTranslation">%1$d of %2$d sentences · about %3$d h %4$d min left</string>
     <string name="tts_chapter_preparation_notification_progress_left_short" tools:ignore="MissingTranslation">%1$d of %2$d sentences · under a minute left</string>
+    <string name="tts_chapter_preparation_notification_cancelling" tools:ignore="MissingTranslation">Cancelling…</string>
     <string name="tts_chapter_preparation_notification_cancel" tools:ignore="MissingTranslation">Cancel</string>
 </resources>
