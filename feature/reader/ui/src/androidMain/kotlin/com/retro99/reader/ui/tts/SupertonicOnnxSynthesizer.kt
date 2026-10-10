@@ -127,16 +127,14 @@ class SupertonicOnnxSynthesizer(
                 withContext(Dispatchers.IO) {
                     val activeEngine = engine
                         ?: throw CancellationException("Supertonic engine released")
-                    activeEngine.generateWithConfigAndCallback(text, generationConfig) {
-                        if (
+                    activeEngine.generateWithConfigAndCallback(
+                        text,
+                        generationConfig,
+                        neuralGenerationCallback {
                             requestJob?.isActive == false ||
-                            cancellationGeneration.get() != requestGeneration
-                        ) {
-                            1
-                        } else {
-                            0
-                        }
-                    }
+                                    cancellationGeneration.get() != requestGeneration
+                        },
+                    )
                 }
             }
             if (requestJob?.isActive == false) {
@@ -161,6 +159,9 @@ class SupertonicOnnxSynthesizer(
             if (saved && outputFile.exists() && outputFile.length() > 0) {
                 TtsSynthesisResult(TtsSynthesisStatus.SUCCESS, outputFile)
             } else {
+                // The output file is the cache entry: a partial save must leave nothing
+                // behind, as every other failure path here does (TTS-F03).
+                outputFile.delete()
                 TtsSynthesisResult(
                     status = TtsSynthesisStatus.ERROR,
                     error = "Supertonic failed to save audio",

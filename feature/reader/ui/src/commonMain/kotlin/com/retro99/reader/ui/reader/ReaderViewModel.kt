@@ -82,6 +82,7 @@ import com.retro99.reader.domain.usecase.SaveReadingProgressUseCase
 import com.retro99.reader.domain.usecase.SetCurrentlyReadingUseCase
 import com.retro99.reader.ui.di.InitialAudioPosition
 import com.retro99.reader.ui.di.ReaderScope
+import com.retro99.reader.ui.di.ReaderScopeLease
 import com.retro99.reader.ui.model.PositionConflictUiModel
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.ReaderSettingsUiModel
@@ -102,6 +103,7 @@ import com.retro99.reader.ui.tts.NeuralVoicePackage
 import com.retro99.reader.ui.tts.SupertonicTermsStore
 import com.retro99.reader.ui.tts.TtsPreparationProgress
 import com.retro99.reader.ui.tts.TtsVoicePreparationState
+import com.retro99.reader.ui.tts.TtsVoicePreparationStateHolder
 import com.retro99.reader.ui.tts.neuralVoicePackage
 import com.retro99.statistics.domain.ActiveSessionTimer
 import com.retro99.statistics.domain.usecase.SaveReadingSessionUseCase
@@ -233,8 +235,22 @@ class ReaderViewModel(
     )
     private var continueReadingOpenResolved = false
 
+    /**
+     * Two reader screens for one book share this scope, so neither may close it or the
+     * controllers in it while the other is alive (TTS-F10). The lease counts the holders;
+     * the hold is given back in [onCleared].
+     */
+    private val readerScopeLease: ReaderScopeLease by lazy { getKoin().get() }
+
+    /** True once this reader has a hold to give back; a reader that never opened the scope
+     * must not decrement another one's. */
+    private var hasReaderScopeHold = false
+
     private val readerScope: Scope by lazy {
-        getKoin().getOrCreateScope<ReaderScope>(bookUuid).apply {
+        hasReaderScopeHold = true
+        readerScopeLease.acquire(bookUuid) {
+            getKoin().getOrCreateScope<ReaderScope>(bookUuid)
+        }.apply {
             viewState.value.publicationState?.let { pubState ->
                 val initialPositionMs = pubState.position?.audioTimestampMs
                 val initialHref = pubState.position?.href
@@ -249,21 +265,24 @@ class ReaderViewModel(
         }
     }
 
+    // These three are reader-scoped and therefore shared with any other screen open on the
+    // same book, so the lease closes them when the last screen lets go — not this
+    // ViewModel's addCloseable, which closed them under the survivor (TTS-F10).
     private val bookController: BookController by lazy {
         readerScope.get<BookController>().also {
-            addCloseable(it)
+            readerScopeLease.addCloseable(bookUuid, it)
         }
     }
 
     private val audioController: AudioController by lazy {
         readerScope.get<AudioController>().also {
-            addCloseable(it)
+            readerScopeLease.addCloseable(bookUuid, it)
         }
     }
 
     private val ttsController: TtsController by lazy {
         readerScope.get<TtsController>().also { controller ->
-            addCloseable(controller)
+            readerScopeLease.addCloseable(bookUuid, controller)
         }
     }
 
@@ -277,8 +296,15 @@ class ReaderViewModel(
 
     private val syncCoordinator: ReaderSyncCoordinator by lazy {
         readerScope.get<ReaderSyncCoordinator>().also {
-            addCloseable(it)
+            readerScopeLease.addCloseable(bookUuid, it)
         }
+    }
+
+    private val ttsOperationReporter: ReaderTtsOperationReporter by lazy {
+        ReaderTtsOperationReporter(
+            reports = readerScope.get<TtsPlaybackOperationReports>(),
+            analytics = analytics,
+        )
     }
 
     private val readingSpeedTracker: ReadingSpeedTracker by lazy {
@@ -1081,124 +1107,75 @@ class ReaderViewModel(
     private fun initTts(keepNarrationActive: Boolean = false) {
         observeTtsPlaybackOperations()
         viewModelScope.launch {
-            bookController.currentLocator.first()
-            val hasContent = ttsController.hasReadableContent()
-            if (!hasContent) return@launch
+            ttsSetup().run(keepNarrationActive)
+        }
+    }
 
+    private fun ttsSetup(): ReaderTtsSetup = ReaderTtsSetup(
+        ttsController = ttsController,
+        locators = bookController.currentLocator,
+        readSettings = {
             val settings = getReaderSettingsUseCase().first()
-            val availableVoices = ttsController.availableVoices()
-            val savedVoice = availableVoices
-                .firstOrNull { voice -> voice.id == settings.ttsVoiceId }
-            val selectedVoiceId = settings.ttsVoiceId?.takeIf {
-                savedVoice != null &&
-                        (
-                                savedVoice.neuralVoicePackage != NeuralVoicePackage.SUPERTONIC ||
-                                        currentViewState().hasAcceptedSupertonicTerms
-                                )
-            }
-            if (!keepNarrationActive) activeNarrationController = ttsController
-            updateState { state ->
-                state.copy(
-                    isTtsReadAloud = true,
-                    showNoAudioMessage = false,
-                    ttsVoices = availableVoices,
-                    selectedTtsVoiceId = selectedVoiceId,
-                )
-            }
-
-            observeNarrationPlaybackState(ttsController)
-
-            observeTtsPreviewState()
-            observeTtsSentenceProgress()
-            observeTtsVoicePreparationState()
-
-            ttsController.selectVoice(selectedVoiceId)
-            if (settings.ttsVoiceId != selectedVoiceId) {
+            ReaderTtsSetupSettings(
+                voiceId = settings.ttsVoiceId,
+                isTtsEnabled = settings.ttsEnabled,
+            )
+        },
+        hasAcceptedSupertonicTerms = { currentViewState().hasAcceptedSupertonicTerms },
+        actions = ReaderTtsSetupActions(
+            takeOverNarration = { activeNarrationController = ttsController },
+            showVoices = { voices, selectedVoiceId ->
+                updateState { state ->
+                    state.copy(
+                        showNoAudioMessage = false,
+                        ttsVoices = voices,
+                        selectedTtsVoiceId = selectedVoiceId,
+                    )
+                }
+            },
+            startCollectors = {
+                observeNarrationPlaybackState(ttsController)
+                observeTtsPreviewState()
+                observeTtsSentenceProgress()
+                observeTtsVoicePreparationState()
+            },
+            markReadAloudAvailable = {
+                updateState { state -> state.copy(isTtsReadAloud = true) }
+            },
+            saveSelectedVoice = { readVoiceId, selectedVoiceId ->
                 saveReaderSettingsUpdate { latestSettings ->
-                    if (latestSettings.ttsVoiceId == settings.ttsVoiceId) {
+                    if (latestSettings.ttsVoiceId == readVoiceId) {
                         latestSettings.copy(ttsVoiceId = selectedVoiceId)
                     } else {
                         latestSettings
                     }
                 }
-            }
-            if (settings.ttsEnabled && !keepNarrationActive) {
-                enableTtsSentencePlayback()
-            }
-            val selectedVoice = availableVoices
-                .firstOrNull { voice -> voice.id == selectedVoiceId }
-            if (
-                settings.ttsEnabled &&
-                selectedVoice?.isNeural == true &&
-                !selectedVoice.needsDownload
-            ) {
-                prepareTtsVoice(selectedVoice.id)
-            }
-        }
-    }
+            },
+            enableSentencePlayback = { enableTtsSentencePlayback() },
+            prepareVoice = { voiceId -> prepareTtsVoice(voiceId) },
+        ),
+    )
 
     private fun observeTtsPlaybackOperations() {
         if (isObservingTtsPlaybackOperations) return
         isObservingTtsPlaybackOperations = true
         ttsController.playbackOperations
             .onEach { operation ->
-                val action = operation.action.analyticsValue
-                val outcome = when (operation) {
-                    is TtsPlaybackOperation.Attempted -> "attempted"
-                    is TtsPlaybackOperation.Succeeded -> "succeeded"
-                    is TtsPlaybackOperation.Failed -> "failed"
-                    is TtsPlaybackOperation.Cancelled -> "cancelled"
-                }
-                val stage = if (operation is TtsPlaybackOperation.Attempted) "start" else "terminal"
-                val durationMs = when (operation) {
-                    is TtsPlaybackOperation.Attempted -> null
-                    is TtsPlaybackOperation.Succeeded -> operation.durationMs
-                    is TtsPlaybackOperation.Failed -> operation.durationMs
-                    is TtsPlaybackOperation.Cancelled -> operation.durationMs
-                }
-                val reasonCode = when (operation) {
-                    is TtsPlaybackOperation.Failed -> operation.reasonCode.analyticsValue
-                    is TtsPlaybackOperation.Cancelled -> operation.reasonCode.analyticsValue
-                    else -> null
-                }
-                analytics.logEvent(
-                    ReaderAnalyticsEvent.TtsPlaybackOperation(
-                        action = action,
-                        outcome = outcome,
-                        isRetry = operation.isRetry,
-                        durationMs = durationMs,
-                        reasonCode = reasonCode,
-                    ),
-                )
-                val context = DiagnosticContext(
-                    screen = "reader",
-                    sourceScreen = "reader",
-                    entryPoint = action,
-                    action = "start_tts_playback",
-                    operation = "tts_playback",
-                    stage = stage,
-                    outcome = outcome,
-                    reasonCode = reasonCode,
-                    mediaType = "ebook",
-                    correlationId = operation.correlationId,
-                )
+                // What the outcome does to this screen: each screen has its own banner and
+                // its own usage session, so both of these belong to every collector.
                 when (operation) {
-                    is TtsPlaybackOperation.Attempted -> {
+                    is TtsPlaybackOperation.Attempted ->
                         updateState { it.copy(showTtsPlaybackFailed = false) }
-                        analytics.logBreadcrumb(context)
-                    }
-                    is TtsPlaybackOperation.Succeeded -> analytics.logBreadcrumb(context)
                     is TtsPlaybackOperation.Failed -> {
                         usageSession.checkpoint(UsageEndReason.Error)
-                        if (operation.error != null) {
-                            analytics.logException(operation.error, context)
-                        } else {
-                            analytics.logBreadcrumb(context)
-                        }
                         updateState { it.copy(showTtsPlaybackFailed = true) }
                     }
-                    is TtsPlaybackOperation.Cancelled -> analytics.logBreadcrumb(context)
+                    is TtsPlaybackOperation.Succeeded,
+                    is TtsPlaybackOperation.Cancelled -> Unit
                 }
+                // The report belongs to the attempt, not to the screen: a second reader of
+                // the same book shares the record and reports nothing (QA-BUG-0100).
+                ttsOperationReporter.report(operation)
             }
             .launchIn(viewModelScope)
     }
@@ -1215,7 +1192,7 @@ class ReaderViewModel(
         if (selectedVoice?.needsDownload == true) {
             // Picking a voice that is not downloaded fetches its package, then selects it.
             updateState { state -> state.copy(pendingTtsVoiceId = selectedVoice.id) }
-            prepareTtsVoice(selectedVoice.id, onPrepared = { selectTtsVoice(selectedVoice.id) })
+            prepareTtsVoice(selectedVoice.id)
             return
         }
         val isNeural = selectedVoice?.isNeural == true
@@ -1301,17 +1278,13 @@ class ReaderViewModel(
             .firstOrNull { voice -> voice.neuralVoicePackage == voicePackage }
             ?.id
             ?: return
-        val pendingVoiceId = currentViewState().pendingTtsVoiceId
-            ?.takeIf { pending -> pending.neuralVoicePackage() == voicePackage }
-        prepareTtsVoice(
-            voiceId,
-            onPrepared = pendingVoiceId?.let { pending -> { selectTtsVoice(pending) } },
-        )
+        // Whether the voice is selected once it arrives is pendingTtsVoiceId's business, as
+        // for any other download; retrying does not have an opinion of its own (TTS-F19).
+        prepareTtsVoice(voiceId)
     }
 
     private fun prepareTtsVoice(
         voiceId: String,
-        onPrepared: (() -> Unit)? = null,
         updateToLatest: Boolean = false,
     ) {
         val voicePackage = voiceId.neuralVoicePackage() ?: return
@@ -1349,11 +1322,20 @@ class ReaderViewModel(
                     failedTtsVoicePackage = null,
                 )
             }
+            // Cancelled until something else happens: the notification's Cancel, the
+            // sheet's Cancel and a delete of the pack all cancel this job, and a cancelled
+            // job never reaches the assignment below (TTS-F19).
+            var end = TtsVoicePreparationEnd.Cancelled
             try {
                 val isPrepared = ttsController.prepareVoice(voiceId, updateToLatest) { progress ->
                     updateState { state ->
                         state.copy(ttsVoicePreparationProgress = progress)
                     }
+                }
+                end = if (isPrepared) {
+                    TtsVoicePreparationEnd.Prepared
+                } else {
+                    TtsVoicePreparationEnd.Failed
                 }
                 if (isPrepared) {
                     val refreshedVoices = ttsController.availableVoices()
@@ -1363,31 +1345,61 @@ class ReaderViewModel(
                             failedTtsVoicePackage = null,
                         )
                     }
-                    onPrepared?.invoke()
-                } else {
-                    updateState { state ->
-                        state.copy(
-                            failedTtsVoicePackage = voicePackage,
-                            ttsPreviewingVoiceId = null,
-                            isTtsPreviewPlaying = false,
-                        )
-                    }
                 }
             } finally {
                 if (ttsPreparationJob === runningJob) {
-                    updateState { state ->
-                        state.copy(
-                            isTtsVoicePreparing = false,
-                            preparingTtsVoicePackage = null,
-                            ttsVoicePreparationProgress = null,
-                        )
+                    // A failure the user's own cancellation caused is a cancellation: a
+                    // delete of a downloading pack made the card show a failed download.
+                    val resolvedEnd = if (runningJob?.isCancelled == true) {
+                        TtsVoicePreparationEnd.Cancelled
+                    } else {
+                        end
                     }
+                    applyTtsVoicePreparationEnd(resolvedEnd, voicePackage)
                     ttsPreparationJob = null
                 }
             }
         }
         ttsPreparationJob = preparationJob
         preparationJob.start()
+    }
+
+    /**
+     * The sheet after a preparation ends: no progress, and whatever
+     * [resolveTtsVoicePreparationEnd] says about the voice that was waiting for it.
+     *
+     * A user-cancelled download reports no outcome, which is what the sheet's own Cancel
+     * reports: the notification's Cancel now does the same thing, not a different thing.
+     */
+    private fun applyTtsVoicePreparationEnd(
+        end: TtsVoicePreparationEnd,
+        voicePackage: NeuralVoicePackage,
+    ) {
+        val decision = resolveTtsVoicePreparationEnd(end, currentViewState().pendingTtsVoiceId)
+        updateState { state ->
+            state.copy(
+                isTtsVoicePreparing = false,
+                preparingTtsVoicePackage = null,
+                ttsVoicePreparationProgress = null,
+                pendingTtsVoiceId = if (decision.clearPendingSelection) {
+                    null
+                } else {
+                    state.pendingTtsVoiceId
+                },
+                failedTtsVoicePackage = if (decision.showFailedPackage) voicePackage else null,
+                ttsPreviewingVoiceId = if (decision.showFailedPackage) {
+                    null
+                } else {
+                    state.ttsPreviewingVoiceId
+                },
+                isTtsPreviewPlaying = if (decision.showFailedPackage) {
+                    false
+                } else {
+                    state.isTtsPreviewPlaying
+                },
+            )
+        }
+        decision.selectVoiceId?.let { voiceId -> selectTtsVoice(voiceId) }
     }
 
     private fun deleteNeuralVoicePackage(voicePackage: NeuralVoicePackage) {
@@ -1399,6 +1411,9 @@ class ReaderViewModel(
                 state.copy(
                     deletingTtsVoicePackage = voicePackage,
                     pendingTtsVoiceId = null,
+                    // A delete the user asked for is not a failed download, even if the
+                    // install it cancelled reported one first (run 4's leftover card).
+                    failedTtsVoicePackage = null,
                     failedTtsVoicePackageDeletion = null,
                 )
             }
@@ -1619,13 +1634,17 @@ class ReaderViewModel(
     }
 
     private fun observeTtsSentenceProgress() {
+        val progress = ReaderTtsSentenceProgress(
+            showSentenceNumber = { number ->
+                updateState { state -> state.copy(ttsSentenceNumber = number) }
+            },
+            clearSentenceHighlight = { bookController.clearSentenceHighlight() },
+        )
         ttsController.currentSentence
             .onEach { sentence ->
                 ttsCurrentElementId = sentence?.elementId ?: ttsCurrentElementId
                 if (sentence != null) ttsCurrentSentence = sentence
-                if (sentence != null) {
-                    updateState { state -> state.copy(ttsSentenceIndex = sentence.index) }
-                }
+                progress.onCurrentSentence(sentence)
             }
             .launchIn(viewModelScope)
         ttsController.sentenceCount
@@ -1666,6 +1685,9 @@ class ReaderViewModel(
     }
 
     private fun observeTtsVoicePreparationState() {
+        // The holder is app-wide: drop a finished download's result before collecting, so this
+        // reader does not show a failure banner for a download it never started (TTS-F18).
+        getKoin().get<TtsVoicePreparationStateHolder>().clearFinishedState()
         ttsController.voicePreparationState
             .onEach { preparationState ->
                 when (preparationState) {
@@ -3200,7 +3222,7 @@ class ReaderViewModel(
         currentBookTargetCheckpoint?.cancel()
         routineSyncScheduler.close()
         super.onCleared()
-        readerScope.close()
+        if (hasReaderScopeHold) readerScopeLease.release(bookUuid)
     }
 
     @OptIn(ExperimentalUuidApi::class)

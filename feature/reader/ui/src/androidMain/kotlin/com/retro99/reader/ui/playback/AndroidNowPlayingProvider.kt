@@ -16,6 +16,7 @@ import org.koin.core.annotation.Single
 @Single(binds = [NowPlayingProvider::class])
 class AndroidNowPlayingProvider(
     private val mediaPlaybackController: MediaPlaybackController,
+    private val readAloud: ReadAloudPlayback,
 ) : NowPlayingProvider {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -46,6 +47,10 @@ class AndroidNowPlayingProvider(
     }
 
     override fun stop() {
+        // The device voice has a session of its own behind the media session, so stopping
+        // the player alone would leave it synthesising and holding the service player
+        // (QA-BUG-0049). One stop, both.
+        readAloud.stop()
         mediaPlaybackController.stop()
         mediaPlaybackController.clearCurrentPlayingBook()
     }

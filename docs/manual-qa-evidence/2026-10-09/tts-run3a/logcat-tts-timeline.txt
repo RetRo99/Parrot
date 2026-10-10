@@ -1,0 +1,229 @@
+10-09 22:21:48.603  8631  8631 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 22:21:49.215  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:21:49.217  8631  8631 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=614}
+10-09 22:22:27.354  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:22:27.356  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:22:44.745  8631  8631 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=resume, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 22:22:44.748  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:22:44.749  8631  8631 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=resume, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=6}
+10-09 22:23:00.335  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:23:00.339  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:23:44.665  8631  8631 I SherpaOnnxTts: Kokoro loaded: sampleRate=24000 speakers=11
+10-09 22:24:26.080  8631  8631 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 22:24:26.185  8631  8698 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=60
+10-09 22:24:28.894  8631  8698 I SherpaOnnxTts: Kokoro synthesize done in 2708ms, samples=69666, file=139376 bytes
+10-09 22:24:28.933  8631  8698 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=101
+10-09 22:24:28.977  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:24:28.978  8631  8631 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=2899}
+10-09 22:24:31.993  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:24:31.994  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:24:33.157  8631  8698 I SherpaOnnxTts: Kokoro synthesize done in 4224ms, samples=121554, file=243152 bytes
+10-09 22:24:33.171  8631  8698 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=27
+10-09 22:24:33.207  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:24:34.782  8631  8698 I SherpaOnnxTts: Kokoro synthesize done in 1611ms, samples=36335, file=72714 bytes
+10-09 22:24:34.783  8631  8740 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=16
+10-09 22:24:36.035  8631  8740 I SherpaOnnxTts: Kokoro synthesize done in 1252ms, samples=23119, file=46282 bytes
+10-09 22:24:36.043  8631  8681 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=93
+10-09 22:24:40.055  8631  8681 I SherpaOnnxTts: Kokoro synthesize done in 4012ms, samples=106008, file=212060 bytes
+10-09 22:24:40.056  8631  8681 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=120
+10-09 22:24:45.253  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:24:45.254  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:24:45.439  8631  8681 I SherpaOnnxTts: Kokoro synthesize done in 5383ms, samples=136963, file=273970 bytes
+10-09 22:24:45.453  8631  8681 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=167
+10-09 22:24:45.492  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:24:51.291  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:24:51.292  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:24:52.462  8631  8681 I SherpaOnnxTts: Kokoro synthesize done in 7009ms, samples=183666, file=367376 bytes
+10-09 22:24:52.476  8631  8681 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=222
+10-09 22:24:52.492  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:25:00.229  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:25:00.230  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:25:01.862  8631  8681 I SherpaOnnxTts: Kokoro synthesize done in 9386ms, samples=250668, file=501380 bytes
+10-09 22:25:01.877  8631  8681 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=46
+10-09 22:25:01.900  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:25:04.550  8631  8681 I SherpaOnnxTts: Kokoro synthesize done in 2673ms, samples=61176, file=122396 bytes
+10-09 22:25:04.551  8631  8681 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=30
+10-09 22:25:06.507  8631  8681 I SherpaOnnxTts: Kokoro synthesize done in 1956ms, samples=37714, file=75472 bytes
+10-09 22:25:06.507  8631  8697 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=158
+10-09 22:25:13.824  8631  8697 I SherpaOnnxTts: Kokoro synthesize done in 7317ms, samples=191540, file=383124 bytes
+10-09 22:25:13.825  8631  8681 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=54
+10-09 22:25:14.706  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:25:14.709  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:26:15.462  8631  8631 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 22:26:15.613  8631  8697 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=54
+10-09 22:26:15.675  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:26:15.676  8631  8631 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=216}
+10-09 22:26:18.016  8631  8697 I SherpaOnnxTts: Kokoro synthesize done in 2403ms, samples=61454, file=122952 bytes
+10-09 22:26:26.243  8631  8697 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=17
+10-09 22:26:27.588  8631  8697 I SherpaOnnxTts: Kokoro synthesize done in 1345ms, samples=26532, file=53108 bytes
+10-09 22:26:28.789  8631  8697 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=18
+10-09 22:26:30.063  8631  8697 I SherpaOnnxTts: Kokoro synthesize done in 1274ms, samples=25618, file=51280 bytes
+10-09 22:26:30.341  8631  8697 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=44
+10-09 22:26:32.260  8631  8697 I SherpaOnnxTts: Kokoro synthesize done in 1919ms, samples=49313, file=98670 bytes
+10-09 22:26:38.351  8631  8697 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=43
+10-09 22:26:40.597  8631  8697 I SherpaOnnxTts: Kokoro synthesize done in 2246ms, samples=59718, file=119480 bytes
+10-09 22:26:40.888  8631  8697 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=56
+10-09 22:26:43.569  8631  8697 I SherpaOnnxTts: Kokoro synthesize done in 2681ms, samples=70496, file=141036 bytes
+10-09 22:26:43.570  8631  8681 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=122
+10-09 22:26:48.319  8631  8681 I SherpaOnnxTts: Kokoro synthesize done in 4749ms, samples=134596, file=269236 bytes
+10-09 22:26:48.320  8631  8703 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=222
+10-09 22:26:56.150  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:26:56.150  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:26:57.263  8631  8703 I SherpaOnnxTts: Kokoro synthesize done in 8943ms, samples=240208, file=480460 bytes
+10-09 22:26:57.278  8631  8703 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=61
+10-09 22:26:57.304  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:27:01.125  8631  8703 I SherpaOnnxTts: Kokoro synthesize done in 3847ms, samples=79801, file=159646 bytes
+10-09 22:27:01.125  8631  8735 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=21
+10-09 22:27:03.019  8631  8735 I SherpaOnnxTts: Kokoro synthesize done in 1893ms, samples=29176, file=58396 bytes
+10-09 22:27:03.023  8631  8702 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=13
+10-09 22:27:04.661  8631  8702 I SherpaOnnxTts: Kokoro synthesize done in 1638ms, samples=21897, file=43838 bytes
+10-09 22:27:04.662  8631  8695 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=69
+10-09 22:27:08.420  8631  8695 I SherpaOnnxTts: Kokoro synthesize done in 3758ms, samples=72777, file=145598 bytes
+10-09 22:27:08.421  8631  8702 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=16
+10-09 22:27:10.170  8631  8702 I SherpaOnnxTts: Kokoro synthesize done in 1749ms, samples=22896, file=45836 bytes
+10-09 22:27:10.733  8631  8702 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=20
+10-09 22:27:12.582  8631  8702 I SherpaOnnxTts: Kokoro synthesize done in 1849ms, samples=25253, file=50550 bytes
+10-09 22:27:12.583  8631  8695 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=43
+10-09 22:27:15.284  8631  8695 I SherpaOnnxTts: Kokoro synthesize done in 2701ms, samples=49015, file=98074 bytes
+10-09 22:27:15.285  8631  8735 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=119
+10-09 22:27:19.942  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:27:19.944  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:27:22.791  8631  8735 I SherpaOnnxTts: Kokoro synthesize done in 7506ms, samples=144341, file=288726 bytes
+10-09 22:27:22.814  8631  8735 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=52
+10-09 22:27:22.851  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:27:26.687  8631  8735 I SherpaOnnxTts: Kokoro synthesize done in 3872ms, samples=60705, file=121454 bytes
+10-09 22:27:26.688  8631  8693 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=125
+10-09 22:27:31.541  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:27:31.542  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:27:34.496  8631  8693 I SherpaOnnxTts: Kokoro synthesize done in 7808ms, samples=148831, file=297706 bytes
+10-09 22:27:34.518  8631  8693 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=67
+10-09 22:27:34.550  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:27:35.446  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:27:35.449  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:27:35.489  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:27:36.216  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:27:36.218  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:27:36.250  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:27:36.979  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:27:36.982  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:27:37.025  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:27:37.746  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:27:37.751  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:27:37.790  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:27:38.516  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:27:38.518  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:27:38.524  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:27:39.276  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:27:39.279  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:27:39.312  8631  8693 I SherpaOnnxTts: Kokoro synthesize done in 4794ms, samples=81209, file=162462 bytes
+10-09 22:27:39.314  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:27:39.314  8631  8695 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=94
+10-09 22:27:40.041  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:27:40.043  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:27:40.084  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:27:40.814  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:27:40.816  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:27:40.853  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:27:41.578  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:27:41.580  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:27:41.624  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:27:42.347  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:27:42.351  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:27:42.389  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:27:43.103  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:27:43.105  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:27:43.147  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:27:43.868  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:27:43.874  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:27:43.912  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:27:44.634  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:27:44.636  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:27:44.669  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:27:45.874  8631  8695 I SherpaOnnxTts: Kokoro synthesize done in 6560ms, samples=113543, file=227130 bytes
+10-09 22:27:45.875  8631  8695 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=140
+10-09 22:27:53.693  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:27:53.695  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:27:55.118  8631  8695 I SherpaOnnxTts: Kokoro synthesize done in 9243ms, samples=167257, file=334558 bytes
+10-09 22:27:55.139  8631  8695 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=34
+10-09 22:27:55.178  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:27:57.883  8631  8695 I SherpaOnnxTts: Kokoro synthesize done in 2744ms, samples=38770, file=77584 bytes
+10-09 22:27:57.884  8631  8702 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=40
+10-09 22:28:01.704  8631  8702 I SherpaOnnxTts: Kokoro synthesize done in 3820ms, samples=54188, file=108420 bytes
+10-09 22:28:01.705  8631  8697 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=55
+10-09 22:28:03.283  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:28:03.287  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:28:28.136  8631  8631 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 22:28:28.285  8631  8695 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=55
+10-09 22:28:28.337  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:28:28.338  8631  8631 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=204}
+10-09 22:28:31.885  8631  8695 I SherpaOnnxTts: Kokoro synthesize done in 3600ms, samples=73093, file=146230 bytes
+10-09 22:28:31.886  8631  8695 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=48
+10-09 22:28:34.834  8631  8695 I SherpaOnnxTts: Kokoro synthesize done in 2948ms, samples=57309, file=114662 bytes
+10-09 22:28:34.835  8631  8695 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=29
+10-09 22:28:37.280  8631  8695 I SherpaOnnxTts: Kokoro synthesize done in 2445ms, samples=40985, file=82014 bytes
+10-09 22:28:37.281  8631  8702 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=21
+10-09 22:28:39.530  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:28:39.531  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:28:39.673  8631  8702 I SherpaOnnxTts: Kokoro synthesize done in 2392ms, samples=35009, file=70062 bytes
+10-09 22:28:39.694  8631  8702 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=120
+10-09 22:28:39.716  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:28:41.259  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:28:41.260  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:28:46.554  8631  8702 I SherpaOnnxTts: Kokoro synthesize done in 6860ms, samples=139915, file=279874 bytes
+10-09 22:28:46.571  8631  8702 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=89
+10-09 22:28:46.600  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:28:51.928  8631  8702 I SherpaOnnxTts: Kokoro synthesize done in 5357ms, samples=96087, file=192218 bytes
+10-09 22:28:51.929  8631 11974 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=10
+10-09 22:28:53.765  8631 11974 I SherpaOnnxTts: Kokoro synthesize done in 1836ms, samples=19058, file=38160 bytes
+10-09 22:28:53.766  8631  8702 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=41
+10-09 22:28:56.895  8631  8702 I SherpaOnnxTts: Kokoro synthesize done in 3129ms, samples=49981, file=100006 bytes
+10-09 22:28:56.896  8631  8702 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=22
+10-09 22:28:59.284  8631  8702 I SherpaOnnxTts: Kokoro synthesize done in 2388ms, samples=29497, file=59038 bytes
+10-09 22:28:59.285  8631 11974 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=49
+10-09 22:29:00.809  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:29:00.810  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:29:03.679  8631 11974 I SherpaOnnxTts: Kokoro synthesize done in 4393ms, samples=67852, file=135748 bytes
+10-09 22:29:03.696  8631 11974 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=42
+10-09 22:29:03.736  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:29:06.677  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:29:06.678  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:29:07.332  8631 11974 I SherpaOnnxTts: Kokoro synthesize done in 3636ms, samples=57221, file=114486 bytes
+10-09 22:29:07.350  8631 11974 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=93
+10-09 22:29:07.377  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:29:09.849  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:29:09.850  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:29:14.139  8631 11974 I SherpaOnnxTts: Kokoro synthesize done in 6789ms, samples=118006, file=236056 bytes
+10-09 22:29:14.158  8631 11974 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=4
+10-09 22:29:14.189  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:29:15.725  8631 11974 I SherpaOnnxTts: Kokoro synthesize done in 1566ms, samples=14277, file=28598 bytes
+10-09 22:29:15.726  8631  8696 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=39
+10-09 22:29:19.050  8631  8696 I SherpaOnnxTts: Kokoro synthesize done in 3324ms, samples=43960, file=87964 bytes
+10-09 22:29:19.051  8631  8693 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=24
+10-09 22:29:21.582  8631  8693 I SherpaOnnxTts: Kokoro synthesize done in 2531ms, samples=32606, file=65256 bytes
+10-09 22:29:21.583  8631  8696 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=95
+10-09 22:29:23.094  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:29:23.095  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:29:28.557  8631  8696 I SherpaOnnxTts: Kokoro synthesize done in 6974ms, samples=120214, file=240472 bytes
+10-09 22:29:28.625  8631  8696 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=170
+10-09 22:29:28.658  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:29:30.323  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:29:30.330  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:30:31.949  8631  8631 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 22:30:32.163  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:30:32.165  8631  8631 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=216}
+10-09 22:31:07.043  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:31:07.058  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 22:31:47.796  8631  8631 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 22:31:48.021  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 22:31:48.026  8631  8631 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=229}
+10-09 22:32:24.695  8631  8697 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=170
+10-09 22:32:31.124  8631  8697 I SherpaOnnxTts: Kokoro synthesize done in 6429ms, samples=196523, file=393090 bytes
+10-09 22:32:31.124  8631  8697 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=32
+10-09 22:32:33.092  8631  8697 I SherpaOnnxTts: Kokoro synthesize done in 1968ms, samples=46370, file=92784 bytes
+10-09 22:32:33.093  8631  8735 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=67
+10-09 22:32:36.135  8631  8735 I SherpaOnnxTts: Kokoro synthesize done in 3042ms, samples=85038, file=170120 bytes
+10-09 22:32:36.139  8631  8693 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=109
+10-09 22:32:41.914  8631  8693 I SherpaOnnxTts: Kokoro synthesize done in 5775ms, samples=123758, file=247560 bytes
+10-09 22:32:41.915  8631  8693 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=104
+10-09 22:32:43.530  8631  8631 D čič   : Analytics Event: playback_paused
+10-09 22:32:43.533  8631  8631 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0

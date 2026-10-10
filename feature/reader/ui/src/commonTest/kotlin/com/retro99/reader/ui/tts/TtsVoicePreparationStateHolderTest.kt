@@ -58,6 +58,51 @@ class TtsVoicePreparationStateHolderTest {
     }
 
     @Test
+    fun `clearing a finished state drops a failure a later reader never started`() {
+        // Given
+        val classUnderTest = TtsVoicePreparationStateHolder()
+        classUnderTest.begin(NeuralVoicePackage.KOKORO, TtsPreparationProgress.Downloading(10L, 100L))
+        classUnderTest.markFailed(NeuralVoicePackage.KOKORO)
+
+        // When
+        classUnderTest.clearFinishedState()
+
+        // Then
+        assertEquals(TtsVoicePreparationState.Idle, classUnderTest.state.value)
+    }
+
+    @Test
+    fun `clearing a finished state drops a completion`() {
+        // Given
+        val classUnderTest = TtsVoicePreparationStateHolder()
+        classUnderTest.begin(NeuralVoicePackage.KOKORO, TtsPreparationProgress.Downloading(10L, 100L))
+        classUnderTest.markComplete(NeuralVoicePackage.KOKORO)
+
+        // When
+        classUnderTest.clearFinishedState()
+
+        // Then
+        assertEquals(TtsVoicePreparationState.Idle, classUnderTest.state.value)
+    }
+
+    @Test
+    fun `clearing a finished state leaves a running preparation and its progress`() {
+        // Given
+        val classUnderTest = TtsVoicePreparationStateHolder()
+        val progress = TtsPreparationProgress.Downloading(40L, 100L)
+        classUnderTest.begin(NeuralVoicePackage.KOKORO, progress)
+
+        // When
+        classUnderTest.clearFinishedState()
+
+        // Then
+        assertEquals(
+            TtsVoicePreparationState.Running(NeuralVoicePackage.KOKORO, progress),
+            classUnderTest.state.value,
+        )
+    }
+
+    @Test
     fun `updates from another package cannot complete the active preparation`() {
         // Given
         val classUnderTest = TtsVoicePreparationStateHolder()

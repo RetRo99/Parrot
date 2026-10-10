@@ -67,6 +67,24 @@ class TtsVoicePreparationStateHolder {
         )
     }
 
+    /**
+     * Drops a finished result (Complete or Failed) so a reader that opens later starts from
+     * Idle instead of showing the outcome of a download it never started. A Running
+     * preparation is left alone: it is still the holder's one active download.
+     *
+     * Not called when a download finishes: `awaitVoicePreparation` reads the result from here
+     * and reads Idle as "cancelled", so clearing early would turn a success into one.
+     */
+    fun clearFinishedState() {
+        mutableState.update { currentState ->
+            if (currentState is TtsVoicePreparationState.Running) {
+                currentState
+            } else {
+                TtsVoicePreparationState.Idle
+            }
+        }
+    }
+
     private fun updateTerminalState(
         voicePackage: NeuralVoicePackage,
         terminalState: TtsVoicePreparationState,

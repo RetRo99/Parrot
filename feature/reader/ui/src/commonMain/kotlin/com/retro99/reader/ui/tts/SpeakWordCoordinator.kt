@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** Small state of the dictionary "speak word" path: what the speaker button shows. */
 sealed interface SpeakWordState {
@@ -107,7 +108,10 @@ class SpeakWordCoordinator(
                 paused = interruptions.filter { interruption -> interruption.isPlayingNow() }
                 paused.forEach { interruption -> interruption.pause() }
                 _state.value = SpeakWordState.Speaking
-                player.play(clip)
+                val ended = withTimeoutOrNull(WORD_PLAYBACK_TIMEOUT_MS) { player.play(clip) }
+                if (ended == null) {
+                    _failures.tryEmit(SpeakWordFailure(voiceId = word.voiceId, isNeural = word.isNeural))
+                }
             } finally {
                 player.stop()
                 paused.forEach { interruption -> interruption.resume() }
@@ -117,10 +121,17 @@ class SpeakWordCoordinator(
     }
 
     fun stop() {
-        val running = job ?: return
-        job = null
-        running.cancel()
+        // Cancel without blocking the caller, and keep the job: a speak() right after this must
+        // still join the cancelled request's cleanup, or that cleanup lands on the new word.
+        job?.cancel()
     }
 
     fun close() = stop()
 }
+
+/**
+ * How long a word clip is given to report its end. A word clip is at most a few seconds, so a
+ * longer wait means the player never reported anything — it is holding the clip because audio
+ * focus was refused, for instance — and narration must not stay paused behind it.
+ */
+private const val WORD_PLAYBACK_TIMEOUT_MS = 10_000L

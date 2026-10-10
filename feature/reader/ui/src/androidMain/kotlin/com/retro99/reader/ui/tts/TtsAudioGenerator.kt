@@ -9,17 +9,58 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
 
-@Single
+/**
+ * The one synthesis call read-aloud makes. Lets a host test drive synthesis outcomes:
+ * [TtsAudioGenerator] itself needs [TtsAudioCache], which needs an Android `Context`.
+ */
+interface TtsSentenceAudioSource {
+
+    suspend fun synthesize(
+        text: String,
+        voiceId: String?,
+        rate: Float,
+        pitch: Float,
+    ): TtsSynthesisResult
+}
+
+@Single(binds = [TtsAudioGenerator::class, TtsSentenceAudioSource::class])
 class TtsAudioGenerator(
+    synthesizer: TtsSynthesizer,
+    cache: TtsAudioCache,
+) : TtsSentenceAudioSource {
+
+    private val core = TtsAudioGeneratorCore(synthesizer = synthesizer, cache = cache.store)
+
+    override suspend fun synthesize(
+        text: String,
+        voiceId: String?,
+        rate: Float,
+        pitch: Float,
+    ): TtsSynthesisResult = core.synthesize(text = text, voiceId = voiceId, rate = rate, pitch = pitch)
+
+    /** The cached WAV for identical text and parameters, or null. Skips the synthesis gate. */
+    fun findCached(
+        text: String,
+        voiceId: String?,
+        rate: Float,
+        pitch: Float,
+    ): File? = core.findCached(text = text, voiceId = voiceId, rate = rate, pitch = pitch)
+}
+
+/**
+ * The generation logic, with the cache as the Context-free [TtsAudioCacheStore], so a host
+ * test can drive synthesis outcomes against a real cache directory.
+ */
+internal class TtsAudioGeneratorCore(
     private val synthesizer: TtsSynthesizer,
-    private val cache: TtsAudioCache,
-) {
+    private val cache: TtsAudioCacheStore,
+) : TtsSentenceAudioSource {
 
     private val lockRegistryMutex = Mutex()
     private val synthesisLocks = mutableMapOf<String, LockEntry>()
     private val synthesisSemaphore = Semaphore(MAX_CONCURRENT_SYNTHESIS)
 
-    suspend fun synthesize(
+    override suspend fun synthesize(
         text: String,
         voiceId: String?,
         rate: Float,
@@ -39,14 +80,19 @@ class TtsAudioGenerator(
                 }
 
                 val outputFile = cache.fileFor(key)
-                val result = synthesisSemaphore.withPermit {
-                    synthesizer.synthesize(
-                        text = text,
-                        voiceId = voiceId,
-                        rate = effectiveRate,
-                        pitch = pitch,
-                        outputFile = outputFile,
-                    )
+                val result = try {
+                    synthesisSemaphore.withPermit {
+                        synthesizer.synthesize(
+                            text = text,
+                            voiceId = voiceId,
+                            rate = effectiveRate,
+                            pitch = pitch,
+                            outputFile = outputFile,
+                        )
+                    }
+                } catch (error: Throwable) {
+                    outputFile.delete()
+                    throw error
                 }
                 val resultFile = result.file
                 if (
@@ -59,12 +105,15 @@ class TtsAudioGenerator(
                         durationMs = result.durationMs ?: cache.durationMs(resultFile),
                     )
                 }
+                // TTS-F03: the output file is the cache entry, so anything a failed or
+                // cancelled synthesis left there would be served as a valid hit forever.
+                // The rule holds here for every synthesizer, whatever each one deletes.
+                outputFile.delete()
                 result
             }
         }
     }
 
-    /** The cached WAV for identical text and parameters, or null. Skips the synthesis gate. */
     fun findCached(
         text: String,
         voiceId: String?,

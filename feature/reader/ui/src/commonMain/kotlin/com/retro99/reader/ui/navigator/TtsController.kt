@@ -53,6 +53,9 @@ enum class TtsPlaybackAction(val analyticsValue: String) {
     CHAPTER("chapter"),
     RESUME("resume"),
     PREVIEW_RESUME("preview_resume"),
+
+    /** Narration restarted because the voice, the speed or the pitch changed. */
+    SETTINGS_CHANGE("settings_change"),
     ACTIVE_PLAYBACK("active_playback"),
 }
 

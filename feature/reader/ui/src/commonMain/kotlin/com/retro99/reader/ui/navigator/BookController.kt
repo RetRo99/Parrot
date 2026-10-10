@@ -121,6 +121,9 @@ interface BookController : AutoCloseable {
         sentenceDurationMs: Long,
     )
 
+    /** Removes the sentence highlight [applyHighlightWithPageTurn] drew, if any. */
+    suspend fun clearSentenceHighlight() = Unit
+
     /**
      * Checks the visibility of a sentence element on the current page.
      * Used for pre-emptive page turn logic during TTS playback.
@@ -176,6 +179,12 @@ interface BookController : AutoCloseable {
      * requiring media overlays. Platforms that do not support TTS return an empty list.
      */
     suspend fun getChapterSentences(): List<TtsSentence> = emptyList()
+
+    /**
+     * The hrefs of the reading order, in spine order. Empty when the platform cannot report
+     * them. Read-aloud uses it to find the next chapter that has text (TTS-F14).
+     */
+    suspend fun readingOrderHrefs(): List<String> = emptyList()
 
     /**
      * Start of each reading-order item as a fraction (0..1) of the whole book, used to draw

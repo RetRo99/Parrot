@@ -1,0 +1,8 @@
+10-09 17:57:50.904 26487 26546 I SherpaOnnxTts: Kokoro synthesize done in 6710ms, samples=124406, file=248856 bytes
+10-09 17:57:50.905 26487 26556 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:57:50.905 26487 26556 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=164
+10-09 17:57:51.376  4042  4042 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:log -p i -t QA-MARKER pressing Stop listening now'
+10-09 17:57:51.404 31603 31603 I QA-MARKER: pressing Stop listening now
+10-09 17:57:51.604 26487 26487 D čič   : Analytics Event: playback_paused
+10-09 17:58:11.462  4042  4042 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:log -p i -t QA-MARKER generation thread went idle 0.00 s after stop'
+10-09 17:58:11.503 32085 32085 I QA-MARKER: generation thread went idle 0.00 s after stop

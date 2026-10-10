@@ -1,0 +1,8 @@
+10-09 17:49:45.728 26487 26535 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:49:45.730 26487 26535 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=253
+10-09 17:49:55.083 26487 26535 I SherpaOnnxTts: Kokoro synthesize done in 9353ms, samples=294774, file=589592 bytes
+10-09 17:49:55.087 26487 26535 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:49:55.087 26487 26535 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=162
+10-09 17:50:00.547 26487 26535 I SherpaOnnxTts: Kokoro synthesize done in 5460ms, samples=179665, file=359374 bytes
+10-09 17:50:00.595 26487 26487 I ExoPlayerImpl: Init a430c85 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-09 17:50:00.941 26487 28506 D AudioTrack: setVolume(1.000000, 1.000000) pid : 26487

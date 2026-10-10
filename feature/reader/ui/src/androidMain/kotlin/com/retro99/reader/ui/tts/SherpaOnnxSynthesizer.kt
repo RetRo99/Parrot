@@ -105,7 +105,7 @@ class SherpaOnnxSynthesizer(
             outputFile.parentFile?.mkdirs()
             if (outputFile.exists()) outputFile.delete()
 
-            val speakerId = parseSpeakerId(voiceId)
+            val speakerId = parseKokoroSpeakerId(voiceId)
             val speed = rate.coerceIn(MIN_SPEED, MAX_SPEED)
             val requestJob = currentCoroutineContext()[Job]
             val requestGeneration = cancellationGeneration.get()
@@ -116,16 +116,15 @@ class SherpaOnnxSynthesizer(
                 withContext(Dispatchers.IO) {
                     val activeEngine = engine
                         ?: throw CancellationException("Kokoro engine released")
-                    activeEngine.generateWithCallback(text, speakerId, speed) {
-                        if (
+                    activeEngine.generateWithCallback(
+                        text,
+                        speakerId,
+                        speed,
+                        neuralGenerationCallback {
                             requestJob?.isActive == false ||
-                            cancellationGeneration.get() != requestGeneration
-                        ) {
-                            1
-                        } else {
-                            0
-                        }
-                    }
+                                    cancellationGeneration.get() != requestGeneration
+                        },
+                    )
                 }
             }
             if (requestJob?.isActive == false) {
@@ -150,6 +149,9 @@ class SherpaOnnxSynthesizer(
             if (saved && outputFile.exists() && outputFile.length() > 0) {
                 TtsSynthesisResult(TtsSynthesisStatus.SUCCESS, outputFile)
             } else {
+                // The output file is the cache entry: a partial save must leave nothing
+                // behind, as every other failure path here does (TTS-F03).
+                outputFile.delete()
                 TtsSynthesisResult(
                     status = TtsSynthesisStatus.ERROR,
                     error = "Kokoro failed to save audio",
@@ -241,41 +243,42 @@ class SherpaOnnxSynthesizer(
         }
     }
 
-    private fun parseSpeakerId(voiceId: String?): Int {
-        val raw = voiceId?.substringAfter(':', "")
-        return raw?.toIntOrNull()?.coerceAtLeast(0) ?: 0
-    }
-
     private companion object {
         val NUM_THREADS = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
         const val WARMUP_TEXT = "a"
         const val MIN_SPEED = TtsSpeechRate.MIN
         const val MAX_SPEED = TtsSpeechRate.MAX
         const val TAG = "SherpaOnnxTts"
-
-        val KOKORO_VOICES: List<TtsVoice> = listOf(
-            "af" to "Heart (US female)",
-            "af_bella" to "Bella (US female)",
-            "af_nicole" to "Nicole (US female)",
-            "af_sarah" to "Sarah (US female)",
-            "af_sky" to "Sky (US female)",
-            "am_adam" to "Adam (US male)",
-            "am_michael" to "Michael (US male)",
-            "bf_emma" to "Emma (UK female)",
-            "bf_isabella" to "Isabella (UK female)",
-            "bm_george" to "George (UK male)",
-            "bm_lewis" to "Lewis (UK male)",
-        ).mapIndexed { index, (_, label) ->
-            TtsVoice(
-                id = "$KOKORO_VOICE_PREFIX$index",
-                name = label,
-                locale = "en",
-                quality = 500,
-                latency = 500,
-                requiresNetwork = false,
-                isNeural = true,
-                isDownloaded = false,
-            )
-        }
     }
+}
+
+/** The speaker index a stored `kokoro:<n>` voice id names, for the native engine. */
+internal fun parseKokoroSpeakerId(voiceId: String?): Int {
+    val raw = voiceId?.substringAfter(':', "")
+    return raw?.toIntOrNull()?.coerceIn(KOKORO_VOICES.indices) ?: 0
+}
+
+internal val KOKORO_VOICES: List<TtsVoice> = listOf(
+    "af" to "Heart (US female)",
+    "af_bella" to "Bella (US female)",
+    "af_nicole" to "Nicole (US female)",
+    "af_sarah" to "Sarah (US female)",
+    "af_sky" to "Sky (US female)",
+    "am_adam" to "Adam (US male)",
+    "am_michael" to "Michael (US male)",
+    "bf_emma" to "Emma (UK female)",
+    "bf_isabella" to "Isabella (UK female)",
+    "bm_george" to "George (UK male)",
+    "bm_lewis" to "Lewis (UK male)",
+).mapIndexed { index, (_, label) ->
+    TtsVoice(
+        id = "$KOKORO_VOICE_PREFIX$index",
+        name = label,
+        locale = "en",
+        quality = 500,
+        latency = 500,
+        requiresNetwork = false,
+        isNeural = true,
+        isDownloaded = false,
+    )
 }
