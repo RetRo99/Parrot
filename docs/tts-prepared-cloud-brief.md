@@ -228,6 +228,17 @@ ANDROID_HOME=$HOME/Library/Android/sdk ./gradlew :androidApp:assembleDebug :comp
 ```
 
 ```bash
+ANDROID_HOME=$HOME/Library/Android/sdk ./gradlew :lib:database:implementation:testAndroidHostTest :lib:database:implementation:verifySqlDelightMigration --max-workers=2 -Pkotlin.daemon.jvmargs=-Xmx6g
+```
+
+The second task there compares a freshly created database with one upgraded through the
+migrations. It must pass after any change to a `.sq` or `.sqm` file. A new column goes at
+the END of the table in the `.sq` file, where `ALTER TABLE ... ADD COLUMN` puts it on an
+upgraded device: several queries use `SELECT *`, and their generated readers take columns
+by position, so a column placed in the middle is read from the wrong slot on every
+existing install.
+
+```bash
 scripts/supabase/test.sh
 ```
 
