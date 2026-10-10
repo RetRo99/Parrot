@@ -1,6 +1,6 @@
 --- REPORT ---
 Branch: tts/prepared-chapters
-Commits this run (hash + subject, oldest first): 9ca92c97 docs(tts): record prepared chapters gate and test baseline; 65e9eaa3 docs(tts): establish dead Play predates run 5b on Samsung; 7d812f67 test(tts): specify prepared encoding seam (red: four failures); subsequent finalization commits recorded in git log
+Commits this run (hash + subject, oldest first): 9ca92c97 docs(tts): record prepared chapters gate and test baseline; 65e9eaa3 docs(tts): establish dead Play predates run 5b on Samsung; 7d812f67 test(tts): specify prepared encoding seam (red: four failures); e64bf999 feat(tts): add tested PCM input and atomic prepared encoding core; report-only finalization commit is not self-listed (see git log)
 Steps complete (0-8): 0 comparison complete; 1 partial (host seam only); 2-8 not complete
 Step 0: did the dead Play button reproduce (yes/no, on which entry paths); same on the build of 7045b62b (yes/no); cause (file and line); fixed (yes/no) and the test that failed first: yes, Pride and Prejudice via Continue reading and Library -> Read on both builds; yes on 7045b62b; root cause not established (code leads: ReaderViewModel.kt:2544 and ReaderTtsSetup.kt:68-72); no fix or failing regression test, since it predates run 5b; second book plays on both builds
 Step 1: format chosen; six-sentence measurements (WAV bytes, compressed bytes, duration difference per sentence in ms); joins audibly worse than WAV (yes/no); fell back to WAV (yes/no, why): not chosen; measurements not run; joins not assessed; no fallback decision; interface, PCM reader and atomic encoding core built, platform codec not built
@@ -12,7 +12,7 @@ Step 6: every state of the row that was built (list); every new string key (list
 Tests from the bug-fix runs edited (name + why), or "none": none
 Per module: reader ui Android host 435/435, reader ui iOS 319/319 (before: 319/319), settings ui 22/22, home ui 84/84, composeApp 59/59, analytics 75/75
 Does a test resolve the new classes from the real Koin graph (yes/no, name): no new classes
-App build results (Android assemble, iOS framework): baseline both successful; post-change builds pending
+App build results (Android assemble, iOS framework): both successful, baseline and post-change final builds
 Device used (model + serial), any command sent to another device (yes/no): Samsung SM-S921B RFCWC0SSVDM; no
 Kokoro chapter: sentences, time to prepare, size on disk, notification showed progress (yes/no): not run
 Playing the prepared chapter: any synthesize line for it (yes/no); pause, resume, skip, double-tap (result of each): not run
@@ -22,7 +22,7 @@ Speed change and back: what the row showed each time: not run
 Delete from the row, settings total, Delete all (result of each): not run
 System voice chapter prepared and played (yes/no): not run
 States of the row seen on the phone (list), and states not reached: none; all, row not built
-State the phone was left in (voice, rate, screen, prepared audio deleted yes/no): baseline APK restored; Library; final voice/rate check pending; no prepared audio exists
+State the phone was left in (voice, rate, screen, prepared audio deleted yes/no): System voice, 1.0, Library, yes (none created; run-as confirms files/tts-prepared absent); restored baseline APK
 Done this run: branch created; baseline counts recorded; dead Play before/after comparison and privacy-filtered evidence; tests-first encoding seam; ongoing feature document and report
 Not done or partly done, and why: stopped during Step 1 after host seam; native codec and six-sentence phone measurements pending; no downstream work built on an unvalidated format; Steps 2-8 not built
 Tests skipped, ignored or weakened (file + name + reason), or "none": none

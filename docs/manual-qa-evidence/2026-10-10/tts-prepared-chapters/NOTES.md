@@ -27,4 +27,9 @@ tapping the page, opening Highlight instead of controls. It was closed without
 editing it; tapping the page at (540,1170), then waiting 0.9 s and taking fresh
 Listen bounds, opened Listening. No saved highlight was changed.
 
-Feature checks, compression measurements and row screenshots: not run yet.
+Feature checks, compression measurements and row screenshots: not run; native
+codec and row are not built. Step 1 is partial, host seam only.
+
+- Final six-module verification: reader Android 435/435 (423 original plus 12 new), reader iOS 319/319 (before 319/319), settings 22/22, home 84/84, composeApp 59/59, analytics 75/75; zero skips/errors/failures from XML.
+- Final Android assemble and iOS framework: successful after encoder-core implementation.
+- Final phone check: Listening shows System voice and 1×; reader closed via fresh Back bounds; Library visible; run-as test reports files/tts-prepared absent. Baseline APK restored, no prepared audio created or deleted.

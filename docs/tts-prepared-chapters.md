@@ -52,8 +52,10 @@ implementation then replaced that stub without editing the tests. Six-module
 verification is green: reader Android 435/435 (423 existing + 12 new), reader
 iOS 319/319 (before 319/319), settings 22/22, home 84/84, composeApp 59/59,
 analytics 75/75. Counts are from result XML; zero failures/errors/skips. The
-existing bug-fix tests are unedited. Baseline Android APK and iOS framework
-builds succeeded; post-seam final builds are pending.
+existing bug-fix tests are unedited. Both baseline and post-seam final Android
+APK/iOS framework builds succeeded. Phone left on the restored baseline APK,
+System voice, rate 1×, Library; `files/tts-prepared` does not exist (run-as
+checked). No prepared audio was created, so none needed deleting.
 
 The core invokes an injected suspend encoding function, giving it a unique
 same-directory `.part` file. Only a nonempty result with positive measured
