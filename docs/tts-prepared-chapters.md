@@ -170,7 +170,7 @@ All three fail against the unimplemented pump; the initial test-only
 ByteBuffer return-type compile error was corrected before the red run.
 Native MediaCodec adapter and six-sentence measurement remain pending.
 
-Native adapter implementation now exists as `AndroidTtsPreparedAudioEncoder`:
+Native AAC adapter implementation now exists as `AndroidTtsPreparedAacEncoder`:
 MediaCodec AAC-LC, mono, 48 kbit/s at the WAV sample rate, MediaMuxer M4A.
 The host-tested pump feeds bounded PCM buffers, derives timestamps from sample
 counts, queues a separate EOS, drains through output EOS, and bounds a stall
@@ -221,6 +221,8 @@ attempted and one succeeded operation, 1,327 ms, one correlated start/terminal
 breadcrumb. Playback paused after observation. Evidence is in the dated folder
 (`dead-play-fixed-logcat.txt`). The cause matches the proposed guard.
 
+## Previous run status (historical; superseded by continuation above)
+
 Branch `tts/prepared-chapters`, based on `e8ed4319`. The supplied worktree was
 detached at that commit. All work and Gradle commands run from that worktree;
 no configuration files are created or edited.
@@ -250,7 +252,7 @@ primary worktree using Gradle `-p`, with ANDROID_HOME and no local.properties.
 Both APKs were installed with `adb -s RFCWC0SSVDM install -r`; baseline restored
 after comparison. No other device was targeted or Supertonic terms accepted.
 
-## Baseline tests
+## Previous run baseline tests
 
 The requested six-module verification command succeeded (existing test tasks
 up to date). Counts read from `build/test-results` XML, not console summaries:
@@ -341,6 +343,21 @@ binding is WAV, not AAC. Every new `@Single` needs a real-graph resolution test.
 Cloud packaging guidance above reflects the implemented store, but Step 7's
 final UI/strings/state/limits documentation remains unfinished until the feature
 exists. No previously built bug-fix test was changed or weakened.
+
+Final verification and restoration: the six-module counts above remain green;
+Android assemble and iOS framework succeeded on Step 3 source `9478844e`.
+That APK was installed with `install -r` on the Samsung. Normal System playback
+still starts and shows Pause with one attempted and one succeeded operation
+(889 ms, PID 23332). This is a regression smoke, not a Step 8 prepared-chapter
+check. Fresh sheet showed System voice at 1×; Stop listening and reader Back
+returned to Library. `run-as` confirmed both probe folder and `files/tts-prepared`
+absent. Only the authored temporary UI dump was removed; no app data was cleared.
+Tiny instrumentation APK remains installed under the no-uninstall rule.
+
+This run ends for execution-time budget after complete, committed green Steps
+1–3, rather than starting an unfinished Step 4. The complete end-of-step report
+is `docs/tts-prepared-chapters-report.txt`. No full preparation UI/device journey
+is claimed; acoustic comparison remains explicitly unassessed.
 
 ## For the cloud backup run
 

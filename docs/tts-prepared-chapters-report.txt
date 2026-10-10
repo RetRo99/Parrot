@@ -15,7 +15,8 @@ d561f8bf test(tts): specify prepared store safety and resume (intentionally red)
 0ed7f197 feat(tts): add atomic resumable prepared chapter store
 5cc02748 test(tts): pin prepared lookup and live synthesis priority (intentionally red)
 9478844e feat(tts): serve prepared audio with live-first synthesis priority
-(Final documentation-only checkpoint commits are listed in git log and the final report.)
+e78f2339 docs: checkpoint steps 1-3 report and step 4 handoff
+(This final documentation-only report commit is listed in git log and the final response.)
 Steps complete this run, and steps complete in total (1-8): 1,2,3; 1,2,3 (WAV fallback, subjective AAC join check unavailable).
 Step 1: format chosen; six-sentence measurements (WAV bytes, compressed bytes, duration difference per sentence in ms); joins audibly worse than WAV (yes/no); fell back to WAV (yes/no, why): WAV; Kokoro 76970/11190/+104, 99606/14050/+102, 127086/17690/+127; System 105764/14909/+102, 103340/14570/+109, 141262/19364/+87; audibly worse unknown (no audio-monitoring tool); yes, all AAC durations exceed 50 ms and encoder-delay/padding remux metadata was not preserved, deltas unchanged. Both WAV and AAC groups played indices 0,1,2 through the unchanged engine.
 Step 2: where prepared audio lives on disk; manifest fields; does any file name or manifest contain sentence text or a title (yes/no): filesDir/tts-prepared/<hashed-server+book>/<hashed-href>/<same-cache-key>.wav and manifest.json; formatVersion, bookId, serverId, chapterHref, voiceId, modelVersion, rate, pitch, createdTimeMs, ordered sentences(key,durationMs,bytes), complete,totalBytes,lastUsedTimeMs; no. Host implementation green.
@@ -36,12 +37,12 @@ Speed change and back: what the row showed each time: not built.
 Delete from the row, settings total, Delete all (result of each): not built.
 System voice chapter prepared and played (yes/no): no; not built.
 States of the row seen on the phone (list), and states not reached: none; all not built.
-State the phone was left in (voice, rate, screen, prepared audio deleted yes/no): System voice, 1x, Listening sheet in first text chapter, paused; no prepared audio created.
-Why the run ended where it did (finished / out of time / blocked, and on what): out of time after committed green step 3; final phone cleanup/smoke pending; step 4 not started.
+State the phone was left in (voice, rate, screen, prepared audio deleted yes/no): System voice, rate 1.0, Library; yes, probe audio removed and files/tts-prepared absent by run-as; tiny instrumentation-only APK retained (no uninstall allowed).
+Why the run ended where it did (finished / out of time / blocked, and on what): out of time after committed green step 3, full six-module verification, both final builds and Samsung normal-playback regression smoke (one attempted/succeeded, 889 ms); step 4 not started.
 Done this run: brief committed, comparison worktree removed, Play regression failed then fixed and Samsung confirmed; real native encoder, measured WAV fallback, atomic resumable prepared store, prepared-first playback, live-priority synthesis, three real Koin graph tests; steps 1-3 committed green.
 Not done or partly done, and why: subjective join assessment unavailable; numeric duration gate sufficient for WAV fallback; steps 4-8 not built, so no end-user preparation button or job yet.
 Tests skipped, ignored or weakened (file + name + reason), or "none": none.
 Places the brief was ambiguous and what I chose: ordered manifest includes pending entries (null duration, zero bytes) to retain resumable total; duplicate keys count positions but bytes once; total store/limit include manifests; private synthesis before successful encoding preserves live-owned WAVs, existing valid cache is not deleted on background failure; WAV fallback selected on numeric gate without pretending subjective joins were assessed.
 Files changed outside feature/reader/ui, feature/settings/ui, lib/analytics, translations, androidApp/src/main/AndroidManifest.xml, composeApp tests and docs: none.
-Known problems I am leaving: WAV uses more storage; AAC adds 87-127 ms in the second phone probe; no subjective acoustic judgment. Tiny instrumentation test APK remains installed (no uninstall allowed).
+Known problems I am leaving: feature not user-visible until steps 4-6; WAV uses more storage; AAC adds 87-127 ms in the second phone probe; no subjective acoustic judgment; limit may remain exceeded while all chapters are protected; no checksum/fsync guarantees. Tiny instrumentation test APK remains installed (no uninstall allowed).
 --- END REPORT ---

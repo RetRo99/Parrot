@@ -1,5 +1,12 @@
 # Prepared chapters: Step 0 comparison
 
+## Final continuation checkpoint
+
+- Steps 1–3 complete and committed green; steps 4–8 not built. Final XML counts: reader Android 469/469, iOS 324/324, settings 22/22, home 84/84, composeApp 62/62, analytics 75/75; zero failures/errors/skips. No bug-fix tests edited.
+- Final Android assemble and iOS framework succeeded on `9478844e` source. Samsung update-installed with `install -r` (no data clear). Normal System playback showed Pause and one attempted/succeeded operation, 889 ms, PID 23332; see `final-build-system-smoke-logcat.txt`. This is not a prepared-chapter UI check.
+- Fresh sheet confirmed System voice, 1×. Stop listening, then fresh reader Back returned to Library. `run-as` checks confirmed `cache/prepared-step1-probe` and `files/tts-prepared` absent. Authored temporary `/sdcard/parrot-prepared-ui.xml` removed. Instrumentation-only test APK left installed under no-uninstall rule; no launcher or app data.
+- All adb calls targeted RFCWC0SSVDM. No other device, uninstall, data clear, sign-out, Supertonic terms acceptance, network change or ringer change.
+
 ## Continuation: dead Play fix
 
 ## Step 1: six-sentence format gate
