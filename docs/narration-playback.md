@@ -162,3 +162,48 @@ The honest statement of the defect is therefore two-part:
   app was already breaking.
 
 The fix belongs in the app: hop to the application thread before touching the session.
+
+## 5. What is fixed in this run
+
+The device pass is `manual-qa-evidence/2026-10-10/narration-playback/`.
+
+| Fix | Commit | What it does |
+| --- | --- | --- |
+| Clip messages on the right thread | `ae738e4b` | `ClipScheduler` calls `setLooper(player.applicationLooper)` before `send()`, so the callback that reaches the session runs on the thread the session requires. Narration plays: `state=READY`, `isPlaying=true`, session `PLAYING(3)`. |
+| The playlist outliving its player | `23392830`, `949ad7f0` | `playlistNeedsRebuild` — a pure function in the shape of `mediaButtonSpecs`, host tested — now also says "rebuild" when the cached playlist was built on a player that no longer exists, and `MediaOverlayPlayer` tracks (weakly) which player that was. Without it, handing listening from the device voice back to narration left `prepareChapterAsync` seeking a brand-new, empty player: `state=NONE(0)`, `0:00`, and no press on Play recovered it. |
+
+Only the second fault had a host test. The first is thread affinity inside media3, which
+needs a real `ExoPlayer` and a `Looper` to observe; this module's host tests are pure JVM
+with hand-written fakes and the project has no Robolectric and no mocking library, so any
+seam that could be tested would have pushed the defective line into untested code. It was
+proven on the device instead, before and after, in `ae738e4b`'s message and NOTES A6/D1.
+
+What the device pass established, on the same read-along book: play, pause, resume, both
+ten second skips, a seek-bar drag and 1× → 1.5× → 1× all work; the media notification is
+posted and the service is a real foreground service (`startForegroundCount=1`), with
+pause and play working from the shade and the control present on the lock screen; three
+minutes locked keeps playing (21:24 → 24:30) with no idle stop — the check `804ac41e`
+could not do for narration; the highlight follows the audio across a page turn
+(page 9 → 10); a chapter boundary is crossed with the service kept; narration and the
+device voice can be swapped in both directions with only one playing; Stop listening
+removes the notification; and read-aloud on an ordinary book still plays, pauses from the
+notification, resumes on **one** press and survives a minute locked.
+
+### What is not fixed
+
+1. **Stop listening leaves the service and the session up, paused, until the reader is
+   left.** The notification goes and the service leaves the foreground, so nothing is
+   shown and nothing plays; `release()` tears the rest down on leaving the reader. This is
+   narration's shape of what `tts-background-playback.md` "what was not fixed" §3 records
+   for read-aloud. NOTES F1.
+2. **The notification's duration is the audio file's, not the chapter's** — `20:13 / 59:18`
+   in the shade against `24:53 / 41:44` in the sheet at the same moment, because the
+   chapter's audio file is longer than the chapter. Cosmetic. NOTES F2.
+3. **`<BOOK B>`, *The Rajah's Diamond*, is an incomplete read-along on the server** (§3).
+   The owner has to rebuild or re-publish that title's read-along file so the EPUB carries
+   its SMIL and audio, or stop offering it as a read-along. No app change: the app already
+   detects it (`readaloud_missing_media_overlays`) and tells the user *"This book has no
+   narration — reading with your device voice."* NOTES F3.
+4. The one-page section that does not auto-advance, recorded in
+   `tts-background-playback.md` and shared with this path, was out of this run's scope and
+   was not looked at.
