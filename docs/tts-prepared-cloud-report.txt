@@ -3,7 +3,7 @@ Branch: tts/prepared-cloud (worktree .claude/worktrees/tts-investigation)
 Commits this run (hash + subject, oldest first):
 44b10406 docs(tts): the owner's changes to the prepared-cloud brief
 6df96e92 docs(tts): part A stops - another feature's migration is pending
-<this commit> docs(tts): parts B and C on the phone, and the run report
+c2dcaffa docs(tts): parts B and C on the phone, and the run report
 Parts complete (A-D): A stopped at its own step 2 by design; B blocked entirely, not
 started; C complete, all three checks; D nothing to do. No code changed.
 A: linked (yes/no, or the command the owner must run); pending migrations before applying (list):
