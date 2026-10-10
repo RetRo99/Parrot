@@ -8,6 +8,9 @@ import resources.translations.reader_tts_delete
 import resources.translations.reader_tts_prepared_chapter_continue
 import resources.translations.reader_tts_prepared_chapter_failed
 import resources.translations.reader_tts_prepared_chapter_failed_space
+import resources.translations.reader_tts_prepared_chapter_estimate
+import resources.translations.reader_tts_prepared_chapter_estimate_hours
+import resources.translations.reader_tts_prepared_chapter_estimate_short
 import resources.translations.reader_tts_prepared_chapter_hint
 import resources.translations.reader_tts_prepared_chapter_other_busy
 import resources.translations.reader_tts_prepared_chapter_other_settings
@@ -31,9 +34,55 @@ class PreparedChapterRowUiTest {
     @Test fun `not prepared says what preparing is for and offers one button`() {
         val ui = preparedChapterRowUi(PreparedChapterRowState.NotPrepared)
         assertEquals(StringRes.reader_tts_prepared_chapter_hint, ui.status)
+        assertEquals(emptyList(), ui.statusArgs)
         assertEquals(listOf(PreparedChapterAction.PREPARE), ui.actions)
         assertEquals(StringRes.reader_tts_prepared_chapter_prepare, ui.actions.single().label)
         assertNull(ui.progress)
+    }
+
+    @Test fun `not prepared says the time and the size before the user starts`() {
+        val ui = preparedChapterRowUi(
+            PreparedChapterRowState.NotPrepared,
+            estimate = PreparedChapterEstimate(minutes = 12, bytes = 9_000_000),
+        )
+        assertEquals(StringRes.reader_tts_prepared_chapter_estimate, ui.status)
+        assertEquals(listOf(12, "9 MB"), ui.statusArgs)
+        assertEquals(listOf(PreparedChapterAction.PREPARE), ui.actions)
+    }
+
+    @Test fun `an estimate under a minute says so rather than rounding up to one`() {
+        val ui = preparedChapterRowUi(
+            PreparedChapterRowState.NotPrepared,
+            estimate = PreparedChapterEstimate(minutes = 0, bytes = 120_000),
+        )
+        assertEquals(StringRes.reader_tts_prepared_chapter_estimate_short, ui.status)
+        assertEquals(listOf("120 kB"), ui.statusArgs)
+    }
+
+    @Test fun `an estimate of an hour or more is said in hours and minutes`() {
+        val ui = preparedChapterRowUi(
+            PreparedChapterRowState.NotPrepared,
+            estimate = PreparedChapterEstimate(minutes = 90, bytes = 60_000_000),
+        )
+        assertEquals(StringRes.reader_tts_prepared_chapter_estimate_hours, ui.status)
+        assertEquals(listOf(1, 30, "60 MB"), ui.statusArgs)
+    }
+
+    @Test fun `a whole number of hours still reads as hours and zero minutes`() {
+        val ui = preparedChapterRowUi(
+            PreparedChapterRowState.NotPrepared,
+            estimate = PreparedChapterEstimate(minutes = 120, bytes = 1_000_000),
+        )
+        assertEquals(StringRes.reader_tts_prepared_chapter_estimate_hours, ui.status)
+        assertEquals(listOf(2, 0, "1 MB"), ui.statusArgs)
+    }
+
+    @Test fun `the estimate is only ever shown on the not prepared row`() {
+        val estimate = PreparedChapterEstimate(minutes = 12, bytes = 9_000_000)
+        val ready = preparedChapterRowUi(PreparedChapterRowState.Ready(81_000), estimate = estimate)
+        assertEquals(StringRes.reader_tts_prepared_chapter_ready, ready.status)
+        val partly = preparedChapterRowUi(PreparedChapterRowState.Partly(19, 151), estimate = estimate)
+        assertEquals(StringRes.reader_tts_prepared_chapter_partly, partly.status)
     }
 
     @Test fun `preparing counts the sentences with a progress bar and only cancel`() {

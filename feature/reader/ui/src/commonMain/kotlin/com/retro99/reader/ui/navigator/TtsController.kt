@@ -5,6 +5,7 @@ import com.retro99.reader.ui.tts.SpeakWordFailure
 import com.retro99.reader.ui.tts.TtsChapterPreparationRequest
 import com.retro99.reader.ui.tts.TtsChapterPreparationState
 import com.retro99.reader.ui.reader.PreparedChapterCloudInputs
+import com.retro99.reader.ui.reader.PreparedChapterMeasured
 import com.retro99.reader.ui.tts.TtsPreparedChapterAudio
 import com.retro99.reader.ui.tts.SpeakWordState
 import com.retro99.reader.ui.tts.TtsPreparationProgress
@@ -145,6 +146,14 @@ interface TtsController : NarrationController {
      */
     val chapterPreparation: Flow<TtsChapterPreparationState>
         get() = flowOf(TtsChapterPreparationState.Idle)
+
+    /**
+     * What this device has actually measured while preparing with the voice selected now,
+     * for the estimate on the "Prepare this chapter" button. The default is the answer on a
+     * platform that prepares nothing: no measurements, so the fixed figures are used.
+     */
+    val preparedChapterMeasured: Flow<PreparedChapterMeasured>
+        get() = flowOf(PreparedChapterMeasured())
 
     /** Prepared audio for [chapterHref] with the voice, speed and pitch selected now. */
     fun preparedChapterAudio(chapterHref: String): Flow<TtsPreparedChapterAudio> =

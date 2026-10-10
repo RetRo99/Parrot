@@ -146,6 +146,8 @@ internal data class AudioSheetUi(
     val preparedChapter: PreparedChapterRowState? = null,
     /** Name of the voice prepared audio was made for, when that voice is still installed. */
     val preparedChapterVoiceLabel: String? = null,
+    /** What preparing the chapter on screen is about to cost, when it can be estimated. */
+    val preparedChapterEstimate: PreparedChapterEstimate? = null,
     /** What Parrot Cloud adds to that row: one line of status and at most one button. */
     val preparedChapterCloud: PreparedChapterCloudInputs = PreparedChapterCloudInputs(),
 ) {
@@ -465,6 +467,7 @@ private fun DeviceVoiceBody(ui: AudioSheetUi, hasNarration: Boolean, actions: Au
         PreparedChapterCard(
             state = preparedChapter,
             voiceLabel = ui.preparedChapterVoiceLabel,
+            estimate = ui.preparedChapterEstimate,
             isEink = ui.isEink,
             actions = PreparedChapterActions(
                 onPrepare = actions.onPrepareChapter,

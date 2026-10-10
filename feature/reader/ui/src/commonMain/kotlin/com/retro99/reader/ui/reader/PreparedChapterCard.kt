@@ -63,6 +63,7 @@ internal data class PreparedChapterActions(
 internal fun PreparedChapterCard(
     state: PreparedChapterRowState,
     voiceLabel: String?,
+    estimate: PreparedChapterEstimate?,
     isEink: Boolean,
     actions: PreparedChapterActions,
     modifier: Modifier = Modifier,
@@ -70,7 +71,7 @@ internal fun PreparedChapterCard(
 ) {
     val colors = Ember.colors
     val shape = RoundedCornerShape(20.dp)
-    val ui = preparedChapterRowUi(state, voiceLabel)
+    val ui = preparedChapterRowUi(state, voiceLabel, estimate)
     val cloudUi = preparedChapterCloudUi(cloud)
     val title = stringResource(StringRes.reader_tts_prepared_chapter_title)
     val status = stringResource(ui.status, *ui.statusArgs.toTypedArray())

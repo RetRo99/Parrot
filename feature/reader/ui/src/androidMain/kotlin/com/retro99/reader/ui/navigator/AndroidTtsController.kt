@@ -25,6 +25,7 @@ import com.retro99.reader.ui.tts.TtsChapterPreparationJob
 import com.retro99.reader.ui.tts.TtsChapterPreparationRequest
 import com.retro99.reader.ui.tts.TtsChapterPreparationState
 import com.retro99.reader.ui.tts.TtsPreparationVoiceKind
+import com.retro99.reader.ui.reader.PreparedChapterMeasured
 import com.retro99.reader.ui.tts.TtsPreparedAudioStore
 import com.retro99.reader.ui.tts.TtsPreparedChapterBackup
 import com.retro99.reader.ui.tts.TtsPreparedChapterAudio
@@ -745,6 +746,25 @@ class AndroidTtsController(
     override fun preparedChapterAudio(chapterHref: String): Flow<TtsPreparedChapterAudio> =
         combine(chapterPreparationJob.state, preparedAudioRevision) { _, _ -> Unit }
             .map { withContext(Dispatchers.IO) { readPreparedChapterAudio(chapterHref) } }
+
+    /**
+     * The device's own average bytes per sentence for the voice selected now, taken from the
+     * manifests of chapters it has already finished. Synthesis *time* is not recorded
+     * anywhere, so only the size half is measured and the time half stays fixed.
+     */
+    override val preparedChapterMeasured: Flow<PreparedChapterMeasured> =
+        combine(chapterPreparationJob.state, preparedAudioRevision) { _, _ -> Unit }
+            .map { withContext(Dispatchers.IO) { readPreparedChapterMeasured() } }
+
+    private fun readPreparedChapterMeasured(): PreparedChapterMeasured = runCatching {
+        val voice = voiceId
+        val matching = preparedAudioStore.store.completeChapters()
+            .filter { it.settings.voiceId == voice && it.sentences > 0 }
+        if (matching.isEmpty()) return@runCatching PreparedChapterMeasured()
+        val sentences = matching.sumOf { it.sentences.toLong() }
+        val bytes = matching.sumOf { it.totalBytes }
+        PreparedChapterMeasured(bytesPerSentence = if (sentences > 0) bytes / sentences else null)
+    }.getOrElse { PreparedChapterMeasured() }
 
     override fun preparedChapterCloud(chapterHref: String): Flow<PreparedChapterCloudInputs> =
         combine(chapterPreparationJob.state, preparedAudioRevision) { _, _ -> Unit }

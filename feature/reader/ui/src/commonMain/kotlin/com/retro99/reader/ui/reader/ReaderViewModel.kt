@@ -1675,6 +1675,9 @@ class ReaderViewModel(
             .flatMapLatest { href -> ttsController.preparedChapterAudio(href) }
             .onEach { audio -> updateState { state -> state.copy(preparedChapterAudio = audio) } }
             .launchIn(viewModelScope)
+        ttsController.preparedChapterMeasured
+            .onEach { measured -> updateState { state -> state.copy(preparedChapterMeasured = measured) } }
+            .launchIn(viewModelScope)
         bookController.currentLocator
             .map { locator -> locator.href }
             .distinctUntilChanged()

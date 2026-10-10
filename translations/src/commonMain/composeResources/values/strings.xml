@@ -582,6 +582,9 @@
     <!-- Prepared chapters -->
     <string name="reader_tts_prepared_chapter_title" tools:ignore="MissingTranslation">This chapter</string>
     <string name="reader_tts_prepared_chapter_hint" tools:ignore="MissingTranslation">Preparing takes a while. Afterwards this chapter plays instantly.</string>
+    <string name="reader_tts_prepared_chapter_estimate" tools:ignore="MissingTranslation">About %1$d minutes · about %2$s</string>
+    <string name="reader_tts_prepared_chapter_estimate_hours" tools:ignore="MissingTranslation">About %1$d h %2$d min · about %3$s</string>
+    <string name="reader_tts_prepared_chapter_estimate_short" tools:ignore="MissingTranslation">Under a minute · about %1$s</string>
     <string name="reader_tts_prepared_chapter_prepare" tools:ignore="MissingTranslation">Prepare this chapter</string>
     <string name="reader_tts_prepared_chapter_progress" tools:ignore="MissingTranslation">%1$d of %2$d sentences</string>
     <string name="reader_tts_prepared_chapter_other_busy" tools:ignore="MissingTranslation">Another chapter is being prepared.</string>

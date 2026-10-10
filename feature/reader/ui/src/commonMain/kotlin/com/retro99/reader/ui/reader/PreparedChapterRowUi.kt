@@ -8,6 +8,9 @@ import resources.translations.general_cancel
 import resources.translations.general_retry
 import resources.translations.reader_tts_delete
 import resources.translations.reader_tts_prepared_chapter_continue
+import resources.translations.reader_tts_prepared_chapter_estimate
+import resources.translations.reader_tts_prepared_chapter_estimate_hours
+import resources.translations.reader_tts_prepared_chapter_estimate_short
 import resources.translations.reader_tts_prepared_chapter_failed
 import resources.translations.reader_tts_prepared_chapter_failed_space
 import resources.translations.reader_tts_prepared_chapter_hint
@@ -71,13 +74,20 @@ internal fun preparedRateLabel(rate: Float): String {
     }
 }
 
-/** @param voiceLabel name of the voice prepared audio was made for, when it is still known. */
+/**
+ * @param voiceLabel name of the voice prepared audio was made for, when it is still known.
+ * @param estimate what preparing this chapter is about to cost, when the sentence count is
+ *   known. Null leaves the plain hint, which says preparing takes a while without saying
+ *   how long: better than a number invented from a sentence count nobody has counted yet.
+ */
 internal fun preparedChapterRowUi(
     state: PreparedChapterRowState,
     voiceLabel: String? = null,
+    estimate: PreparedChapterEstimate? = null,
 ): PreparedChapterRowUi = when (state) {
     PreparedChapterRowState.NotPrepared -> PreparedChapterRowUi(
-        status = StringRes.reader_tts_prepared_chapter_hint,
+        status = notPreparedStatus(estimate),
+        statusArgs = notPreparedArgs(estimate),
         actions = listOf(PreparedChapterAction.PREPARE),
     )
 
@@ -138,3 +148,26 @@ internal fun preparedChapterRowUi(
         actions = listOf(PreparedChapterAction.OPEN_VOICES),
     )
 }
+
+private fun notPreparedStatus(estimate: PreparedChapterEstimate?): StringResource = when {
+    estimate == null -> StringRes.reader_tts_prepared_chapter_hint
+    estimate.minutes == 0 -> StringRes.reader_tts_prepared_chapter_estimate_short
+    estimate.minutes >= MINUTES_PER_HOUR -> StringRes.reader_tts_prepared_chapter_estimate_hours
+    else -> StringRes.reader_tts_prepared_chapter_estimate
+}
+
+private fun notPreparedArgs(estimate: PreparedChapterEstimate?): List<Any> {
+    if (estimate == null) return emptyList()
+    val size = preparedChapterEstimateSizeLabel(estimate.bytes)
+    return when {
+        estimate.minutes == 0 -> listOf(size)
+        estimate.minutes >= MINUTES_PER_HOUR -> listOf(
+            estimate.minutes / MINUTES_PER_HOUR,
+            estimate.minutes % MINUTES_PER_HOUR,
+            size,
+        )
+        else -> listOf(estimate.minutes, size)
+    }
+}
+
+private const val MINUTES_PER_HOUR = 60

@@ -59,6 +59,8 @@ internal data class PreparedChapterSummary(
     val settings: PreparedVoiceSettings,
     val folder: File,
     val totalBytes: Long,
+    /** How many sentences the manifest holds; the divisor for a per-sentence average. */
+    val sentences: Int = 0,
 )
 
 /** Context-free store. Planned keys retain sentence order and resumable total, never text. */
@@ -175,6 +177,7 @@ internal class TtsPreparedStore(
                 settings = manifest.settings(),
                 folder = folder,
                 totalBytes = manifest.totalBytes,
+                sentences = manifest.sentences.count { it.durationMs != null },
             )
         }
 

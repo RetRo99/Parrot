@@ -273,3 +273,61 @@ linked project at all (and why not to fix it with `alter role ... inherit`), a s
 for `20261011000000` with its own rollback, and a six-point list of what a production
 rollout still needs — including that opening uploads is a product decision with a storage
 cost, not just a migration.
+
+## Part C: the estimate on the button (decision 7)
+
+- C1 where it is computed: `feature/reader/ui/src/commonMain/kotlin/com/retro99/reader/ui/
+  reader/PreparedChapterEstimate.kt`, pure, no Android types. `preparedChapterEstimate(
+  sentenceCount, voiceKind, measured)` returns `PreparedChapterEstimate(minutes, bytes)`
+  or null. The row renders it in `PreparedChapterRowUi.kt` under the `NotPrepared` state
+  only; nothing else about the row moves.
+- C2 figures, taken from the six-sentence table in `docs/tts-prepared-chapters.md`
+  ("Step 1: Samsung measurements and format gate"). Bytes are the mean of its **M4A**
+  column, which is the format the store actually keeps (`PREPARED_AUDIO_EXTENSION` =
+  `m4a`, `TtsPreparedStore.kt:12`):
+  - System: 2500 ms and 16000 bytes per sentence (table mean 2531 ms, 16281 B)
+  - Kokoro: 2200 ms and 14000 bytes per sentence (table mean 2218 ms, 14310 B)
+  - Supertonic: the same as Kokoro. **It was never in that table**; it takes the other
+    neural engine's figures, and this is written in the code comment too.
+  The 64 kB per sentence in the same document is the *free-space headroom* figure, four
+  times the measured size, and would overstate a user-facing estimate; it is not used.
+- C3 **the time figures are a stand-in, and this is the one soft spot in part C.** The
+  document holds no measurement of synthesis *speed* anywhere — only spoken duration per
+  sentence. So spoken length stands in for preparation time. Part D check 2 compares it
+  with reality for the first time; see the D section for the measured outcome.
+- C4 the device's own measurements override the fixed ones: `PreparedChapterMeasured(
+  msPerSentence, bytesPerSentence)`, either half independently, and a zero or negative
+  figure is ignored rather than trusted. Wired on Android in
+  `AndroidTtsController.preparedChapterMeasured`, which averages the manifests of
+  completed chapters whose `voiceId` matches the voice selected now:
+  `bytes / sentences` over all of them. `PreparedChapterSummary` gained a `sentences`
+  count for the divisor. **Only the size half is measured**; synthesis time is recorded
+  nowhere in the app, so `msPerSentence` is always null today and the fixed figure is
+  used. Recording it would mean changing the manifest format, which the archive checks
+  and the iPhone format both depend on, so it is left for the owner to decide.
+- C5 no estimate when the sentence count is not known: `sentenceCount` is
+  `viewState.ttsSentenceCount`, which the TTS controller only fills once read-aloud has
+  loaded the chapter. Null, zero and negative all return null, and the row then shows the
+  unchanged `reader_tts_prepared_chapter_hint`.
+- C6 rounding, as a person would say it: under 45 s is "under a minute"; 1-9 minutes
+  exactly; 10-59 to the nearest 5; an hour and more to the nearest 10 and said as
+  "1 h 30 min". Size is coarser than the exact label on purpose — whole MB above a
+  megabyte, tens of kB below — because "about 9.1 MB" claims a precision an estimate
+  does not have.
+- C7 tests: **25 added**, all written before the code. 19 in
+  `PreparedChapterEstimateTest.kt` (no-count, each voice kind, measured override, one
+  half measured, nonsense measured, every rounding boundary including the 44/45 s edge,
+  the size label, and which kind each voice is) and 6 in `PreparedChapterRowUiTest.kt`
+  (the three shapes, a whole number of hours, the plain hint when there is no estimate,
+  and that the estimate never leaks into the Ready or Partly rows). One existing
+  assertion in `PreparedChapterRowUiTest` gained an `assertEquals(emptyList(),
+  ui.statusArgs)` line; no existing assertion was changed or removed.
+- C8 new string keys in `translations/src/commonMain/composeResources/values/strings.xml`,
+  beside the existing `reader_tts_prepared_` entries:
+  - `reader_tts_prepared_chapter_estimate` — "About %1$d minutes · about %2$s"
+  - `reader_tts_prepared_chapter_estimate_hours` — "About %1$d h %2$d min · about %3$s"
+  - `reader_tts_prepared_chapter_estimate_short` — "Under a minute · about %1$s"
+- C9 counts after part C, all green, no skips: reader ui android 667 -> **692**, reader ui
+  ios 401 -> **426**; every other module unchanged (reader domain 196, epub 45, books data
+  151, cloud-account ui 28, settings ui 24, server-parrot-cloud 62, analytics 80,
+  composeApp 65).

@@ -764,6 +764,11 @@ internal fun ReaderOverlayContent(
                     preparation = viewState.chapterPreparation,
                     voice = preparedChapterVoice(selectedVoice, viewState.hasAcceptedSupertonicTerms),
                 ),
+                preparedChapterEstimate = preparedChapterEstimate(
+                    sentenceCount = viewState.ttsSentenceCount,
+                    voiceKind = preparedVoiceKind(selectedVoice),
+                    measured = viewState.preparedChapterMeasured,
+                ),
                 preparedChapterVoiceLabel = (viewState.preparedChapterAudio as? TtsPreparedChapterAudio.OtherSettings)
                     ?.let { other ->
                         viewState.ttsVoices.firstOrNull { voice -> voice.id == other.voiceId }?.name
