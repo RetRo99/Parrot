@@ -320,6 +320,28 @@ No cloud, server, database migration, library,
 cache-key change, sentence-cache compression, automatic or whole-book
 preparation, iPhone TTS, TTS-F15 or TTS-F25 changes.
 
+## Current handoff after Step 3
+
+Steps 1–3 are built and committed green in order. Steps 4–8 are not built:
+no app-wide chapter job/state flow, foreground service, notification/Voices
+gates, preparation analytics, controller/screen wiring, row or strings,
+Settings total/Delete all row, UI render tests, or full prepared-chapter device
+journey. This is not an end-user-ready feature. Continue at Step 4 with tests
+first for the pure job, then the foreground service and fail-closed analytics
+sanitizer. Do not skip ahead to reader/UI while Step 4 is uncommitted/non-green.
+
+Existing seams ready for that run: `TtsPreparedAudioStore.store.begin(id,
+settings, orderedKeys)`, per-chapter `lookup(id,key)` without playback touch,
+`TtsAudioGenerator.prepareSentence(...)`, store `markComplete`, `enforceLimit`
+and deletion. Generate keys with the existing cache key/model version and
+effective rate. Freeze those settings and loaded sentence order for the job.
+The manifest holds ids and keys, not sentence text; the running job must hold
+texts in memory and receive them again to resume after app kill. Current encoder
+binding is WAV, not AAC. Every new `@Single` needs a real-graph resolution test.
+Cloud packaging guidance above reflects the implemented store, but Step 7's
+final UI/strings/state/limits documentation remains unfinished until the feature
+exists. No previously built bug-fix test was changed or weakened.
+
 ## For the cloud backup run
 
 Host-testable folders now exist; the app does not yet expose preparation UI/jobs.
