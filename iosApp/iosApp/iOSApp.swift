@@ -40,6 +40,10 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         EpubReaderBridgeRegistry.shared.register(bridge: ReadiumEpubReaderBridge())
         EpubMetadataBridgeRegistry.shared.register(bridge: ReadiumEpubMetadataBridge())
 
+        // Throwaway TTS spike: registers the bridge and runs once when a Kokoro model
+        // directory exists in Documents/kokoro. Not wired into any product UI.
+        TtsSpikeRunner.registerAndMaybeRun()
+
         return true
     }
 
