@@ -4,6 +4,7 @@ package com.retro99.reader.ui.tts
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okio.Path.Companion.toPath
 import platform.Foundation.NSDate
 import platform.Foundation.timeIntervalSinceNow
 import platform.Foundation.NSDocumentDirectory
@@ -120,6 +121,9 @@ object IosTtsSpike {
         lines += "peakMem: before=${memBefore}B afterLoad=${memAfterLoad}B " +
             "afterCold=${memAfterCold}B afterWarm=${memAfterWarm}B"
 
+        lines += "--- pack download (lib/packs PackDownloader, ktor-darwin) ---"
+        lines += probePackDownload(outDir)
+
         lines += "--- queue probe ---"
         lines += withContext(Dispatchers.Main) {
             bridge.probeQueuePlayback(listOf(coldOut, warmOut))
@@ -130,6 +134,34 @@ object IosTtsSpike {
 
         lastReport = lines.joinToString("\n")
         return lastReport
+    }
+
+    /**
+     * Proves the multiplatform lib/packs path end to end from Kotlin on iOS:
+     * downloads one real pack file (tokens.txt, 1078 bytes) with ktor-darwin, then
+     * sha256-verifies it with okio HashingSource — the same code Android uses.
+     */
+    private suspend fun probePackDownload(outDir: String): String {
+        return runCatching {
+            val file = com.retro99.packs.PackFile(
+                path = "tokens.txt",
+                url = "https://github.com/RetRo99/tts-models/releases/download/" +
+                    "models-20260928123911-4/kokoro-tokens.txt",
+                size = 1078L,
+                sha256 = "4f31c71282d14af4e926cd12462078fe9d20d00c589e63fe2750a8f56d6d7f7b",
+            )
+            val client = io.ktor.client.HttpClient(io.ktor.client.engine.darwin.Darwin)
+            val downloader = com.retro99.packs.PackDownloader(client)
+            val target = "$outDir/spike-pack-tokens.txt".toPath()
+            okio.FileSystem.SYSTEM.delete(target, mustExist = false)
+            val start = NSDate()
+            downloader.download(file, target)
+            val ms = (-start.timeIntervalSinceNow() * 1000).toLong()
+            val verified = downloader.verify(file, target)
+            client.close()
+            "download: ${ms}ms verified=$verified " +
+                "bytes=${okio.FileSystem.SYSTEM.metadataOrNull(target)?.size}"
+        }.getOrElse { "download FAILED: ${it::class.simpleName}: ${it.message}" }
     }
 
     private fun documentsPath(): String {

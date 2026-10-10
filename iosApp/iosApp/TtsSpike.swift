@@ -133,23 +133,36 @@ final class ParrotTtsSpike: NSObject {
         let items = wavPaths.map { AVPlayerItem(url: URL(fileURLWithPath: $0)) }
         let player = AVQueuePlayer(items: items)
 
+        // Expected per-item durations from the asset itself.
+        for (index, item) in items.enumerated() {
+            let d = item.asset.duration
+            report.append("item\(index) duration=\(String(format: "%.3f", CMTimeGetSeconds(d)))s")
+        }
+        report.append("route: \(session.currentRoute.outputs.map { $0.portType.rawValue }.joined(separator: ","))")
+
         var transitionKinds: [String] = []
         var transitionTimes: [TimeInterval] = []
         var observers: [NSKeyValueObservation] = []
         let start = CACurrentMediaTime()
+        let lock = NSLock()
+
+        func record(_ label: String) {
+            lock.lock()
+            transitionKinds.append(label)
+            transitionTimes.append(CACurrentMediaTime() - start)
+            lock.unlock()
+        }
 
         for (index, item) in items.enumerated() {
             observers.append(item.observe(\.status, options: [.new]) { observed, _ in
                 if observed.status == .failed {
-                    transitionKinds.append("item\(index):failed(\(observed.error?.localizedDescription ?? "?"))")
+                    record("item\(index):failed(\(observed.error?.localizedDescription ?? "?"))")
                 }
             })
         }
-        observers.append(player.observe(\.currentItem, options: [.new]) { observed, _ in
-            let t = CACurrentMediaTime() - start
+        observers.append(player.observe(\.currentItem, options: [.initial, .new]) { observed, _ in
             if let item = observed.currentItem, let idx = items.firstIndex(of: item) {
-                transitionKinds.append("item\(idx)")
-                transitionTimes.append(t)
+                record("currentItem->item\(idx)")
             }
         })
 
@@ -160,19 +173,47 @@ final class ParrotTtsSpike: NSObject {
             object: items.last,
             queue: nil
         ) { _ in
-            transitionTimes.append(CACurrentMediaTime() - start)
+            record("lastItemEnded")
             endExpectation.fulfill()
         }
 
+        // Periodic time observer: ground truth on whether playhead actually advances.
+        var playheadSamples: [String] = []
+        let timeObserver = player.addPeriodicTimeObserver(
+            forInterval: CMTime(seconds: 0.25, preferredTimescale: 600),
+            queue: nil
+        ) { t in
+            let cur = CMTimeGetSeconds(t)
+            let idx = player.currentItem.flatMap { items.firstIndex(of: $0) } ?? -1
+            playheadSamples.append("i\(idx)@\(String(format: "%.2f", cur))")
+        }
+
         player.play()
-        let finished = endExpectation.wait(timeout: 60)
+        report.append("rate after play(): \(player.rate)")
+
+        // Diagnostic: does a plain single-file AVPlayer advance on this target?
+        let single = AVPlayer(url: URL(fileURLWithPath: wavPaths[0]))
+        single.play()
+        var singlePos: [String] = []
+        for _ in 0..<8 {
+            Thread.sleep(forTimeInterval: 0.5)
+            singlePos.append(String(format: "%.2f", CMTimeGetSeconds(single.currentTime())))
+        }
+        let singleAdvanced = CMTimeGetSeconds(single.currentTime()) > 0.5
+        single.pause()
+        report.append("single AVPlayer positions over 4s: \(singlePos.joined(separator: " ")) advanced=\(singleAdvanced)")
+
+        let finished = endExpectation.wait(timeout: 30)
+        let elapsed = CACurrentMediaTime() - start
         player.pause()
+        player.removeTimeObserver(timeObserver)
         if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
         observers.forEach { $0.invalidate() }
 
         report.append("transitions: \(transitionKinds.joined(separator: " -> "))")
-        report.append("transitionTimes: \(transitionTimes.map { String(format: "%.3f", $0) }.joined(separator: ", "))")
-        report.append("finished: \(finished)")
+        report.append("playhead samples (first 12): \(playheadSamples.prefix(12).joined(separator: " "))")
+        report.append("playhead samples (last 6): \(playheadSamples.suffix(6).joined(separator: " "))")
+        report.append("elapsed: \(String(format: "%.2f", elapsed))s finished: \(finished)")
         return report.joined(separator: "\n")
     }
 
