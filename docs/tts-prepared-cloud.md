@@ -14,7 +14,7 @@ from the server side.
 
 Step 1 is written but **its SQL has NOT been run** — see below; nothing could be
 executed on this machine, and that is still true: there is still no container runtime
-here. Steps 2, 3, 4, 5 and 6 are complete. Step 7 is not done.
+here. Steps 2 to 7 are complete, with Step 7's limits recorded below: the hosted server was never contacted and the device has no cloud account, so only the no-account path could be observed on a phone.
 
 ### Can the local Supabase stack run here?
 
@@ -1139,6 +1139,79 @@ been run and passed.**
   bytes, and `get_storage_usage` returns the breakdown, so a tier change is a quota
   change on the account and not a client change.
 
-## Step 7: the checks
+## Step 7: the checks that can be done without the hosted server
 
-Not done.
+### Host tests and both builds
+
+All run. Counts per module are in `docs/tts-prepared-cloud-report.txt`. Both app builds
+succeed: `:androidApp:assembleDebug` and
+`:composeApp:linkDebugFrameworkIosSimulatorArm64`. `verifySqlDelightMigration` passes.
+
+The only red tests anywhere are the four pre-existing `feature/books/ui` failures
+(`LinkPickerViewModelTest` x2, `LinkReviewViewModelTest` x2), which were red before this
+work and are outside the brief's verify command.
+
+### On the Samsung, with nothing deployed
+
+Samsung Galaxy S24 (`SM_S921B`), serial `RFCWC0SSVDM`, `-s RFCWC0SSVDM` on every adb
+call, `adb install -r` only. The Xiaomi that is also paired to this machine was offline
+and was never addressed. Nothing was uninstalled, no app data was cleared, no account was
+signed in or out, and no network setting or ringer was changed.
+
+What happened, in order:
+
+1. Installed the debug APK over the existing one and launched it. The library drew
+   normally. **No crash.**
+2. `files/tts-prepared-inbox` and `files/tts-prepared-outbox` both existed immediately
+   after launch, so `TtsPreparedChapterBackup` was built and its `AppInitializer` ran.
+   **Both were empty**, so the app-start sweep queued nothing and left nothing behind.
+3. Opened *Alice's Adventures in Wonderland* at CHAPTER IV and the Listening sheet. The
+   row read "Preparing takes a while. Afterwards this chapter plays instantly." with
+   **no cloud line at all**.
+4. Pressed "Prepare this chapter". It prepared all 151 sentences in about 5 minutes,
+   progressing normally ("7 of 151" → "Ready, plays instantly · 5.3 MB"), and still
+   showed **no cloud line**.
+5. Pressed Play. It was reading **"Sentence 10 of 151" within 4 seconds** — it plays
+   instantly. **No regression.**
+6. Killed and relaunched the app, which runs the sweep again against a chapter that is
+   now finished. **No crash**, and the outbox and inbox were **still empty**, so nothing
+   was packed and nothing was queued. The row still read "Ready, plays instantly ·
+   5.3 MB" with no cloud line.
+7. Pressed "Delete…". The confirmation said *"This chapter will have to be prepared again
+   before it plays instantly."* — the **original** message, correctly **not** the one that
+   mentions Parrot Cloud, because nothing had been sent there. Confirmed; the chapter
+   folder was gone from `files/tts-prepared` and the row returned to its hint.
+8. Left the phone on a System voice at rate 1.0, pitch Normal, on the library screen,
+   with prepared audio deleted.
+
+**What the server answered: nothing. The server was never contacted.** That is the
+honest answer and it is worth being precise about. The active profile
+(`OPDS-QA-…`) is **signed out of Parrot Cloud** — the Parrot Cloud screen offered Sign in
+and Create an account, and the log shows
+`cloud_session_restore … outcome=succeeded … result_code=signed_out`. So
+`PreparedBackupAccount.snapshot()` returned null, the gate answered `NotApplicable`
+before any network call, and no reserve was ever attempted. The allow-list and the
+unknown-media-type case therefore could not be reached from this device, because reaching
+them would have meant signing in, which the brief forbids.
+
+**What the row showed: nothing about backup, in every state.** That is the intended
+quiet, truthful state for a device with no cloud account: `NotApplicable` produces no
+line at all, so the row said exactly what it said before this work. **No crash, no retry
+loop and no error the user did not ask for**: the whole-session log for the app's pid
+contains no exception from this work, the crash buffer is empty, and no
+`tts_prepared_audio_backup_ended` event was logged at all — which is correct, because
+nothing was ever queued and that event is only logged for a real outcome.
+
+### What was not checked, and why
+
+- The row's **signed-in** states (`NotAllowed`, `WaitingForBookBackup`,
+  `WaitingForWifi`, `BackedUp`, `StorageFull`) were not observed on a device. Reaching
+  any of them needs a signed-in account, and the brief forbids signing in. They are
+  covered by `PreparedChapterBackupQueueTest` and `PreparedChapterCloudUiTest`.
+- **A server that does not know the media type** was not observed, for the same reason.
+  What would happen is known from the code: the server would refuse the reserve with
+  `invalid_upload_metadata` or `uploads_not_enabled`, both of which are in
+  `PERMANENT_REJECTIONS`, so the transfer ends `failed` with **no retry scheduled** and
+  the row reads a single `Failed` line. There is a test for each of those refusals.
+- **Nothing was downloaded**, since the cloud holds nothing and there is no account.
+- The real end-to-end check needs the migration applied. Its checklist is above.
