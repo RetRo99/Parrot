@@ -7,10 +7,10 @@ import com.retro99.reader.ui.reader.derivePreparedChapterRow
 import com.retro99.reader.ui.reader.preparedChapterRowUi
 import com.retro99.reader.ui.reader.preparedTimeLeftLabel
 import com.retro99.translations.StringRes
-import resources.translations.reader_tts_prepared_chapter_progress
 import resources.translations.reader_tts_prepared_chapter_progress_left
 import resources.translations.reader_tts_prepared_chapter_progress_left_hours
 import resources.translations.reader_tts_prepared_chapter_progress_left_short
+import resources.translations.reader_tts_prepared_chapter_progress_waiting
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -108,9 +108,30 @@ class TtsPreparationTimeLeftTest {
         assertEquals(listOf(5, 2_000, 1, 30), long.statusArgs)
     }
 
-    @Test fun `before there is an estimate the row says only the count`() {
+    @Test fun `before there is a time left the row promises one in its place`() {
         val ui = preparedChapterRowUi(PreparedChapterRowState.Preparing(2, 369))
-        assertEquals(StringRes.reader_tts_prepared_chapter_progress, ui.status)
+        assertEquals(StringRes.reader_tts_prepared_chapter_progress_waiting, ui.status)
         assertEquals(listOf(2, 369), ui.statusArgs)
+    }
+
+    @Test fun `skipped sentences with nothing generated yet still promise a time`() {
+        // A resumed chapter: five sentences are already on disk, so done climbs without a
+        // single measurement being taken, and there is still nothing to say about time.
+        val ui = preparedChapterRowUi(PreparedChapterRowState.Preparing(5, 9))
+        assertEquals(StringRes.reader_tts_prepared_chapter_progress_waiting, ui.status)
+        assertEquals(listOf(5, 9), ui.statusArgs)
+    }
+
+    @Test fun `the promise is gone the moment there is a time left`() {
+        val ui = preparedChapterRowUi(PreparedChapterRowState.Preparing(3, 369, remainingMs = 9 * minute))
+        assertEquals(StringRes.reader_tts_prepared_chapter_progress_left, ui.status)
+        assertEquals(listOf(3, 369, 9), ui.statusArgs)
+    }
+
+    @Test fun `and it never comes back once a time has been shown`() {
+        // The run keeps the value it last showed when a fresh estimate cannot be made, so
+        // the row cannot fall back to the promise half way through a chapter.
+        val shown = TtsPreparationTimeLeft(remainingMs = 9 * minute, shownAtMs = 1_000)
+        assertEquals(shown, nextPreparationTimeLeft(shown, estimateMs = null, nowMs = 600_000))
     }
 }

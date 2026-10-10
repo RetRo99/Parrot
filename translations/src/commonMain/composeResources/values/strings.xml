@@ -590,6 +590,7 @@
     <string name="reader_tts_prepared_chapter_audio_length_short" tools:ignore="MissingTranslation">Under a minute of audio</string>
     <string name="reader_tts_prepared_chapter_prepare" tools:ignore="MissingTranslation">Prepare this chapter</string>
     <string name="reader_tts_prepared_chapter_progress" tools:ignore="MissingTranslation">%1$d of %2$d sentences</string>
+    <string name="reader_tts_prepared_chapter_progress_waiting" tools:ignore="MissingTranslation">%1$d of %2$d sentences · working out how long is left…</string>
     <string name="reader_tts_prepared_chapter_progress_left" tools:ignore="MissingTranslation">%1$d of %2$d sentences · about %3$d min left</string>
     <string name="reader_tts_prepared_chapter_progress_left_hours" tools:ignore="MissingTranslation">%1$d of %2$d sentences · about %3$d h %4$d min left</string>
     <string name="reader_tts_prepared_chapter_progress_left_short" tools:ignore="MissingTranslation">%1$d of %2$d sentences · under a minute left</string>

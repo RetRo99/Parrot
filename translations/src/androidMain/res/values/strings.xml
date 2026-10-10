@@ -12,6 +12,7 @@
     <string name="tts_chapter_preparation_channel_description" tools:ignore="MissingTranslation">Shows the progress of preparing a chapter for instant listening</string>
     <string name="tts_chapter_preparation_notification_title" tools:ignore="MissingTranslation">Preparing chapter audio</string>
     <string name="tts_chapter_preparation_notification_progress" tools:ignore="MissingTranslation">%1$d of %2$d sentences</string>
+    <string name="tts_chapter_preparation_notification_progress_waiting" tools:ignore="MissingTranslation">%1$d of %2$d sentences · working out how long is left…</string>
     <string name="tts_chapter_preparation_notification_progress_left" tools:ignore="MissingTranslation">%1$d of %2$d sentences · about %3$d min left</string>
     <string name="tts_chapter_preparation_notification_progress_left_hours" tools:ignore="MissingTranslation">%1$d of %2$d sentences · about %3$d h %4$d min left</string>
     <string name="tts_chapter_preparation_notification_progress_left_short" tools:ignore="MissingTranslation">%1$d of %2$d sentences · under a minute left</string>

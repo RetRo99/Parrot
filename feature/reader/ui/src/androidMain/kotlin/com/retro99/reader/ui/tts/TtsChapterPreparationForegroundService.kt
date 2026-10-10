@@ -119,6 +119,8 @@ class TtsChapterPreparationForegroundService : Service() {
         val resource = when (text.line) {
             TtsChapterPreparationNotificationLine.COUNT ->
                 TranslationsR.string.tts_chapter_preparation_notification_progress
+            TtsChapterPreparationNotificationLine.WAITING ->
+                TranslationsR.string.tts_chapter_preparation_notification_progress_waiting
             TtsChapterPreparationNotificationLine.TIME_LEFT ->
                 TranslationsR.string.tts_chapter_preparation_notification_progress_left
             TtsChapterPreparationNotificationLine.TIME_LEFT_SHORT ->

@@ -18,7 +18,7 @@ import resources.translations.reader_tts_prepared_chapter_other_speed
 import resources.translations.reader_tts_prepared_chapter_partly
 import resources.translations.reader_tts_prepared_chapter_prepare
 import resources.translations.reader_tts_prepared_chapter_prepare_again
-import resources.translations.reader_tts_prepared_chapter_progress
+import resources.translations.reader_tts_prepared_chapter_progress_waiting
 import resources.translations.reader_tts_prepared_chapter_ready
 import resources.translations.reader_tts_prepared_chapter_voice_pack
 import resources.translations.reader_tts_prepared_chapter_voices
@@ -87,7 +87,7 @@ class PreparedChapterRowUiTest {
 
     @Test fun `preparing counts the sentences with a progress bar and only cancel`() {
         val ui = preparedChapterRowUi(PreparedChapterRowState.Preparing(42, 151))
-        assertEquals(StringRes.reader_tts_prepared_chapter_progress, ui.status)
+        assertEquals(StringRes.reader_tts_prepared_chapter_progress_waiting, ui.status)
         assertEquals(listOf<Any>(42, 151), ui.statusArgs)
         assertEquals(42f / 151f, ui.progress)
         assertEquals(listOf(PreparedChapterAction.CANCEL), ui.actions)

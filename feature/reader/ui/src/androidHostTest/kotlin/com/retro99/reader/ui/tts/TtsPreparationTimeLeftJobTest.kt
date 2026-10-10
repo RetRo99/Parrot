@@ -96,7 +96,7 @@ class TtsPreparationTimeLeftJobTest {
 
     @Test fun `the notification says the same count and time left and names nothing`() {
         val counting = chapterPreparationNotificationText(TtsChapterPreparationState.Running("c1.xhtml", 2, 369))
-        assertEquals(TtsChapterPreparationNotificationLine.COUNT, counting.line)
+        assertEquals(TtsChapterPreparationNotificationLine.WAITING, counting.line)
         assertEquals(listOf<Any>(2, 369), counting.args)
 
         val left = chapterPreparationNotificationText(
@@ -117,5 +117,15 @@ class TtsPreparationTimeLeftJobTest {
         assertEquals(TtsChapterPreparationNotificationLine.TIME_LEFT_HOURS, long.line)
         assertEquals(listOf<Any>(5, 2_000, 1, 30), long.args)
         assertEquals(listOf<Any>(0, 0), chapterPreparationNotificationText(null).args)
+    }
+
+    @Test fun `the notification promises a time in the same place while it has none`() {
+        // A resumed chapter, skipping what is already on disk: nothing has been measured.
+        val skipping = chapterPreparationNotificationText(TtsChapterPreparationState.Running("c1.xhtml", 5, 9))
+        assertEquals(TtsChapterPreparationNotificationLine.WAITING, skipping.line)
+        assertEquals(listOf<Any>(5, 9), skipping.args)
+
+        // Nothing is running, so there is no run to promise anything about.
+        assertEquals(TtsChapterPreparationNotificationLine.COUNT, chapterPreparationNotificationText(null).line)
     }
 }
