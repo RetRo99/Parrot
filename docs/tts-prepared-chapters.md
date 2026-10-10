@@ -40,14 +40,37 @@ composeApp 59/59; analytics 75/75. No bug-fix-run test has been edited.
 
 ## What was built
 
-Step 1 red phase: added the small Android-source-set `TtsPreparedAudioEncoder`
-interface, a result type, and intentionally unimplemented PCM/encode seams.
+Step 1 (partial): added the small Android-source-set `TtsPreparedAudioEncoder`
+interface, a success/failure result type, PCM WAV reader and encode core.
 `TtsPreparedAudioEncoderTest` specifies mono PCM16 WAV parsing (including RIFF
 chunks and padding), rejection of unsupported/truncated input, atomic output,
 failure/cancellation cleanup, measured duration and source/output preservation.
 The focused red run failed as intended: 12 tests, four failures (valid mono
 PCM, odd chunk padding, successful publication, cancellation propagation).
-The other rejection/safety cases pass against the fail-closed stub.
+The other rejection/safety cases passed against the fail-closed stub. The
+implementation then replaced that stub without editing the tests. Six-module
+verification is green: reader Android 435/435 (423 existing + 12 new), reader
+iOS 319/319 (before 319/319), settings 22/22, home 84/84, composeApp 59/59,
+analytics 75/75. Counts are from result XML; zero failures/errors/skips. The
+existing bug-fix tests are unedited. Baseline Android APK and iOS framework
+builds succeeded; post-seam final builds are pending.
+
+The core invokes an injected suspend encoding function, giving it a unique
+same-directory `.part` file. Only a nonempty result with positive measured
+duration is atomically renamed into the requested output. An exception or
+cancellation deletes the staging file; cancellation is propagated. It rejects
+an existing destination and a destination aliasing the source. It never edits
+the input cache WAV. The parser reads RIFF chunk headers without allocating
+from their untrusted lengths, supports mono PCM16, and validates bounds,
+alignment and byte rate. Temporary names contain neither text nor titles.
+
+No platform MediaCodec/MediaMuxer adapter or Koin binding has been built yet.
+No caller uses this seam. AAC-LC mono 48 kbit/s in M4A remains a candidate, not
+the chosen format: six real-sentence measurements and an acoustic join
+comparison on the Samsung are mandatory before any storage/playback feature
+is built on it. This run stops at the tested host seam; Step 1 is not complete.
+Do not infer compression quality or gapless playback from the fake-encoder
+tests. They test publication/cleanup and parsing, not the native codec.
 No prepared store, manifest, UI state, screen text, resource, foreground service
 or analytics event has been added. No encoding measurements have been made.
 
@@ -70,7 +93,9 @@ No new screen strings or resource keys exist in this run yet.
 
 ## Not done
 
-Steps 1–8 remain unbuilt. No cloud, server, database migration, library,
+Step 1 is partial; Steps 2–8 remain unbuilt. The platform codec and its six
+sentence checkpoint are the next work, before prepared storage or playback.
+No cloud, server, database migration, library,
 cache-key change, sentence-cache compression, automatic or whole-book
 preparation, iPhone TTS, TTS-F15 or TTS-F25 changes.
 
@@ -80,3 +105,15 @@ There is no prepared chapter to package yet. When storage is implemented, a
 chapter must be self-contained as one folder with a versioned manifest and
 ordered audio files, so it can be packaged without reader state. Cloud backup
 is not part of this run.
+
+## Resume here
+
+Keep the existing bug-fix tests unchanged. Finish the native adapter behind
+`TtsPreparedAudioEncoder`, then run the six-sentence checkpoint (three real
+Kokoro and three real system-voice WAVs, encoded and played through the existing
+read-aloud engine). Record source/encoded byte sizes, each reported duration
+delta in milliseconds, and an actual audible WAV/AAC join comparison. Try
+padding trimming if needed; select WAV if AAC cannot meet the 50 ms/join gate.
+Only then add the prepared store, with tests first and this document current.
+The nested comparison worktree contains no authored changes and is retained,
+not deleted. It is not the feature branch's working directory.
